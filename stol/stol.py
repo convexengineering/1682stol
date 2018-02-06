@@ -163,7 +163,7 @@ class Mission(Model):
 
     Variables
     ---------
-    Srunway             [ft]        runway length
+    Srunway     400     [ft]        runway length
     mrunway     1.4     [-]         runway margin
     """
     def setup(self):

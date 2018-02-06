@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy import random
 from gpkit.repr_conventions import unitstr
-from solar import Mission
+from stol import Mission
 
 #pylint: disable=invalid-name, anomalous-backslash-in-string
 
@@ -97,23 +97,10 @@ def test():
 
 if __name__ == "__main__":
 
-    if len(sys.argv) > 1:
-        path = sys.argv[1]
-    else:
-        path = ""
-
-    M = Mission(latitude=[20])
-    M.cost = M[M.solar.Wtotal]
+    M = Mission()
+    M.cost = M[M.aircraft.W]
     sol = M.solve("mosek")
-
-    vns = {M.solar.Wpay: "$W_{\\mathrm{pay}}$",
-           M.solar.battery.etacharge: "$\\eta_{\\mathrm{charge}}$",
-           M.solar.battery.etadischarge: "$\\eta_{\\mathrm{discharge}}$",
-           M.solar.battery.hbatt: "$h_{\\mathrm{batt}}$",
-           M.solar.solarcells.etasolar: "$\\eta_{\\mathrm{solar}}$",
-           "Nmax": "$N_{\\mathrm{max}}$",
-           "e": "$e$", "etaprop": "$\\eta_{\\mathrm{prop}}$"}
 
     sd = get_highestsens(M, sol, N=15)
     f, a = plot_chart(sd)
-    f.savefig(path + "sensbar.pdf", bbox_inches="tight")
+    f.savefig("sensbar.pdf", bbox_inches="tight")
