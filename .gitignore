@@ -102,3 +102,4 @@ ENV/
 
 *.pdf
 *.swp
+.DS_Store
