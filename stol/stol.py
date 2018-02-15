@@ -12,7 +12,7 @@ class FlightState(Model):
 
     Variables
     ---------
-    rho         1.225       [kg/m^3]        air density
+    rho         1.223       [kg/m^3]        air density
     mu          1.789e-5    [kg/m/s]        air viscosity
     V                       [knots]         speed
     """
