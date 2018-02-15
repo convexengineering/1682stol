@@ -136,7 +136,7 @@ class GLanding(Model):
     gload       0.5         [-]         gloading constant
     Vstall                  [knots]     stall velocity
     Sgr                     [ft]        landing ground roll
-    msafety     1.4         [-]         Landing safety margin
+    msafety     1.2         [-]         Landing safety margin
     CLland      3.5         [-]         landing CL
     """
     def setup(self, aircraft):
