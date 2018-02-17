@@ -29,7 +29,9 @@ class AircraftPerf(Model):
     Cf              [-]         coefficient of friction
     CL              [-]         coefficient of lift
     mfac    1.1     [-]         profile drag margin factor
-
+    T               [N]         thrust
+    Pshaft          [W]         shaft power
+    etaprop 0.8     [-]         prop efficiency
     """
     def setup(self, aircraft):
         exec parse_variables(AircraftPerf.__doc__)
@@ -90,6 +92,92 @@ class Aircraft(Model):
             Wmotor >= Pshaftmax/sp_motor,
             ]
 
+class TakeOff(Model):
+    """
+    take off model
+    http://www.dept.aoe.vt.edu/~lutze/AOE3104/takeoff&landing.pdf
+
+    Variables
+    ---------
+    A                       [m/s**2]    log fit equation helper 1
+    B                       [1/m]       log fit equation helper 2
+    g           9.81        [m/s**2]    gravitational constant
+    mu          0.025       [-]         coefficient of friction
+    T                       [lbf]       take off thrust
+    cda         0.024       [-]         parasite drag coefficient
+    CDg                     [-]         drag ground coefficient
+    cdp         0.025       [-]         profile drag at Vstallx1.2
+    Kg          0.04        [-]         ground-effect induced drag parameter
+    CLto        3.5         [-]         max lift coefficient
+    Vstall                  [knots]     stall velocity
+    zsto                    [-]         take off distance helper variable
+    Sto                     [ft]        take off distance
+    """
+    def setup(self, aircraft):
+        exec parse_variables(TakeOff.__doc__)
+
+        fs = FlightState()
+
+        path = os.path.dirname(os.path.abspath(__file__))
+        df = pd.read_csv(path + os.sep + "logfit.csv")
+        fd = df.to_dict(orient="records")[0]
+
+        S = self.S = aircraft.S
+        W = self.W = aircraft.W
+        Pshaftmax = aircraft.Pshaftmax
+        AR = aircraft.AR
+        rho = fs.rho
+        V = fs.V
+        cda = aircraft.cda
+        e = aircraft.e
+        mstall = aircraft.mstall
+
+        constraints = [
+            T/W >= A/g + mu,
+            B >= g/W*0.5*rho*S*CDg,
+            T <= Pshaftmax*0.8/V,
+            CDg >= cda + cdp + CLto**2/pi/AR/e,
+            Vstall == (2*W/rho/S/CLto)**0.5,
+            V == mstall*Vstall,
+            FitCS(fd, zsto, [A/g, B*V**2/g]),
+            Sto >= 1.0/2.0/B*zsto]
+
+        return constraints, fs
+
+class Climb(Model):
+
+    """ Climb model
+
+    Variables
+    ---------
+    Sclimb                  [ft]        distance covered in climb
+    h_gain     50           [ft]        height gained in climb
+    t                       [s]         time of climb
+    h_dot                   [m/s]       climb rate
+    E                       [kWh]       climb energy usage
+    """
+
+    def setup(self,aircraft):
+        exec parse_variables(Climb.__doc__)
+        perf = aircraft.flight_model(aircraft)
+
+        CL = self.CL = perf.CL
+        S = self.S = aircraft.S
+        CD = self.CD = perf.CD
+        W = self.W = aircraft.W
+        V = perf.fs.V
+        rho = perf.fs.rho
+
+        constraints = [
+            W <= 0.5*CL*rho*S*V**2,
+            perf.T >= 0.5*CD*rho*S*V**2 + W*h_dot/V,
+            h_gain <= h_dot*t,
+            Sclimb == V*t, #sketchy constraint, is wrong with cos(climb angle)
+            perf.Pshaft >= perf.T*V/perf.etaprop,
+            E >= perf.Pshaft*t
+        ]
+        return constraints, perf
+
 class Cruise(Model):
     """ Aicraft Range model
 
@@ -97,11 +185,9 @@ class Cruise(Model):
     ---------
     R               100    [nmi]     aircraft range
     g               9.81   [m/s**2]  gravitational constant
-    T                      [lbf]     thrust
     treserve        30.0   [min]     Reserve flight time
     Vmin            120    [kts]     min speed
-    Pshaft                 [W]       shaft power
-    etaprop         0.8    [-]       propellor efficiency
+    t                      [min]     flight time
     """
     def setup(self, aircraft):
         exec parse_variables(Cruise.__doc__)
@@ -117,13 +203,14 @@ class Cruise(Model):
         etae = aircraft.etae
         V = perf.fs.V
         rho = perf.fs.rho
-
+        self.Pshaft = perf.Pshaft
         constraints = [
             W == 0.5*CL*rho*S*V**2,
-            T >= 0.5*CD*rho*S*V**2,
-            Pshaft >= T*V/etaprop,
+            perf.T >= 0.5*CD*rho*S*V**2,
+            perf.Pshaft >= perf.T*V/perf.etaprop,
             V >= Vmin,
-            R + treserve*V <= hbatt*Wbatt/g*etae*V/Pshaft]
+            R + treserve*V <= hbatt*Wbatt/g*etae*V/perf.Pshaft,
+            t >= R/V]
 
         return constraints, perf
 
@@ -163,8 +250,10 @@ class Mission(Model):
 
     Variables
     ---------
-    Srunway     400     [ft]        runway length
+    Srunway     300     [ft]        runway length
+    Sobstacle   400     [ft]        obstacle length
     mrunway     1.4     [-]         runway margin
+    g           9.81    [m/s**2]    gravitational constant
     """
     def setup(self):
         exec parse_variables(Mission.__doc__)
@@ -172,77 +261,30 @@ class Mission(Model):
         self.aircraft = Aircraft()
 
         self.takeoff = TakeOff(self.aircraft)
+        self.obstacle_climb = Climb(self.aircraft)
         self.cruise = Cruise(self.aircraft)
         self.landing = GLanding(self.aircraft)
-        self.mission = [self.takeoff, self.cruise, self.landing]
+        self.mission = [self.takeoff, self.obstacle_climb, self.cruise, self.landing]
 
         Pshaftmax = self.aircraft.Pshaftmax
         Pshaft = self.cruise.Pshaft
         Sto = self.takeoff.Sto
         Slnd = self.landing.Sgr
+        Sclimb = self.obstacle_climb["Sclimb"]
 
         constraints = [Pshaftmax >= Pshaft,
                        Srunway >= mrunway*Sto,
-                       Srunway >= mrunway*Slnd]
+                       Srunway >= mrunway*Slnd,
+                       Sobstacle >= Sto + Sclimb,
+                       self.aircraft.Wbatt*self.aircraft.hbatt/g >= self.obstacle_climb["E"] + self.cruise["t"]*self.cruise.Pshaft,
+                    ]
 
         return constraints, self.aircraft, self.mission
 
-class TakeOff(Model):
-    """
-    take off model
-    http://www.dept.aoe.vt.edu/~lutze/AOE3104/takeoff&landing.pdf
-
-    Variables
-    ---------
-    A                       [m/s**2]    log fit equation helper 1
-    B                       [1/m]       log fit equation helper 2
-    g           9.81        [m/s**2]    gravitational constant
-    mu          0.025       [-]         coefficient of friction
-    T                       [lbf]       take off thrust
-    cda         0.024       [-]         parasite drag coefficient
-    CDg                     [-]         drag ground coefficient
-    cdp         0.025       [-]         profile drag at Vstallx1.2
-    Kg          0.04        [-]         ground-effect induced drag parameter
-    CLto        3.5         [-]         max lift coefficient
-    Vstall                  [knots]     stall velocity
-    zsto                    [-]         take off distance helper variable
-    Sto                     [ft]        take off distance
-    etaprop     0.8         [-]         propellor efficiency
-
-    """
-    def setup(self, aircraft):
-        exec parse_variables(TakeOff.__doc__)
-
-        fs = FlightState()
-
-        path = os.path.dirname(os.path.abspath(__file__))
-        df = pd.read_csv(path + os.sep + "logfit.csv")
-        fd = df.to_dict(orient="records")[0]
-
-        S = self.S = aircraft.S
-        W = self.W = aircraft.W
-        Pshaftmax = aircraft.Pshaftmax
-        AR = aircraft.AR
-        rho = fs.rho
-        V = fs.V
-        cda = aircraft.cda
-        e = aircraft.e
-        mstall = aircraft.mstall
-
-        constraints = [
-            T/W >= A/g + mu,
-            B >= g/W*0.5*rho*S*CDg,
-            T <= Pshaftmax*etaprop/V,
-            CDg >= cda + cdp + CLto**2/pi/AR/e,
-            Vstall == (2*W/rho/S/CLto)**0.5,
-            V == mstall*Vstall,
-            FitCS(fd, zsto, [A/g, B*V**2/g]),
-            Sto >= 1.0/2.0/B*zsto]
-
-        return constraints, fs
 
 if __name__ == "__main__":
     M = Mission()
     M.substitutions.update({M.cruise.R: 100, M.Srunway: 400})
     M.cost = M[M.aircraft.W]
     sol = M.solve("mosek")
+    print sol.summary()
