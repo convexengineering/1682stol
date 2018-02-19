@@ -36,10 +36,10 @@ class AircraftP(Model):
 		self.wing_aero = aircraft.wing.dynamic(state)
 		self.perf_models = [self.powertrain_perf,self.wing_aero]
 
-		constraints = [L == aircraft.mass*state["g"],
-					   self.wing_aero["L"],
+		constraints = [L >= aircraft.mass*state["g"],
+					   L <= self.wing_aero["L"],
 					   P >= self.powertrain_perf["P"],
-					   D == self.wing_aero["D"],
+					   D >= self.wing_aero["D"],
 					   self.powertrain_perf["T"] >= self.wing_aero["D"]
 					   ]
 		return constraints,self.perf_models
@@ -70,7 +70,7 @@ class PowertrainP(Model):
 	"""
 	def setup(self,powertrain,state):
 		exec parse_variables(PowertrainP.__doc__)
-		constraints = [T*state["V"] == P*eta,
+		constraints = [T <= P*eta/state["V"],
 					   P <= powertrain["Pmax"]]
 		return constraints
 
@@ -93,7 +93,7 @@ class Wing(Model):
 	"""
 	Variables
 	---------
-	S 			[m^2]			reference area
+	S 	2		[m^2]			reference area
 	b			[m]				span
 	A 	8		[-]				aspect ratio
 	rho	73.28	[kg/m^2]		wing areal density
@@ -125,10 +125,10 @@ class WingP(Model):
 
 		constraints = [CL <= CLmax,
 					   CD >= mfac*1.328/Re**0.5 + CL**2/pi/wing["A"]/wing["e"],
-					   L >= 0.5*CL*wing["S"]*state["rho"]*state["V"]**2,
+					   L <= 0.5*CL*wing["S"]*state["rho"]*state["V"]**2,
 					   D >= 0.5*CD*wing["S"]*state["rho"]*state["V"]**2,
 					   Re == state["V"]*state["rho"]*(wing["S"]/wing["A"])**0.5/state["mu"]]
-
+		return constraints
 class FlightState(Model):
     """ Flight State
 
@@ -244,7 +244,7 @@ class Cruise(Model):
 		self.perf = aircraft.dynamic(self.flightstate)
 		constraints = [R <= aircraft.battery["Estar"]*self.perf.L/self.perf.D * (aircraft.battery["m"]/aircraft.mass) * self.perf.powertrain_perf.eta * 1/self.flightstate["g"],
 					   E >= self.perf.topvar("P")*t,
-					   t == R/self.flightstate["V"],
+					   t >= R/self.flightstate["V"],
 					   self.flightstate["V"] >= Vmin]
 		return constraints, self.perf
 		
@@ -278,7 +278,7 @@ class GLanding(Model):
             ]
 
         return constraints, fs
-        
+
 class Mission(Model):
 	""" Mission
 
@@ -293,9 +293,9 @@ class Mission(Model):
 		exec parse_variables(Mission.__doc__)
 		self.aircraft = Aircraft()
 		self.fs = [Cruise(self.aircraft)]		
-		# constraints = [R <= self.fs[0]["R"]]
-		constraints = [self.aircraft.battery.E_capacity >= sum(fs["E"] for fs in self.fs)]
-		return constraints,self.aircraft
+		constraints = [R <= self.fs[0]["R"]]
+		constraints += [self.aircraft.battery.E_capacity >= sum(fs["E"] for fs in self.fs)]
+		return constraints,self.aircraft,self.fs
 
 if __name__ == "__main__":
     M = Mission()
