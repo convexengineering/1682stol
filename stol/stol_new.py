@@ -65,6 +65,7 @@ class Fuselage(Model):
 	"""
 	def setup(self):
 		exec parse_variables(Fuselage.__doc__)
+
 # 	def dynamic(self,state):
 # 		return FuselageP(self,state)
 
@@ -198,7 +199,7 @@ class TakeOff(Model):
     Sto                     [ft]        take off distance
     W 						[N]			aircraft weight
     """
-    def setup(self, aircraft,poweredwheels=False):
+    def setup(self, aircraft):
         exec parse_variables(TakeOff.__doc__)
 
         fs = FlightState()
