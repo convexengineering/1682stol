@@ -71,7 +71,7 @@ class Aircraft(Model):
     Wmotor                      [lbf]           motor weight
     fstruct         0.3         [-]             structural weight fraction
     Wstruct                     [lbf]           structural weight
-    S                           [ft^2]          wing area
+    S                           [ft^2]   `       wing area
     AR              8           [-]             aspect ratio
     WS2             15./24      [lbf/ft^2]      wing weight per area
     cda             0.015       [-]             parasite drag coefficient
@@ -234,7 +234,7 @@ class GLanding(Model):
         S = self.S = aircraft.S
         W = self.W = aircraft.W
         rho = fs.rho
-        V = fs.V
+        V = fs.Vprofbit
         mstall = aircraft.mstall
 
         constraints = [
