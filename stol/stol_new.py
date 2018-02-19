@@ -11,15 +11,20 @@ class Aircraft(Model):
 	Variables
 	---------
 	m 			[kg] 	aircraft mass
+	Npax	4	[-]		number of passengers
+	Wpax	90	[kg] 	mass of a passenger
+	fstruct	0.3	[-]		structural mass fraction
 	"""
 	def setup(self):
 		exec parse_variables(Aircraft.__doc__)
 		self.powertrain = Powertrain()
 		self.battery = Battery()
 		self.wing = Wing()
-		self.components = [self.wing,self.powertrain,self.battery]
+		self.fuselage = Fuselage()
+		self.components = [self.wing,self.powertrain,self.battery,self.fuselage]
 		self.mass = m
-		constraints = [m>=sum(c["m"] for c in self.components)]
+		constraints = [self.fuselage.m >= fstruct*self.mass,
+						self.mass>=sum(c["m"] for c in self.components) + Wpax*Npax]
 		return constraints, self.components
 	def dynamic(self,state):
 		return AircraftP(self,state)
@@ -32,6 +37,7 @@ class AircraftP(Model):
 	---------
 	L 			[N]		total lift force
 	D 			[N]		total drag force
+	LD 			[-] 	lift to drag ratio
 	P 			[kW] 	total power draw
 	"""
 	def setup(self,aircraft,state):
@@ -43,10 +49,34 @@ class AircraftP(Model):
 		constraints = [L >= aircraft.mass*state["g"],
 					   L <= self.wing_aero["L"],
 					   P >= self.powertrain_perf["P"],
-					   D >= self.wing_aero["D"],
+					   D >= self.wing_aero["D"] + 0.5*state.rho*aircraft.fuselage.cda*aircraft.wing.S*state.V**2,
+					   LD == L/D,
 					   self.powertrain_perf["T"] >= self.wing_aero["D"]
 					   ]
 		return constraints,self.perf_models
+
+class Fuselage(Model):
+	""" Fuselage
+
+	Variables
+	---------
+	m 				[kg]	mass of fuselage
+	cda		0.15	[-]		parasite drag coefficient
+	"""
+	def setup(self):
+		exec parse_variables(Fuselage.__doc__)
+# 	def dynamic(self,state):
+# 		return FuselageP(self,state)
+
+# class FuselageP(Model):
+# 	""" FuselageP
+
+# 	Variables
+# 	---------
+# 	D 		[N] 	total drag force from fuselage
+# 	"""
+# 	def setup(self,state):
+# 		exec parse_variables(FuselageP.__doc__)
 
 class Powertrain(Model):
 	""" Powertrain
@@ -68,9 +98,9 @@ class PowertrainP(Model):
 
 	Variables
 	---------
-	P 			[kW] 	  power
-	eta   0.9	[-]		  whole-chain powertrain efficiency
-	T 			[N]		  total thrust
+	P 				[kW] 	  power
+	eta   0.9*0.8	[-]		  whole-chain powertrain efficiency
+	T 				[N]		  total thrust
 	"""
 	def setup(self,powertrain,state):
 		exec parse_variables(PowertrainP.__doc__)
@@ -99,14 +129,15 @@ class Wing(Model):
 	---------
 	S 			[m^2]			reference area
 	b			[m]				span
-	A 	8		[-]				aspect ratio
-	rho	73.28	[kg/m^2]		wing areal density
+	A 			[-]				aspect ratio
+	rho	3.05	[kg/m^2]		wing areal density
 	m 			[kg]			mass of wing
 	e 	0.8		[-]				span efficiency
 	"""
 	def setup(self):
 		exec parse_variables(Wing.__doc__)
-		constraints = [m >= rho*S]
+		constraints = [m >= rho*S,
+					   A == b**2/S]
 		return constraints
 	def dynamic(self,state):
 		return WingP(self,state)
@@ -167,7 +198,7 @@ class TakeOff(Model):
     Sto                     [ft]        take off distance
     W 						[N]			aircraft weight
     """
-    def setup(self, aircraft):
+    def setup(self, aircraft,poweredwheels=False):
         exec parse_variables(TakeOff.__doc__)
 
         fs = FlightState()
@@ -187,7 +218,7 @@ class TakeOff(Model):
         	W == aircraft.mass*fs.g,
             T/W >= A/g + mu,
             B >= g/W*0.5*rho*S*CDg,
-            T <= Pmax*0.8/V,
+            T <= Pmax*0.8*0.9/V,
             CDg >= cda + cdp + CLto**2/pi/AR/e,
             Vstall == (2*W/rho/S/CLto)**0.5,
             V == mstall*Vstall,
@@ -306,7 +337,7 @@ class Mission(Model):
 
 if __name__ == "__main__":
     M = Mission()
-    M.cost = 1/M.topvar("R")
+    M.cost = M.aircraft.mass
     M.debug()
     sol = M.solve("mosek")
     print sol.summary()
