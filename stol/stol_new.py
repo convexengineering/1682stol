@@ -61,7 +61,7 @@ class Fuselage(Model):
 	Variables
 	---------
 	m 				[kg]	mass of fuselage
-	cda		0.15	[-]		parasite drag coefficient
+	cda		0.015	[-]		parasite drag coefficient
 	"""
 	def setup(self):
 		exec parse_variables(Fuselage.__doc__)
@@ -130,7 +130,7 @@ class Wing(Model):
 	---------
 	S 			[m^2]			reference area
 	b			[m]				span
-	A 			[-]				aspect ratio
+	A 	8		[-]				aspect ratio
 	rho	3.05	[kg/m^2]		wing areal density
 	m 			[kg]			mass of wing
 	e 	0.8		[-]				span efficiency
@@ -323,7 +323,7 @@ class Mission(Model):
     Srunway     300     [ft]        runway length
     Sobstacle   400     [ft]        obstacle length
     mrunway     1.4     [-]         runway margin
-    R 			120		[nmi]		mission range
+    R 			100		[nmi]		mission range
    	"""
 	def setup(self):
 		exec parse_variables(Mission.__doc__)
