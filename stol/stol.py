@@ -2,7 +2,8 @@
 import os
 import pandas as pd
 from numpy import pi
-from gpkit import Model, parse_variables
+from gpkit import Model, parse_variable
+s
 from gpkit.constraints.tight import Tight as TCS
 from gpfit.fit_constraintset import FitCS
 
@@ -234,7 +235,7 @@ class GLanding(Model):
         S = self.S = aircraft.S
         W = self.W = aircraft.W
         rho = fs.rho
-        V = fs.Vprofbit
+        V = fs.V
         mstall = aircraft.mstall
 
         constraints = [

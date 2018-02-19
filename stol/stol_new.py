@@ -1,4 +1,8 @@
-from gpkit import Model, Variable,parse_variables
+import os
+import pandas as pd
+from gpkit import Model, parse_variables
+from gpkit.constraints.tight import Tight as TCS
+from gpfit.fit_constraintset import FitCS
 import math
 pi = math.pi
 class Aircraft(Model):
@@ -35,7 +39,7 @@ class AircraftP(Model):
 		self.powertrain_perf = aircraft.powertrain.dynamic(state)
 		self.wing_aero = aircraft.wing.dynamic(state)
 		self.perf_models = [self.powertrain_perf,self.wing_aero]
-
+		self.fs = state
 		constraints = [L >= aircraft.mass*state["g"],
 					   L <= self.wing_aero["L"],
 					   P >= self.powertrain_perf["P"],
@@ -93,7 +97,7 @@ class Wing(Model):
 	"""
 	Variables
 	---------
-	S 	2		[m^2]			reference area
+	S 			[m^2]			reference area
 	b			[m]				span
 	A 	8		[-]				aspect ratio
 	rho	73.28	[kg/m^2]		wing areal density
@@ -153,7 +157,7 @@ class TakeOff(Model):
     g           9.81        [m/s**2]    gravitational constant
     mu          0.025       [-]         coefficient of friction
     T                       [lbf]       take off thrust
-    cda         0.024       [-]         parasite drag coefficient
+    cda         0.015       [-]         parasite drag coefficient
     CDg                     [-]         drag ground coefficient
     cdp         0.025       [-]         profile drag at Vstallx1.2
     Kg          0.04        [-]         ground-effect induced drag parameter
@@ -161,6 +165,7 @@ class TakeOff(Model):
     Vstall                  [knots]     stall velocity
     zsto                    [-]         take off distance helper variable
     Sto                     [ft]        take off distance
+    W 						[N]			aircraft weight
     """
     def setup(self, aircraft):
         exec parse_variables(TakeOff.__doc__)
@@ -171,20 +176,18 @@ class TakeOff(Model):
         df = pd.read_csv(path + os.sep + "logfit.csv")
         fd = df.to_dict(orient="records")[0]
 
-        S = self.S = aircraft.S
-        W = self.W = aircraft.W
-        Pshaftmax = aircraft.Pshaftmax
-        AR = aircraft.AR
+        S = aircraft.wing["S"]
+        Pmax = aircraft.powertrain.Pmax
+        AR = aircraft.wing.A
         rho = fs.rho
         V = fs.V
-        cda = aircraft.cda
-        e = aircraft.e
-        mstall = aircraft.mstall
-
+        e = aircraft.wing.e
+        mstall = 1.3
         constraints = [
+        	W == aircraft.mass*fs.g,
             T/W >= A/g + mu,
             B >= g/W*0.5*rho*S*CDg,
-            T <= Pshaftmax*0.8/V,
+            T <= Pmax*0.8/V,
             CDg >= cda + cdp + CLto**2/pi/AR/e,
             Vstall == (2*W/rho/S/CLto)**0.5,
             V == mstall*Vstall,
@@ -204,26 +207,28 @@ class Climb(Model):
     t                       [s]         time of climb
     h_dot                   [m/s]       climb rate
     E                       [kWh]       climb energy usage
+    W 						[N]			aircraft weight
     """
 
     def setup(self,aircraft):
         exec parse_variables(Climb.__doc__)
-        perf = aircraft.flight_model(aircraft)
+        self.flightstate = FlightState()
+        perf = aircraft.dynamic(self.flightstate)
 
-        CL = self.CL = perf.CL
-        S = self.S = aircraft.S
-        CD = self.CD = perf.CD
-        W = self.W = aircraft.W
+        CL = self.CL = perf.wing_aero.CL
+        S = self.S = aircraft.wing.S
+        CD = self.CD = perf.wing_aero.CD
         V = perf.fs.V
         rho = perf.fs.rho
 
         constraints = [
+        	W ==  aircraft.mass*perf.fs.g,
             W <= 0.5*CL*rho*S*V**2,
-            perf.T >= 0.5*CD*rho*S*V**2 + W*h_dot/V,
+            perf.powertrain_perf.T >= perf.D + W*h_dot/V,
             h_gain <= h_dot*t,
             Sclimb == V*t, #sketchy constraint, is wrong with cos(climb angle)
-            perf.Pshaft >= perf.T*V/perf.etaprop,
-            E >= perf.Pshaft*t
+            perf.P >= perf.powertrain_perf.T*V/0.8,
+            E >= perf.P*t
         ]
         return constraints, perf
 
@@ -265,15 +270,14 @@ class GLanding(Model):
 
         fs = FlightState()
 
-        S = self.S = aircraft.S
-        W = self.W = aircraft.W
+        S = self.S = aircraft.wing.S
         rho = fs.rho
-        V = fs.Vprofbit
-        mstall = aircraft.mstall
+        V = fs.V
+        mstall = 1.3
 
         constraints = [
             Sgr >= 0.5*V**2/gload/g,
-            Vstall == (2.*W/rho/S/CLland)**0.5,
+            Vstall == (2.*aircraft.mass*fs.g/rho/S/CLland)**0.5,
             V >= mstall*Vstall,
             ]
 
@@ -292,9 +296,12 @@ class Mission(Model):
 	def setup(self):
 		exec parse_variables(Mission.__doc__)
 		self.aircraft = Aircraft()
-		self.fs = [Cruise(self.aircraft)]		
-		constraints = [R <= self.fs[0]["R"]]
-		constraints += [self.aircraft.battery.E_capacity >= sum(fs["E"] for fs in self.fs)]
+		self.fs = [TakeOff(self.aircraft),Climb(self.aircraft),Cruise(self.aircraft),GLanding(self.aircraft)]
+		constraints = [Srunway >= self.fs[0].Sto*mrunway,
+					   Sobstacle >= self.fs[0].Sto + self.fs[1].Sclimb,
+					   self.fs[3].Sgr*mrunway <= Srunway*mrunway,
+					   R <= self.fs[2]["R"],
+					   self.aircraft.battery.E_capacity >= self.fs[1].E + self.fs[2].E]
 		return constraints,self.aircraft,self.fs
 
 if __name__ == "__main__":
