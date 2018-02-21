@@ -3,6 +3,7 @@ import pandas as pd
 from gpkit import Model, parse_variables
 from gpkit.constraints.tight import Tight as TCS
 from gpfit.fit_constraintset import FitCS
+import gpkit
 import math
 pi = math.pi
 class Aircraft(Model):
@@ -15,13 +16,17 @@ class Aircraft(Model):
 	Wpax	90	[kg] 	mass of a passenger
 	fstruct	0.3	[-]		structural mass fraction
 	"""
-	def setup(self):
+	def setup(self,poweredwheels=False,n_wheels=3):
 		exec parse_variables(Aircraft.__doc__)
 		self.powertrain = Powertrain()
 		self.battery = Battery()
 		self.wing = Wing()
 		self.fuselage = Fuselage()
 		self.components = [self.wing,self.powertrain,self.battery,self.fuselage]
+		if poweredwheels:
+			self.pw = PoweredWheel()
+			self.wheels = n_wheels*[self.pw]
+			self.components += self.wheels
 		self.mass = m
 		constraints = [self.fuselage.m >= fstruct*self.mass,
 						self.mass>=sum(c["m"] for c in self.components) + Wpax*Npax]
@@ -44,6 +49,7 @@ class AircraftP(Model):
 		exec parse_variables(AircraftP.__doc__)
 		self.powertrain_perf = aircraft.powertrain.dynamic(state)
 		self.wing_aero = aircraft.wing.dynamic(state)
+		self.wheels_perf = [w["dynamic"]]
 		self.perf_models = [self.powertrain_perf,self.wing_aero]
 		self.fs = state
 		constraints = [L >= aircraft.mass*state["g"],
@@ -109,19 +115,40 @@ class PowertrainP(Model):
 					   P <= powertrain["Pmax"]]
 		return constraints
 
-class PoweredWheels(Model):
+class PoweredWheel(Model):
 	"""Powered Wheels
 
 	Variables
 	---------
 	RPMmax			[rpm]		maximum RPM of motor
-	gear_ratio	5.5	[-]			gear ratio of powered wheels
+	gear_ratio		[-]			gear ratio of powered wheels
 	tau_max			[N*m]		torque of the
 	m 				[kg] 		mass of powered wheels motors
+	m_ref		1	[1/kg] 		reference mass for equations
+	r 			0.2	[m]			tire radius
 	"""
+	def setup(self):
+		exec parse_variables(PoweredWheel.__doc__)
+		with gpkit.SignomialsEnabled():
+			constraints = [RPMmax <= 2.74e4*m**(-1.043) + 3393*Variable("rpm_ref",1,"rpm"),
+						   (27.3/m_ref)*m >= tau_max + 80.2/m_ref]
+		return constraints
 
-	RPMmax <= 4..9*m**2 -313.3*m + 8721.2
-	t_max <= 27.3*m - 80.2
+class PoweredWheelP(Model):
+	""" PoweredWheelsP
+	Variables
+	---------
+	P 				[kW]		power draw of powered wheel
+	RPM 			[rpm]		rpm of powered wheel
+	tau 			[tau]		torque of powered wheel
+	T 				[N]			thrust from powered wheel
+	"""
+	def setup(self,pw,state):
+		exec parse_variables(PoweredWheelP)
+		constraints =[state.V <= RPMmax*2*pi*pw.r/pw.gear_ratio,
+					  state.V == RPM*2*pi*pw.r/pw.gear_ratio,
+					  P == tau*RPM]
+		return constraints
 
 
 class Battery(Model):
@@ -215,35 +242,41 @@ class TakeOff(Model):
     Sto                     [ft]        take off distance
     W 						[N]			aircraft weight
     """
-    def setup(self, aircraft):
-        exec parse_variables(TakeOff.__doc__)
+    def setup(self, aircraft,poweredwheels,n_wheels):
+		exec parse_variables(TakeOff.__doc__)
 
-        fs = FlightState()
+		fs = FlightState()
 
-        path = os.path.dirname(os.path.abspath(__file__))
-        df = pd.read_csv(path + os.sep + "logfit.csv")
-        fd = df.to_dict(orient="records")[0] #fit data
+		path = os.path.dirname(os.path.abspath(__file__))
+		df = pd.read_csv(path + os.sep + "logfit.csv")
+		fd = df.to_dict(orient="records")[0] #fit data
 
-        S = aircraft.wing["S"]
-        Pmax = aircraft.powertrain.Pmax
-        AR = aircraft.wing.A
-        rho = fs.rho
-        V = fs.V
-        e = aircraft.wing.e
-        mstall = 1.3
-        constraints = [
-        	W == aircraft.mass*fs.g,
-            T/W >= A/g + mu,
-            B >= g/W*0.5*rho*S*CDg,
-            T <= Pmax*0.8*0.9/V,
-            CDg >= cda + cdp + CLto**2/pi/AR/e,
-            Vstall == (2*W/rho/S/CLto)**0.5,
-            V == mstall*Vstall,
-            FitCS(fd, zsto, [A/g, B*V**2/g]), #fit constraint set, pass in fit data, zsto is the 
-            # y variable, then arr of independent (input) vars, watch the units
-            Sto >= 1.0/2.0/B*zsto]
+		S = aircraft.wing["S"]
+		Pmax = aircraft.powertrain.Pmax
+		AR = aircraft.wing.A
+		rho = fs.rho
+		V = fs.V
+		e = aircraft.wing.e
+		mstall = 1.3
+		constraints = [
+		    	W == aircraft.mass*fs.g,
+		        T/W >= A/g + mu,
+		        B >= g/W*0.5*rho*S*CDg,
+		        T <= Pmax*0.8*0.9/V,
+		        CDg >= cda + cdp + CLto**2/pi/AR/e,
+		        Vstall == (2*W/rho/S/CLto)**0.5,
+		        V == mstall*Vstall,
+		        FitCS(fd, zsto, [A/g, B*V**2/g]), #fit constraint set, pass in fit data, zsto is the 
+		        # y variable, then arr of independent (input) vars, watch the units
+		        Sto >= 1.0/2.0/B*zsto]
+		if poweredwheels:
+			wheel_models = [wheel.dynamic(fs) for wheel in aircraft.wheel_models]
+			with gpkit.SignomialsEnabled():
+				constraints += [T <= Pmax*0.8*0.9/V + sum(model.T for model in wheel_models)]
+		else:
+			constraints += [T <= Pmax*0.8*0.9/V]
 
-        return constraints, fs
+		return constraints, fs
 
 class Climb(Model):
 
@@ -342,12 +375,12 @@ class Mission(Model):
     mrunway     1.4     	[-]         runway margin
     R 			120			[nmi]		mission range
    	"""
-	def setup(self,poweredwheels=False):
+	def setup(self,poweredwheels=False,n_wheels=3):
 		exec parse_variables(Mission.__doc__)
-		self.aircraft = Aircraft()
+		self.aircraft = Aircraft(poweredwheels,n_wheels)
 		takeoff = TakeOff(self.aircraft)
 		obstacle_climb = Climb(self.aircraft)
-		self.fs = [TakeOff(self.aircraft),Climb(self.aircraft),Cruise(self.aircraft),GLanding(self.aircraft)]
+		self.fs = [TakeOff(self.aircraft,poweredwheels,n_wheels),Climb(self.aircraft),Cruise(self.aircraft),GLanding(self.aircraft)]
 		constraints = [Srunway >= self.fs[0].Sto*mrunway,
 					   Sobstacle >= self.fs[0].Sto + self.fs[1].Sclimb,
 					   self.fs[3].Sgr*mrunway <= Srunway*mrunway,
@@ -356,7 +389,7 @@ class Mission(Model):
 		return constraints,self.aircraft,self.fs
 
 if __name__ == "__main__":
-    M = Mission()
+    M = Mission(poweredwheels=True,n_wheels=3)
     M.cost = M.aircraft.mass
     M.debug()
     sol = M.solve("mosek")
