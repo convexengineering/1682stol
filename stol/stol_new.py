@@ -49,7 +49,6 @@ class AircraftP(Model):
 		exec parse_variables(AircraftP.__doc__)
 		self.powertrain_perf = aircraft.powertrain.dynamic(state)
 		self.wing_aero = aircraft.wing.dynamic(state)
-		self.wheels_perf = [w["dynamic"]]
 		self.perf_models = [self.powertrain_perf,self.wing_aero]
 		self.fs = state
 		constraints = [L >= aircraft.mass*state["g"],
@@ -120,37 +119,37 @@ class PoweredWheel(Model):
 
 	Variables
 	---------
-	RPMmax			[rpm]		maximum RPM of motor
-	gear_ratio		[-]			gear ratio of powered wheels
-	tau_max			[N*m]		torque of the
-	m 				[kg] 		mass of powered wheels motors
-	m_ref		1	[1/kg] 		reference mass for equations
-	r 			0.2	[m]			tire radius
+	RPMmax			10e3	[rpm]		maximum RPM of motor
+	gear_ratio				[-]			gear ratio of powered wheel
+	gear_ratio_max	10		[-]			max gear ratio of powered wheel
+	tau_max					[N*m]		torque of the
+	m 						[kg] 		mass of powered wheel motor
+	m_ref			1		[kg] 		reference mass for equations
+	r 				0.2		[m]			tire radius
 	"""
 	def setup(self):
 		exec parse_variables(PoweredWheel.__doc__)
-		with gpkit.SignomialsEnabled():
-			constraints = [RPMmax <= 2.74e4*m**(-1.043) + 3393*Variable("rpm_ref",1,"rpm"),
-						   (27.3/m_ref)*m >= tau_max + 80.2/m_ref]
+		constraints = [gear_ratio <= gear_ratio_max,
+					   27.3*m >= Variable("tau_m",1,"kg/(N*m)")*tau_max + 80.2*m_ref]
 		return constraints
+	def dynamic(self,state):
+		return PoweredWheelP(self,state)
 
 class PoweredWheelP(Model):
 	""" PoweredWheelsP
 	Variables
 	---------
-	P 				[kW]		power draw of powered wheel
 	RPM 			[rpm]		rpm of powered wheel
-	tau 			[tau]		torque of powered wheel
+	tau 			[N*m]		torque of powered wheel
 	T 				[N]			thrust from powered wheel
 	"""
 	def setup(self,pw,state):
-		exec parse_variables(PoweredWheelP)
-		constraints =[state.V <= RPMmax*2*pi*pw.r/pw.gear_ratio,
+		exec parse_variables(PoweredWheelP.__doc__)
+		constraints =[state.V <= pw.RPMmax*2*pi*pw.r/pw.gear_ratio,
 					  state.V == RPM*2*pi*pw.r/pw.gear_ratio,
-					  P == tau*RPM]
+					  T == tau*pw.gear_ratio/pw.r,
+					  tau <= pw.tau_max]
 		return constraints
-
-
 class Battery(Model):
 	""" Battery
 	Variables
@@ -270,9 +269,10 @@ class TakeOff(Model):
 		        # y variable, then arr of independent (input) vars, watch the units
 		        Sto >= 1.0/2.0/B*zsto]
 		if poweredwheels:
-			wheel_models = [wheel.dynamic(fs) for wheel in aircraft.wheel_models]
+			wheel_models = [wheel.dynamic(fs) for wheel in aircraft.wheels]
 			with gpkit.SignomialsEnabled():
 				constraints += [T <= Pmax*0.8*0.9/V + sum(model.T for model in wheel_models)]
+				constraints += wheel_models
 		else:
 			constraints += [T <= Pmax*0.8*0.9/V]
 
@@ -370,7 +370,7 @@ class Mission(Model):
 
 	Variables
 	---------
-    Srunway     300	 	   	[ft]        runway length
+    Srunway     200	 	   	[ft]        runway length
     Sobstacle   400     	[ft]        obstacle length
     mrunway     1.4     	[-]         runway margin
     R 			120			[nmi]		mission range
@@ -378,9 +378,9 @@ class Mission(Model):
 	def setup(self,poweredwheels=False,n_wheels=3):
 		exec parse_variables(Mission.__doc__)
 		self.aircraft = Aircraft(poweredwheels,n_wheels)
-		takeoff = TakeOff(self.aircraft)
+		takeoff = TakeOff(self.aircraft,poweredwheels,n_wheels)
 		obstacle_climb = Climb(self.aircraft)
-		self.fs = [TakeOff(self.aircraft,poweredwheels,n_wheels),Climb(self.aircraft),Cruise(self.aircraft),GLanding(self.aircraft)]
+		self.fs = [takeoff,obstacle_climb,Cruise(self.aircraft),GLanding(self.aircraft)]
 		constraints = [Srunway >= self.fs[0].Sto*mrunway,
 					   Sobstacle >= self.fs[0].Sto + self.fs[1].Sclimb,
 					   self.fs[3].Sgr*mrunway <= Srunway*mrunway,
@@ -389,8 +389,12 @@ class Mission(Model):
 		return constraints,self.aircraft,self.fs
 
 if __name__ == "__main__":
-    M = Mission(poweredwheels=True,n_wheels=3)
+    poweredwheels = True
+    M = Mission(poweredwheels=poweredwheels,n_wheels=3)
     M.cost = M.aircraft.mass
     M.debug()
-    sol = M.solve("mosek")
+    if poweredwheels == True:
+	    sol = M.localsolve("mosek")
+    else:
+		sol = M.solve("mosek")
     print sol.summary()
