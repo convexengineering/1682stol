@@ -5,10 +5,10 @@ N = 100
 A = np.linspace(0.5, 10, 100)
 B = np.array([0.01, 0.05, 0.4])
 
-x, y = np.meshgrid(A, B)
-z = np.log(x/(x-y))
+x, y = np.meshgrid(A, B) #makes a matrix from A and B
+z = np.log(x/(x-y)) #makes an array of results
 
-u1 = np.array(list(A)*len(B))
+u1 = np.array(list(A)*len(B)) #u1 is runs of A over B
 u2 = np.hstack([[v]*len(A) for v in B])
 u = [u1, u2]
 w = np.hstack(z)

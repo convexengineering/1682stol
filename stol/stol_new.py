@@ -109,6 +109,21 @@ class PowertrainP(Model):
 					   P <= powertrain["Pmax"]]
 		return constraints
 
+class PoweredWheels(Model):
+	"""Powered Wheels
+
+	Variables
+	---------
+	RPMmax			[rpm]		maximum RPM of motor
+	gear_ratio	5.5	[-]			gear ratio of powered wheels
+	tau_max			[N*m]		torque of the
+	m 				[kg] 		mass of powered wheels motors
+	"""
+
+	RPMmax <= 4..9*m**2 -313.3*m + 8721.2
+	t_max <= 27.3*m - 80.2
+
+
 class Battery(Model):
 	""" Battery
 	Variables
@@ -177,6 +192,7 @@ class FlightState(Model):
     """
     def setup(self):
         exec parse_variables(FlightState.__doc__)
+
 class TakeOff(Model):
     """
     take off model
@@ -188,7 +204,7 @@ class TakeOff(Model):
     B                       [1/m]       log fit equation helper 2
     g           9.81        [m/s**2]    gravitational constant
     mu          0.025       [-]         coefficient of friction
-    T                       [lbf]       take off thrust
+    T                       [N]       take off thrust
     cda         0.015       [-]         parasite drag coefficient
     CDg                     [-]         drag ground coefficient
     cdp         0.025       [-]         profile drag at Vstallx1.2
@@ -206,7 +222,7 @@ class TakeOff(Model):
 
         path = os.path.dirname(os.path.abspath(__file__))
         df = pd.read_csv(path + os.sep + "logfit.csv")
-        fd = df.to_dict(orient="records")[0]
+        fd = df.to_dict(orient="records")[0] #fit data
 
         S = aircraft.wing["S"]
         Pmax = aircraft.powertrain.Pmax
@@ -223,7 +239,8 @@ class TakeOff(Model):
             CDg >= cda + cdp + CLto**2/pi/AR/e,
             Vstall == (2*W/rho/S/CLto)**0.5,
             V == mstall*Vstall,
-            FitCS(fd, zsto, [A/g, B*V**2/g]),
+            FitCS(fd, zsto, [A/g, B*V**2/g]), #fit constraint set, pass in fit data, zsto is the 
+            # y variable, then arr of independent (input) vars, watch the units
             Sto >= 1.0/2.0/B*zsto]
 
         return constraints, fs
@@ -235,7 +252,7 @@ class Climb(Model):
     Variables
     ---------
     Sclimb                  [ft]        distance covered in climb
-    h_gain     50           [ft]        height gained in climb
+    h_gain     	  50        [ft]        height gained in climb
     t                       [s]         time of climb
     h_dot                   [m/s]       climb rate
     E                       [kWh]       climb energy usage
@@ -320,14 +337,16 @@ class Mission(Model):
 
 	Variables
 	---------
-    Srunway     300     [ft]        runway length
-    Sobstacle   400     [ft]        obstacle length
-    mrunway     1.4     [-]         runway margin
-    R 			100		[nmi]		mission range
+    Srunway     300	 	   	[ft]        runway length
+    Sobstacle   400     	[ft]        obstacle length
+    mrunway     1.4     	[-]         runway margin
+    R 			120			[nmi]		mission range
    	"""
-	def setup(self):
+	def setup(self,poweredwheels=False):
 		exec parse_variables(Mission.__doc__)
 		self.aircraft = Aircraft()
+		takeoff = TakeOff(self.aircraft)
+		obstacle_climb = Climb(self.aircraft)
 		self.fs = [TakeOff(self.aircraft),Climb(self.aircraft),Cruise(self.aircraft),GLanding(self.aircraft)]
 		constraints = [Srunway >= self.fs[0].Sto*mrunway,
 					   Sobstacle >= self.fs[0].Sto + self.fs[1].Sclimb,
