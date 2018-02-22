@@ -5,6 +5,9 @@ from gpkit.constraints.tight import Tight as TCS
 from gpfit.fit_constraintset import FitCS
 import gpkit
 import math
+import numpy as np
+import matplotlib.pyplot as plt
+
 pi = math.pi
 class Aircraft(Model):
 	""" Aircraft
@@ -119,7 +122,7 @@ class PoweredWheel(Model):
 
 	Variables
 	---------
-	RPMmax			10e3	[rpm]		maximum RPM of motor
+	RPMmax			5e3    	[rpm]		maximum RPM of motor
 	gear_ratio				[-]			gear ratio of powered wheel
 	gear_ratio_max	10		[-]			max gear ratio of powered wheel
 	tau_max					[N*m]		torque of the
@@ -130,7 +133,10 @@ class PoweredWheel(Model):
 	def setup(self):
 		exec parse_variables(PoweredWheel.__doc__)
 		constraints = [gear_ratio <= gear_ratio_max,
-					   27.3*m >= Variable("tau_m",1,"kg/(N*m)")*tau_max + 80.2*m_ref]
+					   # RPMmax == Variable("RPM_m",5500/12.3,"rpm/kg")*m,
+					   tau_max <= Variable("tau_m",24.6,"N*m/kg")*m
+					   # 27.3*m >= Variable("tau_m",1,"kg/(N*m)")*tau_max + 80.2*m_ref
+					   ]
 		return constraints
 	def dynamic(self,state):
 		return PoweredWheelP(self,state)
@@ -169,12 +175,13 @@ class Wing(Model):
 	"""
 	Variables
 	---------
-	S 			[m^2]			reference area
-	b			[m]				span
-	A 	8		[-]				aspect ratio
-	rho	3.05	[kg/m^2]		wing areal density
-	m 			[kg]			mass of wing
-	e 	0.8		[-]				span efficiency
+	S 				[m^2]			reference area
+	b				[m]				span
+	A 		8		[-]				aspect ratio
+	rho		3.05	[kg/m^2]		wing areal density
+	m 				[kg]			mass of wing
+	e 		0.8		[-]				span efficiency
+	CLmax 	3.5	 	[-]				max CL
 	"""
 	def setup(self):
 		exec parse_variables(Wing.__doc__)
@@ -191,7 +198,6 @@ class WingP(Model):
 	---------
 	L 				[N]				lift force
 	D           	[N]				drag force
-	CLmax	3.5 	[-]				max CL
 	mfac	1.1 	[-]				profile drag margin factor
 	CL 				[-]				lift coefficient
 	CD 				[-] 			drag coefficient
@@ -200,7 +206,7 @@ class WingP(Model):
 	def setup(self,wing,state):
 		exec parse_variables(WingP.__doc__)
 
-		constraints = [CL <= CLmax,
+		constraints = [CL <= wing.CLmax,
 					   CD >= mfac*1.328/Re**0.5 + CL**2/pi/wing["A"]/wing["e"],
 					   L <= 0.5*CL*wing["S"]*state["rho"]*state["V"]**2,
 					   D >= 0.5*CD*wing["S"]*state["rho"]*state["V"]**2,
@@ -235,7 +241,6 @@ class TakeOff(Model):
     CDg                     [-]         drag ground coefficient
     cdp         0.025       [-]         profile drag at Vstallx1.2
     Kg          0.04        [-]         ground-effect induced drag parameter
-    CLto        3.5         [-]         max lift coefficient
     Vstall                  [knots]     stall velocity
     zsto                    [-]         take off distance helper variable
     Sto                     [ft]        take off distance
@@ -262,8 +267,8 @@ class TakeOff(Model):
 		        T/W >= A/g + mu,
 		        B >= g/W*0.5*rho*S*CDg,
 		        T <= Pmax*0.8*0.9/V,
-		        CDg >= cda + cdp + CLto**2/pi/AR/e,
-		        Vstall == (2*W/rho/S/CLto)**0.5,
+		        CDg >= cda + cdp + aircraft.wing.CLmax**2/pi/AR/e,
+		        Vstall == (2*W/rho/S/aircraft.wing.CLmax)**0.5,
 		        V == mstall*Vstall,
 		        FitCS(fd, zsto, [A/g, B*V**2/g]), #fit constraint set, pass in fit data, zsto is the 
 		        # y variable, then arr of independent (input) vars, watch the units
@@ -345,7 +350,6 @@ class GLanding(Model):
     Vstall                  [knots]     stall velocity
     Sgr                     [ft]        landing ground roll
     msafety     1.4         [-]         Landing safety margin
-    CLland      3.5         [-]         landing CL
     """
     def setup(self, aircraft):
         exec parse_variables(GLanding.__doc__)
@@ -359,7 +363,7 @@ class GLanding(Model):
 
         constraints = [
             Sgr >= 0.5*V**2/gload/g,
-            Vstall == (2.*aircraft.mass*fs.g/rho/S/CLland)**0.5,
+            Vstall == (2.*aircraft.mass*fs.g/rho/S/aircraft.wing.CLmax)**0.5,
             V >= mstall*Vstall,
             ]
 
@@ -370,10 +374,10 @@ class Mission(Model):
 
 	Variables
 	---------
-    Srunway     200	 	   	[ft]        runway length
+    Srunway     300	 	   	[ft]        runway length
     Sobstacle   400     	[ft]        obstacle length
     mrunway     1.4     	[-]         runway margin
-    R 			120			[nmi]		mission range
+    R 			115			[nmi]		mission range
    	"""
 	def setup(self,poweredwheels=False,n_wheels=3):
 		exec parse_variables(Mission.__doc__)
@@ -383,18 +387,42 @@ class Mission(Model):
 		self.fs = [takeoff,obstacle_climb,Cruise(self.aircraft),GLanding(self.aircraft)]
 		constraints = [Srunway >= self.fs[0].Sto*mrunway,
 					   Sobstacle >= self.fs[0].Sto + self.fs[1].Sclimb,
-					   self.fs[3].Sgr*mrunway <= Srunway*mrunway,
+					   self.fs[3].Sgr*mrunway <= Srunway,
 					   R <= self.fs[2]["R"],
 					   self.aircraft.battery.E_capacity >= self.fs[1].E + self.fs[2].E]
 		return constraints,self.aircraft,self.fs
 
-if __name__ == "__main__":
-    poweredwheels = True
-    M = Mission(poweredwheels=poweredwheels,n_wheels=3)
-    M.cost = M.aircraft.mass
-    M.debug()
-    if poweredwheels == True:
-	    sol = M.localsolve("mosek")
-    else:
+# if __name__ == "__main__":
+#     poweredwheels = False
+#     M = Mission(poweredwheels=poweredwheels,n_wheels=3)
+#     M.substitutions.update({M.Srunway:('sweep', np.linspace(40,300,10))})
+#     M.cost = M.aircraft.mass
+#     M.debug()
+#     if poweredwheels == True:
+# 	    sol = M.localsolve("mosek")
+#     else:
+# 		sol = M.solve("mosek")
+#     print sol.summary()
+#     print sol(M.Srunway)
+#     print sol(M.aircraft.mass)
+#     plt.plot(sol(M.aircraft.wing.b),sol(M.Srunway))
+#     plt.show()
+
+def CLCurves():
+	M = Mission()
+	M.substitutions.update({M.Srunway:('sweep',np.linspace(50,300,20))})
+	M.cost = M.aircraft.mass
+	CLmax_set = np.linspace(3.5,8,5)
+	for CLmax in CLmax_set:
+		print CLmax
+		M.substitutions.update({M.aircraft.wing.CLmax:CLmax})
 		sol = M.solve("mosek")
-    print sol.summary()
+		print sol(M.aircraft.mass)
+		plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label="$CL_{max} = $" + str(CLmax))
+	plt.title("Runway length requirement for eSTOL")
+	plt.xlabel("Runway length [ft]")
+	plt.ylabel("Aircraft mass [kg]")
+	plt.legend()
+	plt.show()
+
+CLCurves()
