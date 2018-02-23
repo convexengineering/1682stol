@@ -178,7 +178,7 @@ class Wing(Model):
     S               [m^2]           reference area
     b               [m]             span
     A       8       [-]             aspect ratio
-    rho     3.05    [kg/m^2]        wing areal density
+    rho     6.05    [kg/m^2]        wing areal density
     m               [kg]            mass of wing
     e       0.8     [-]             span efficiency
     CLmax   3.5     [-]             max CL
@@ -395,22 +395,25 @@ class Mission(Model):
 # if __name__ == "__main__":
 #     poweredwheels = False
 #     M = Mission(poweredwheels=poweredwheels,n_wheels=3)
-#     M.substitutions.update({M.Srunway:('sweep', np.linspace(40,300,10))})
+#     # M.substitutions.update({M.Srunway:('sweep', np.linspace(40,300,10))})
 #     M.cost = M.aircraft.mass
 #     M.debug()
 #     if poweredwheels == True:
 #       sol = M.localsolve("mosek")
 #     else:
 #       sol = M.solve("mosek")
-#     print sol.summary()
+#     print sol.table()
 #     print sol(M.Srunway)
 #     print sol(M.aircraft.mass)
 #     plt.plot(sol(M.aircraft.wing.b),sol(M.Srunway))
-#     plt.show()
+    # plt.show()
 
 def CLCurves():
     M = Mission()
-    M.substitutions.update({M.Srunway:('sweep',np.linspace(50,300,20))})
+    runway_sweep = np.linspace(100,300,20)
+    runway_factor = 3
+    M.substitutions.update({M.Srunway:('sweep',np.linspace(100,300,20))})
+    M.substitutions.update()
     M.cost = M.aircraft.mass
     CLmax_set = np.linspace(3.5,8,5)
     for CLmax in CLmax_set:
@@ -419,6 +422,10 @@ def CLCurves():
         sol = M.solve("mosek")
         print sol(M.aircraft.mass)
         plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label="$CL_{max} = $" + str(CLmax))
+    
+    plt.grid()
+    # plt.xlim([0,300])
+    # plt.ylim([0,1600])
     plt.title("Runway length requirement for eSTOL")
     plt.xlabel("Runway length [ft]")
     plt.ylabel("Aircraft mass [kg]")
