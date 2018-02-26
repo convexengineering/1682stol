@@ -377,6 +377,7 @@ class Mission(Model):
     Srunway     300         [ft]        runway length
     Sobstacle   400         [ft]        obstacle length
     mrunway     1.4         [-]         runway margin
+    mobstacle   1.4         [-]         obstacle margin
     R           115         [nmi]       mission range
     """
     def setup(self,poweredwheels=False,n_wheels=3):
