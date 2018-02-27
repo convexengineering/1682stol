@@ -261,12 +261,13 @@ class TakeOff(Model):
         rho = fs.rho
         V = fs.V
         e = aircraft.wing.e
+        eta_p = aircraft.dynamic(fs).powertrain_perf["eta"]
         mstall = 1.3
         constraints = [
                 W == aircraft.mass*fs.g,
                 T/W >= A/g + mu,
                 B >= g/W*0.5*rho*S*CDg,
-                T <= Pmax*0.8*0.9/V,
+                T <= Pmax*eta_p/V,
                 CDg >= cda + cdp + aircraft.wing.CLmax**2/pi/AR/e,
                 Vstall == (2*W/rho/S/aircraft.wing.CLmax)**0.5,
                 V == mstall*Vstall,
@@ -276,10 +277,10 @@ class TakeOff(Model):
         if poweredwheels:
             wheel_models = [wheel.dynamic(fs) for wheel in aircraft.wheels]
             with gpkit.SignomialsEnabled():
-                constraints += [T <= Pmax*0.8*0.9/V + sum(model.T for model in wheel_models)]
+                constraints += [T <= Pmax*eta_p/V + sum(model.T for model in wheel_models)]
                 constraints += wheel_models
         else:
-            constraints += [T <= Pmax*0.8*0.9/V]
+            constraints += [T <= Pmax*eta_p/V]
 
         return constraints, fs
 
@@ -295,6 +296,12 @@ class Climb(Model):
     h_dot                   [m/s]       climb rate
     E                       [kWh]       climb energy usage
     W                       [N]         aircraft weight
+    
+    LaTex Strings
+    -------------
+    Sclimb      S_{\\mathrm{climb}}
+    h_gain      h_{\\mathrm{gain}}
+    h_dot       \dot{h}
     """
 
     def setup(self,aircraft):
@@ -384,53 +391,55 @@ class Mission(Model):
         exec parse_variables(Mission.__doc__)
         self.aircraft = Aircraft(poweredwheels,n_wheels)
         takeoff = TakeOff(self.aircraft,poweredwheels,n_wheels)
-        obstacle_climb = Climb(self.aircraft)
-        self.fs = [takeoff,obstacle_climb,Cruise(self.aircraft),GLanding(self.aircraft)]
-        constraints = [Srunway >= self.fs[0].Sto*mrunway,
-                       Sobstacle >= self.fs[0].Sto + self.fs[1].Sclimb,
-                       self.fs[3].Sgr*mrunway <= Srunway,
-                       R <= self.fs[2]["R"],
-                       self.aircraft.battery.E_capacity >= self.fs[1].E + self.fs[2].E]
+        climb = Climb(self.aircraft)
+        cruise = Cruise(self.aircraft)
+        landing = GLanding(self.aircraft)
+        self.fs = [takeoff,climb,cruise,landing]
+        constraints = [Srunway >= takeoff.Sto*mrunway,
+                       Srunway >= landing.Sgr*mrunway,
+                       Sobstacle >= takeoff.Sto + climb.Sclimb,
+                       R <= cruise.R,
+                       self.aircraft.battery.E_capacity >= climb.E + cruise.E]
         return constraints,self.aircraft,self.fs
 
-# if __name__ == "__main__":
-#     poweredwheels = False
-#     M = Mission(poweredwheels=poweredwheels,n_wheels=3)
-#     # M.substitutions.update({M.Srunway:('sweep', np.linspace(40,300,10))})
-#     M.cost = M.aircraft.mass
-#     M.debug()
-#     if poweredwheels == True:
-#       sol = M.localsolve("mosek")
-#     else:
-#       sol = M.solve("mosek")
-#     print sol.table()
-#     print sol(M.Srunway)
-#     print sol(M.aircraft.mass)
-#     plt.plot(sol(M.aircraft.wing.b),sol(M.Srunway))
+if __name__ == "__main__":
+    poweredwheels = False
+    M = Mission(poweredwheels=poweredwheels,n_wheels=3)
+    # M.substitutions.update({M.Srunway:('sweep', np.linspace(40,300,10))})
+    M.cost = M.aircraft.mass
+    M.debug()
+    if poweredwheels == True:
+      sol = M.localsolve("mosek")
+    else:
+      sol = M.solve("mosek")
+    print sol.table()
+    # print sol(M.Srunway)
+    # print sol(M.aircraft.mass)
+    plt.plot(sol(M.aircraft.wing.b),sol(M.Srunway))
     # plt.show()
 
-def CLCurves():
-    M = Mission()
-    runway_sweep = np.linspace(100,300,20)
-    runway_factor = 3
-    M.substitutions.update({M.Srunway:('sweep',np.linspace(100,300,20))})
-    M.substitutions.update()
-    M.cost = M.aircraft.mass
-    CLmax_set = np.linspace(3.5,8,5)
-    for CLmax in CLmax_set:
-        print CLmax
-        M.substitutions.update({M.aircraft.wing.CLmax:CLmax})
-        sol = M.solve("mosek")
-        print sol(M.aircraft.mass)
-        plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label="$CL_{max} = $" + str(CLmax))
+# def CLCurves():
+#     M = Mission()
+#     runway_sweep = np.linspace(100,300,20)
+#     runway_factor = 3
+#     M.substitutions.update({M.Srunway:('sweep',np.linspace(100,300,20))})
+#     M.substitutions.update()
+#     M.cost = M.aircraft.mass
+#     CLmax_set = np.linspace(3.5,8,5)
+#     for CLmax in CLmax_set:
+#         print CLmax
+#         M.substitutions.update({M.aircraft.wing.CLmax:CLmax})
+#         sol = M.solve("mosek")
+#         print sol(M.aircraft.mass)
+#         plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label="$CL_{max} = $" + str(CLmax))
     
-    plt.grid()
-    # plt.xlim([0,300])
-    # plt.ylim([0,1600])
-    plt.title("Runway length requirement for eSTOL")
-    plt.xlabel("Runway length [ft]")
-    plt.ylabel("Aircraft mass [kg]")
-    plt.legend()
-    plt.show()
+#     plt.grid()
+#     # plt.xlim([0,300])
+#     # plt.ylim([0,1600])
+#     plt.title("Runway length requirement for eSTOL")
+#     plt.xlabel("Runway length [ft]")
+#     plt.ylabel("Aircraft mass [kg]")
+#     plt.legend()
+#     plt.show()
 
-CLCurves()
+# CLCurves()
