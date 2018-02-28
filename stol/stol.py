@@ -33,7 +33,7 @@ class Aircraft(Model):
             self.components += self.wheels
         self.mass = m
         constraints = [self.fuselage.m >= fstruct*self.mass,
-                        self.mass>=sum(c["m"] for c in self.components) + Wpax*Npax]
+                        self.mass>=sum(c.topvar("m") for c in self.components) + Wpax*Npax]
         return constraints, self.components
     def dynamic(self,state):
         return AircraftP(self,state)
@@ -44,9 +44,6 @@ class AircraftP(Model):
 
     Variables
     ---------
-    L           [N]     total lift force
-    D           [N]     total drag force
-    LD          [-]     lift to drag ratio
     P           [kW]    total power draw
     """
     def setup(self,aircraft,state):
@@ -56,6 +53,7 @@ class AircraftP(Model):
         self.fs = state
         constraints = [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing.S*state.V**2 >= aircraft.mass*state["g"],
                        P >= self.bw_perf["P"],
+                       P <= aircraft.bw.powertrain["Pmax"]
                        # D >= self.wing_aero["D"] + 0.5*state.rho*aircraft.fuselage.cda*aircraft.wing.S*state.V**2,
                        # self.powertrain_perf["T"] >= self.wing_aero["D"]
                        ]
@@ -91,8 +89,8 @@ class Powertrain(Model):
     ---------
     m           [kg]    powertrain mass
     Pmax        [kW]    maximum power
-    Pstar   7   [kW/kg] motor specific power
-    r           [m]     propeller radius
+    Pstar   5   [kW/kg] motor specific power
+    r     0.2   [m]     propeller radius
     """
     def setup(self):
         exec parse_variables(Powertrain.__doc__)
@@ -217,14 +215,15 @@ class BlownWing(Model):
     """
     Variables
     ---------
-    n_prop         [-]             number of props
+    n_prop    8     [-]             number of props
     m               [kg]            mass
     """
     def setup(self):
         exec parse_variables(BlownWing.__doc__)
         self.powertrain = Powertrain()
         self.wing = Wing()
-        constraints = [m >= self.powertrain.m + self.wing.m]
+        constraints = [m >= self.powertrain["m"] + self.wing["m"]]
+        return constraints,self.powertrain,self.wing
     def dynamic(self,state):
         return BlownWingP(self,state)
 
@@ -236,10 +235,10 @@ class BlownWingP(Model):
     Variables
     ---------
     C_L             [-]             total lift coefficient
-    C_LC            [-]             lift coefficient due to circulation
+    C_LC    3       [-]             lift coefficient due to circulation
     C_LT            [-]             lift coefficient from residual jet momentum
     C_Q             [-]             mass momentum coefficient
-    C_J     0.3     [-]             jet momentum coefficient
+    C_J             [-]             jet momentum coefficient
     C_E             [-]             energy momentum coefficient
     C_X             [-]             streamwise force coefficient (thrust and drag)
     C_Di            [-]             induced drag coefficient
@@ -253,7 +252,7 @@ class BlownWingP(Model):
     J_prime         [kg/(s^2)]      momentum flow per unit span
     E_prime         [J/(m*s)]       energy flow per unit span
     rho_j   1.225   [kg/m^3]        density in jet flow
-    u_j             [m/s]           velocity in jet flow
+    u_j     90      [m/s]           velocity in jet flow
     h               [m]             Wake height
     eta     0.8*0.9 [-]             powertrain wholechain efficiency
     T               [N]             propeller thrust
@@ -264,7 +263,6 @@ class BlownWingP(Model):
         #bw is a BlownWing object
         #state is a FlightState
         exec parse_variables(BlownWingP.__doc__)
-
         with gpkit.SignomialsEnabled():
             constraints = [
             T <= P*eta/state["V"],
@@ -272,6 +270,8 @@ class BlownWingP(Model):
             C_L <= C_LC*(1+2*C_J/(pi*bw.wing.AR*e)),
             C_T <= T/((0.5*state.rho*state.V**2)*bw.wing.S),
             m_dotprime == rho_j*u_j*h,
+            J_prime ==  rho_j*(u_j**2)*h,
+            E_prime == 0.5*rho_j*(u_j**3)*h,
             C_Q ==  m_dotprime/(state.rho*state.V* bw.wing.c),
             C_J == J_prime/(0.5*state.rho*state.V**2 * bw.wing.c),
             C_E == E_prime/(0.5*state.rho*state.V**3 * bw.wing.c),
@@ -413,9 +413,8 @@ class Cruise(Model):
         exec parse_variables(Cruise.__doc__)
         self.flightstate = FlightState()
         self.perf = aircraft.dynamic(self.flightstate)
-        constraints = [R <= aircraft.battery["Estar"]*self.perf.L/self.perf.D * (aircraft.battery["m"]/aircraft.mass) * self.perf.bw_perf.eta * 1/self.flightstate["g"],
+        constraints = [R <= t*self.flightstate.V,
                        E >= self.perf.topvar("P")*t,
-                       t >= R/self.flightstate["V"],
                        self.flightstate["V"] >= Vmin]
         return constraints, self.perf
         
@@ -429,6 +428,8 @@ class GLanding(Model):
     Vstall                  [knots]     stall velocity
     Sgr                     [ft]        landing ground roll
     msafety     1.4         [-]         Landing safety margin
+    t                       [s]         Time to execute landing
+    E                       [kWh]       Energy used in landing
     """
     def setup(self, aircraft):
         exec parse_variables(GLanding.__doc__)
@@ -439,14 +440,15 @@ class GLanding(Model):
         rho = fs.rho
         V = fs.V
         mstall = 1.3
-
+        perf = aircraft.dynamic(fs)
         constraints = [
             Sgr >= 0.5*V**2/gload/g,
-            Vstall == (2.*aircraft.mass*fs.g/rho/S/aircraft.bw.wing.CLmax)**0.5,
-            V >= mstall*Vstall,
-            ]
+            V >= mstall*(2.*aircraft.mass*fs.g/rho/S/perf.bw_perf.C_L)**0.5,
+            t >= Sgr/V,
+            E >= t*perf.bw_perf.P
+        ]
 
-        return constraints, fs
+        return constraints, fs,perf
 
 class Mission(Model):
     """ Mission
@@ -471,7 +473,7 @@ class Mission(Model):
                        Srunway >= landing.Sgr*mrunway,
                        Sobstacle >= takeoff.Sto + climb.Sclimb,
                        R <= cruise.R,
-                       self.aircraft.battery.E_capacity >= climb.E + cruise.E]
+                       self.aircraft.battery.E_capacity >= climb.E + cruise.E + landing.E]
         return constraints,self.aircraft,self.fs
 
 if __name__ == "__main__":
@@ -479,12 +481,10 @@ if __name__ == "__main__":
     M = Mission(poweredwheels=poweredwheels,n_wheels=3)
     # M.substitutions.update({M.Srunway:('sweep', np.linspace(40,300,10))})
     M.cost = M.aircraft.mass
-    M.debug()
-    if poweredwheels == True:
-      sol = M.localsolve("mosek")
-    else:
-      sol = M.localsolve("mosek")
+    # M.debug()
+    sol = M.localsolve("mosek")
     print sol.table()
+    # print M.program.gps[-1].result
     # print sol(M.Srunway)
     # print sol(M.aircraft.mass)
     plt.plot(sol(M.aircraft.bw.wing.b),sol(M.Srunway))
