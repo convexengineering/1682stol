@@ -212,6 +212,56 @@ class WingP(Model):
                        D >= 0.5*CD*wing["S"]*state["rho"]*state["V"]**2,
                        Re == state["V"]*state["rho"]*(wing["S"]/wing["A"])**0.5/state["mu"]]
         return constraints
+
+class BlownWing(Model):
+    """
+    Variables
+    ---------
+    S               [m^2]           reference area
+    b               [m]             span
+    AR      8       [-]             aspect ratio
+    rho     6.05    [kg/m^2]        wing areal density
+    m               [kg]            mass of wing
+    e       0.8     [-]             span efficiency
+    CLmax   3.5     [-]             max CL
+    """
+    def setup(self):
+        self.powertrain = Powertrain()
+        exec parse_variables(Wing.__doc__)
+        constraints = [m >= rho*S,
+                       AR == b**2/S]
+        return constraints
+    def dynamic(self):
+        return BlownWingP(self,state)
+
+class BlownWingP(Model):
+    #Built from Mark Drela's Powered-Lift and Drag Calculation
+    #and Thin Airfoil Theory for Blown 2D Airfoils notes
+
+    """
+    Variables
+    ---------
+    C_L             [-]             total lift coefficient
+    C_LC            [-]             lift coefficient due to circulation
+    C_LT            [-]             lift coefficient from residual jet momentum
+    C_Q             [-]             mass momentum coefficient
+    C_J             [-]             jet momentum coefficient
+    C_E             [-]             energy momentum coefficient
+    C_X             [-]             streamwise force coefficient (thrust and drag)
+    C_Di            [-]             induced drag coefficient
+    C_D             [-]             total drag coefficient
+    """
+    def setup(self,bw,state):
+        #bw is a BlownWing object
+        #state is a FlightState
+        prop_perf = bw.powertrain.dynamic(state)
+        with gpkit.SignomialsEnabled():
+            constraints = [
+            C_LC >= C_L/(1+2*C_J/(pi*bw.AR*bw.e)),
+            C_T <= T/q*S,
+            C_Di
+            ]
+        return constraints
 class FlightState(Model):
     """ Flight State
 
