@@ -7,6 +7,7 @@ import gpkit
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+from gpkitmodels.SP.aircraft.wing.wing import Wing
 
 pi = math.pi
 class Aircraft(Model):
@@ -51,7 +52,7 @@ class AircraftP(Model):
         self.bw_perf = aircraft.bw.dynamic(state)
         self.perf_models = [self.bw_perf]
         self.fs = state
-        constraints = [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing.S*state.V**2 >= aircraft.mass*state["g"],
+        constraints = [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*state["g"],
                        P >= self.bw_perf["P"],
                        P <= aircraft.bw.powertrain["Pmax"],
                        self.bw_perf.C_T >= self.bw_perf.C_D + aircraft.fuselage.cda,
@@ -167,28 +168,28 @@ class Battery(Model):
         constraints = [m >= E_capacity/Estar]
         return constraints
 
-class Wing(Model):
-    """
-    Variables
-    ---------
-    S               [m^2]           reference area
-    b               [m]             span
-    AR      8       [-]             aspect ratio
-    rho     6.05    [kg/m^2]        wing areal density
-    m               [kg]            mass of wing
-    e       0.8     [-]             span efficiency
-    CLmax   3.5     [-]             max CL
-    c               [m]             chord
-    """
-    def setup(self):
-        exec parse_variables(Wing.__doc__)
-        constraints = [m >= rho*S,
-                       AR == b**2/S,
-                       c == b/AR #rectangular wing
-                       ]
-        return constraints
-    def dynamic(self,state):
-        return WingP(self,state)
+# class Wing(Model):
+#     """
+#     Variables
+#     ---------
+#     S               [m^2]           reference area
+#     b               [m]             span
+#     AR      8       [-]             aspect ratio
+#     rho     6.05    [kg/m^2]        wing areal density
+#     m               [kg]            mass of wing
+#     e       0.8     [-]             span efficiency
+#     CLmax   3.5     [-]             max CL
+#     c               [m]             chord
+#     """
+#     def setup(self):
+#         exec parse_variables(Wing.__doc__)
+#         constraints = [m >= rho*S,
+#                        AR == b**2/S,
+#                        c == b/AR #rectangular wing
+#                        ]
+#         return constraints
+#     def dynamic(self,state):
+#         return WingP(self,state)
 
 class BlownWing(Model):
     """
@@ -200,8 +201,11 @@ class BlownWing(Model):
     def setup(self):
         exec parse_variables(BlownWing.__doc__)
         self.powertrain = Powertrain()
-        self.wing = Wing()
-        constraints = [m >= self.powertrain["m"] + self.wing["m"]]
+        self.wing = Wing(N=14)
+        self.wing.substitutions[self.wing.planform.tau]=0.115
+        constraints = [m >= self.powertrain["m"] + self.wing.topvar("W")/Variable("g",9.8,"m/s/s"),
+        self.wing.mw == 20,
+        self.wing.Sy >= Variable("Sy_lowerb", 1e-6, "m**3")]
         return constraints,self.powertrain,self.wing
     def dynamic(self,state):
         return BlownWingP(self,state)
@@ -246,16 +250,16 @@ class BlownWingP(Model):
             P >= 0.5*T*state["V"]*((T/(A_disk*(state.V**2)*state.rho/2)+1)**(1/2)+1),
             u_j <= state.V*(T/(A_disk*(state.V**2)*state.rho/2) + 1)**(1/2),
             P <= bw.powertrain["Pmax"],
-            C_L <= C_LC*(1+2*C_J/(pi*bw.wing.AR*e)),
-            C_T <= T/((0.5*state.rho*state.V**2)*bw.wing.S),
+            C_L <= C_LC*(1+2*C_J/(pi*bw.wing["AR"]*e)),
+            C_T <= T/((0.5*state.rho*state.V**2)*bw.wing["S"]),
             m_dotprime == rho_j*u_j*h,
             J_prime ==  rho_j*(u_j**2)*h,
             E_prime == 0.5*rho_j*(u_j**3)*h,
-            C_Q ==  m_dotprime/(state.rho*state.V* bw.wing.c),
-            C_J == J_prime/(0.5*state.rho*state.V**2 * bw.wing.c),
-            C_E == E_prime/(0.5*state.rho*state.V**3 * bw.wing.c),
+            C_Q ==  m_dotprime/(state.rho*state.V* bw.wing["cmac"]),
+            C_J == J_prime/(0.5*state.rho*state.V**2 * bw.wing["cmac"]),
+            C_E == E_prime/(0.5*state.rho*state.V**3 * bw.wing["cmac"]),
             h == (bw.n_prop*pi*bw.powertrain.r**2)/bw.wing.b,
-            C_Di >= (C_L**2)/(pi*bw.wing.AR*e),
+            C_Di >= (C_L**2)/(pi*bw.wing["AR"]*e),
             C_D >= C_Di  + C_Dp,
             C_Dp == mfac*1.328/Re**0.5, #friction drag only, need to add form
             Re == state["V"]*state["rho"]*(bw.wing["S"]/bw.wing["AR"])**0.5/state["mu"],
@@ -307,7 +311,7 @@ class TakeOff(Model):
 
         S = aircraft.bw.wing["S"]
         Pmax = aircraft.bw.powertrain.Pmax
-        AR = aircraft.bw.wing.AR
+        AR = aircraft.bw.wing.planform.AR
         rho = fs.rho
         V = fs.V
         perf = aircraft.dynamic(fs)
@@ -360,7 +364,7 @@ class Climb(Model):
         perf = aircraft.dynamic(self.flightstate)
 
         CL = self.CL = perf.bw_perf.C_L
-        S = self.S = aircraft.bw.wing.S
+        S = self.S = aircraft.bw.wing["S"]
         CD = self.CD = perf.bw_perf.C_D
         V = perf.fs.V
         rho = perf.fs.rho
@@ -413,7 +417,7 @@ class GLanding(Model):
 
         fs = FlightState()
 
-        S = self.S = aircraft.bw.wing.S
+        S = self.S = aircraft.bw.wing["S"]
         rho = fs.rho
         mstall = 1.3
         perf = aircraft.dynamic(fs)
