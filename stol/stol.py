@@ -235,7 +235,7 @@ class BlownWingP(Model):
     Variables
     ---------
     C_L             [-]             total lift coefficient
-    C_LC    3       [-]             lift coefficient due to circulation
+    C_LC    3.5     [-]             lift coefficient due to circulation
     C_Q             [-]             mass momentum coefficient
     C_J             [-]             jet momentum coefficient
     C_E             [-]             energy momentum coefficient
@@ -251,7 +251,6 @@ class BlownWingP(Model):
     E_prime         [J/(m*s)]       energy flow per unit span
     rho_j   1.225   [kg/m^3]        density in jet flow
     u_j             [m/s]           velocity in jet flow
-    u_disk          [m/s]           disk velocity
     h               [m]             Wake height
     T               [N]             propeller thrust
     P               [kW]            power draw
@@ -266,13 +265,8 @@ class BlownWingP(Model):
             constraints = [
             A_disk == pi*bw.powertrain.r**2,
             P >= 0.5*T*state["V"]*((T/(A_disk*(state.V**2)*state.rho/2)+1)**(1/2)+1),
-            (u_j/state.V)**2 <= T/(A_disk*(state.V**2)*state.rho/2) + 1,
-            # u_j <= 2*u_disk - state.V,
+            u_j <= state.V*(T/(A_disk*(state.V**2)*state.rho/2) + 1)**(1/2),
             P <= bw.powertrain["Pmax"],
-
-            # eta <= 2/(1+u_j/state.V),
-            # u_disk >= 0.5*(u_j + state.V),
-            # u_disk <= state.V * 0.5*((T/(A_disk*state.V**2 * state.rho/2) + 1)**(1/2) + 1),
             C_L <= C_LC*(1+2*C_J/(pi*bw.wing.AR*e)),
             C_T <= T/((0.5*state.rho*state.V**2)*bw.wing.S),
             m_dotprime == rho_j*u_j*h,
@@ -284,9 +278,9 @@ class BlownWingP(Model):
             h == (bw.n_prop*pi*bw.powertrain.r**2)/bw.wing.b,
             C_Di >= (C_L**2)/(pi*bw.wing.AR*e),
             C_D >= C_Di  + C_Dp,
-            C_Dp >= mfac*1.328/Re**0.5, #friction drag only, need to add form
+            C_Dp == mfac*1.328/Re**0.5, #friction drag only, need to add form
             Re == state["V"]*state["rho"]*(bw.wing["S"]/bw.wing["AR"])**0.5/state["mu"],
-            C_D/C_T <= 1 #steady level non-accelerating constraint as C_T-C_D = 1
+            C_T >= C_D #steady level non-accelerating constraint as C_T-C_D = 1
             ]
         return constraints
 class FlightState(Model):
@@ -321,6 +315,7 @@ class TakeOff(Model):
     zsto                    [-]         take off distance helper variable
     Sto                     [ft]        take off distance
     W                       [N]         aircraft weight
+    E                       [kWh]       energy consumed in takeoff
     """
     def setup(self, aircraft,poweredwheels,n_wheels):
         exec parse_variables(TakeOff.__doc__)
@@ -336,28 +331,29 @@ class TakeOff(Model):
         AR = aircraft.bw.wing.AR
         rho = fs.rho
         V = fs.V
-        bw_perf =  aircraft.bw.dynamic(fs)
-        e = bw_perf.e
+        perf = aircraft.dynamic(fs)
+        e = perf.bw_perf.e
         mstall = 1.3
         constraints = [
                 W == aircraft.mass*fs.g,
                 T/W >= A/g + mu,
                 B >= g/W*0.5*rho*S*CDg,
-                CDg >= cda + cdp + bw_perf.C_L**2/pi/AR/e,
-                V >= mstall*(2*W/rho/S/bw_perf.C_L)**0.5,
+                CDg >= perf.bw_perf.C_D,
+                V >= mstall*(2*W/rho/S/perf.bw_perf.C_L)**0.5,
                 FitCS(fd, zsto, [A/g, B*V**2/g]), #fit constraint set, pass in fit data, zsto is the 
                 # y variable, then arr of independent (input) vars, watch the units
+                E >= (Sto/V)*perf.bw_perf.P,
                 Sto >= 1.0/2.0/B*zsto]
         if poweredwheels:
             wheel_models = [wheel.dynamic(fs) for wheel in aircraft.wheels]
             with gpkit.SignomialsEnabled():
-                constraints += [T <= bw_perf.T + sum(model.T for model in wheel_models)]
+                constraints += [T <= perf.bw_perf.T + sum(model.T for model in wheel_models)]
                 constraints += wheel_models
 
         else:
-            constraints += [T <= bw_perf.T]
+            constraints += [T <= perf.bw_perf.T]
 
-        return constraints, fs, bw_perf
+        return constraints, fs, perf
 
 class Climb(Model):
 
@@ -440,13 +436,12 @@ class GLanding(Model):
 
         S = self.S = aircraft.bw.wing.S
         rho = fs.rho
-        V = fs.V
         mstall = 1.3
         perf = aircraft.dynamic(fs)
         constraints = [
-            Sgr >= 0.5*V**2/gload/g,
-            V >= mstall*(2.*aircraft.mass*fs.g/rho/S/perf.bw_perf.C_L)**0.5,
-            t >= Sgr/V,
+            Sgr >= 0.5*fs.V**2/gload/g,
+            fs.V >= mstall*(2.*aircraft.mass*fs.g/rho/S/perf.bw_perf.C_L)**0.5,
+            t >= Sgr/fs.V,
             E >= t*perf.bw_perf.P
         ]
 
@@ -458,7 +453,7 @@ class Mission(Model):
     Variables
     ---------
     Srunway     300         [ft]        runway length
-    Sobstacle   400         [ft]        obstacle length
+    Sobstacle               [ft]        obstacle length
     mrunway     1.4         [-]         runway margin
     mobstacle   1.4         [-]         obstacle margin
     R           115         [nmi]       mission range
@@ -473,9 +468,10 @@ class Mission(Model):
         self.fs = [takeoff,climb,cruise,landing]
         constraints = [Srunway >= takeoff.Sto*mrunway,
                        Srunway >= landing.Sgr*mrunway,
+                       Sobstacle == Srunway*(4/3),
                        Sobstacle >= takeoff.Sto + climb.Sclimb,
                        R <= cruise.R,
-                       self.aircraft.battery.E_capacity >= climb.E + cruise.E + landing.E]
+                       self.aircraft.battery.E_capacity >= takeoff.E + climb.E + cruise.E + landing.E]
         return constraints,self.aircraft,self.fs
 
 if __name__ == "__main__":
@@ -483,37 +479,39 @@ if __name__ == "__main__":
     M = Mission(poweredwheels=poweredwheels,n_wheels=3)
     # M.substitutions.update({M.Srunway:('sweep', np.linspace(40,300,10))})
     M.cost = M.aircraft.mass
-    M.debug()
+    # M.debug()
     sol = M.localsolve("mosek")
-    print sol.summary()
+    print sol.table()
     # print M.program.gps[-1].result
     # print sol(M.Srunway)
     # print sol(M.aircraft.mass)
-    plt.plot(sol(M.aircraft.bw.wing.b),sol(M.Srunway))
+    # plt.plot(sol(M.aircraft.bw.wing.b),sol(M.Srunway))
     # plt.show()
 
 # def CLCurves():
 #     M = Mission()
-#     runway_sweep = np.linspace(100,300,20)
-#     runway_factor = 3
-#     M.substitutions.update({M.Srunway:('sweep',np.linspace(100,300,20))})
-#     M.substitutions.update()
+#     runway_sweep = np.linspace(40,300,20)
+#     obstacle_sweep = runway_sweep*4/3
+#     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
 #     M.cost = M.aircraft.mass
-#     CLmax_set = np.linspace(3.5,8,5)
-#     for CLmax in CLmax_set:
-#         print CLmax
-#         M.substitutions.update({M.aircraft.wing.CLmax:CLmax})
-#         sol = M.solve("mosek")
-#         print sol(M.aircraft.mass)
-#         plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label="$CL_{max} = $" + str(CLmax))
+#     sol = M.localsolve("mosek")
+#     plt.plot(sol(M.Srunway),sol(M.aircraft.mass))
+
+#     # sol = M.solve()
+#     # # CLmax_set = np.linspace(3.5,8,5)
+#     # for CLmax in CLmax_set:
+#     #     print CLmax
+#     #     # M.substitutions.update({M.aircraft.bw.CLmax:CLmax})
+#     #     sol = M.solve("mosek")
+#     #     print sol(M.aircraft.mass)
     
 #     plt.grid()
 #     # plt.xlim([0,300])
 #     # plt.ylim([0,1600])
 #     plt.title("Runway length requirement for eSTOL")
 #     plt.xlabel("Runway length [ft]")
-#     plt.ylabel("Aircraft mass [kg]")
-#     plt.legend()
+#     plt.ylabel("Takeoff mass [kg]")
+#     # plt.legend()
 #     plt.show()
 
 # CLCurves()
