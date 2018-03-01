@@ -189,28 +189,6 @@ class Wing(Model):
     def dynamic(self,state):
         return WingP(self,state)
 
-class WingP(Model):
-    """
-
-    Variables
-    ---------
-    L               [N]             lift force
-    D               [N]             drag force
-    mfac    1.1     [-]             profile drag margin factor
-    CL              [-]             lift coefficient
-    CD              [-]             drag coefficient
-    Re              [-]             Reynolds number
-    """
-    def setup(self,wing,state):
-        exec parse_variables(WingP.__doc__)
-
-        constraints = [CL <= wing.CLmax,
-                       CD >= mfac*1.328/Re**0.5 + CL**2/pi/wing["A"]/wing["e"],
-                       L <= 0.5*CL*wing["S"]*state["rho"]*state["V"]**2,
-                       D >= 0.5*CD*wing["S"]*state["rho"]*state["V"]**2,
-                       Re == state["V"]*state["rho"]*(wing["S"]/wing["A"])**0.5/state["mu"]]
-        return constraints
-
 class BlownWing(Model):
     """
     Variables
