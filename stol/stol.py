@@ -236,11 +236,9 @@ class BlownWingP(Model):
     ---------
     C_L             [-]             total lift coefficient
     C_LC    3       [-]             lift coefficient due to circulation
-    C_LT            [-]             lift coefficient from residual jet momentum
     C_Q             [-]             mass momentum coefficient
     C_J             [-]             jet momentum coefficient
     C_E             [-]             energy momentum coefficient
-    C_X             [-]             streamwise force coefficient (thrust and drag)
     C_Di            [-]             induced drag coefficient
     C_Dp            [-]             profile drag
     C_D             [-]             total drag coefficient
@@ -258,7 +256,6 @@ class BlownWingP(Model):
     T               [N]             propeller thrust
     P               [kW]            power draw
     A_disk          [m^2]           area of prop disk
-    eta             [-]             efficiency
 
     """
     def setup(self,bw,state):
@@ -269,12 +266,13 @@ class BlownWingP(Model):
             constraints = [
             A_disk == pi*bw.powertrain.r**2,
             P >= 0.5*T*state["V"]*((T/(A_disk*(state.V**2)*state.rho/2)+1)**(1/2)+1),
-            (u_disk/state.V)**2 <= T/(A_disk*(state.V**2)*state.rho/2) + 1,
-            u_j <= 2*u_disk - state.V,
+            (u_j/state.V)**2 <= T/(A_disk*(state.V**2)*state.rho/2) + 1,
+            # u_j <= 2*u_disk - state.V,
+            P <= bw.powertrain["Pmax"],
+
             # eta <= 2/(1+u_j/state.V),
             # u_disk >= 0.5*(u_j + state.V),
             # u_disk <= state.V * 0.5*((T/(A_disk*state.V**2 * state.rho/2) + 1)**(1/2) + 1),
-            # P <= bw.powertrain["Pmax"],
             C_L <= C_LC*(1+2*C_J/(pi*bw.wing.AR*e)),
             C_T <= T/((0.5*state.rho*state.V**2)*bw.wing.S),
             m_dotprime == rho_j*u_j*h,
@@ -320,7 +318,6 @@ class TakeOff(Model):
     CDg                     [-]         drag ground coefficient
     cdp         0.025       [-]         profile drag at Vstallx1.2
     Kg          0.04        [-]         ground-effect induced drag parameter
-    Vstall                  [knots]     stall velocity
     zsto                    [-]         take off distance helper variable
     Sto                     [ft]        take off distance
     W                       [N]         aircraft weight
@@ -347,8 +344,7 @@ class TakeOff(Model):
                 T/W >= A/g + mu,
                 B >= g/W*0.5*rho*S*CDg,
                 CDg >= cda + cdp + bw_perf.C_L**2/pi/AR/e,
-                Vstall == (2*W/rho/S/bw_perf.C_L)**0.5,
-                V == mstall*Vstall,
+                V >= mstall*(2*W/rho/S/bw_perf.C_L)**0.5,
                 FitCS(fd, zsto, [A/g, B*V**2/g]), #fit constraint set, pass in fit data, zsto is the 
                 # y variable, then arr of independent (input) vars, watch the units
                 Sto >= 1.0/2.0/B*zsto]
@@ -432,7 +428,6 @@ class GLanding(Model):
     ---------
     g           9.81        [m/s**2]    gravitational constant
     gload       0.5         [-]         gloading constant
-    Vstall                  [knots]     stall velocity
     Sgr                     [ft]        landing ground roll
     msafety     1.4         [-]         Landing safety margin
     t                       [s]         Time to execute landing
