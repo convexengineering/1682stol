@@ -252,11 +252,13 @@ class BlownWingP(Model):
     J_prime         [kg/(s^2)]      momentum flow per unit span
     E_prime         [J/(m*s)]       energy flow per unit span
     rho_j   1.225   [kg/m^3]        density in jet flow
-    u_j     90      [m/s]           velocity in jet flow
+    u_j             [m/s]           velocity in jet flow
+    u_disk          [m/s]           disk velocity
     h               [m]             Wake height
-    eta     0.8*0.9 [-]             powertrain wholechain efficiency
     T               [N]             propeller thrust
     P               [kW]            power draw
+    A_disk          [m^2]           area of prop disk
+    eta             [-]             efficiency
 
     """
     def setup(self,bw,state):
@@ -265,8 +267,14 @@ class BlownWingP(Model):
         exec parse_variables(BlownWingP.__doc__)
         with gpkit.SignomialsEnabled():
             constraints = [
-            T <= P*eta/state["V"],
-            P <= bw.powertrain["Pmax"],
+            A_disk == pi*bw.powertrain.r**2,
+            P >= 0.5*T*state["V"]*((T/(A_disk*(state.V**2)*state.rho/2)+1)**(1/2)+1),
+            (u_disk/state.V)**2 <= T/(A_disk*(state.V**2)*state.rho/2) + 1,
+            u_j <= 2*u_disk - state.V,
+            # eta <= 2/(1+u_j/state.V),
+            # u_disk >= 0.5*(u_j + state.V),
+            # u_disk <= state.V * 0.5*((T/(A_disk*state.V**2 * state.rho/2) + 1)**(1/2) + 1),
+            # P <= bw.powertrain["Pmax"],
             C_L <= C_LC*(1+2*C_J/(pi*bw.wing.AR*e)),
             C_T <= T/((0.5*state.rho*state.V**2)*bw.wing.S),
             m_dotprime == rho_j*u_j*h,
@@ -333,13 +341,11 @@ class TakeOff(Model):
         V = fs.V
         bw_perf =  aircraft.bw.dynamic(fs)
         e = bw_perf.e
-        eta_p = bw_perf.eta
         mstall = 1.3
         constraints = [
                 W == aircraft.mass*fs.g,
                 T/W >= A/g + mu,
                 B >= g/W*0.5*rho*S*CDg,
-                T <= Pmax*eta_p/V,
                 CDg >= cda + cdp + bw_perf.C_L**2/pi/AR/e,
                 Vstall == (2*W/rho/S/bw_perf.C_L)**0.5,
                 V == mstall*Vstall,
@@ -349,12 +355,13 @@ class TakeOff(Model):
         if poweredwheels:
             wheel_models = [wheel.dynamic(fs) for wheel in aircraft.wheels]
             with gpkit.SignomialsEnabled():
-                constraints += [T <= Pmax*eta_p/V + sum(model.T for model in wheel_models)]
+                constraints += [T <= bw_perf.T + sum(model.T for model in wheel_models)]
                 constraints += wheel_models
-        else:
-            constraints += [T <= Pmax*eta_p/V]
 
-        return constraints, fs
+        else:
+            constraints += [T <= bw_perf.T]
+
+        return constraints, fs, bw_perf
 
 class Climb(Model):
 
@@ -481,9 +488,9 @@ if __name__ == "__main__":
     M = Mission(poweredwheels=poweredwheels,n_wheels=3)
     # M.substitutions.update({M.Srunway:('sweep', np.linspace(40,300,10))})
     M.cost = M.aircraft.mass
-    # M.debug()
+    M.debug()
     sol = M.localsolve("mosek")
-    print sol.table()
+    print sol.summary()
     # print M.program.gps[-1].result
     # print sol(M.Srunway)
     # print sol(M.aircraft.mass)
