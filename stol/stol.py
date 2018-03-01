@@ -54,7 +54,8 @@ class AircraftP(Model):
         self.fs = state
         constraints = [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*state["g"],
                        P >= self.bw_perf["P"],
-                       P <= aircraft.bw.powertrain["Pmax"]
+                       P <= aircraft.bw.powertrain["Pmax"],
+                       self.bw_perf.C_T >= self.bw_perf.C_D + aircraft.fuselage.cda,
                        # D >= self.wing_aero["D"] + 0.5*state.rho*aircraft.fuselage.cda*aircraft.wing.S*state.V**2,
                        # self.powertrain_perf["T"] >= self.wing_aero["D"]
                        ]
@@ -262,7 +263,7 @@ class BlownWingP(Model):
             C_D >= C_Di  + C_Dp,
             C_Dp == mfac*1.328/Re**0.5, #friction drag only, need to add form
             Re == state["V"]*state["rho"]*(bw.wing["S"]/bw.wing["AR"])**0.5/state["mu"],
-            C_T >= C_D #steady level non-accelerating constraint as C_T-C_D = 1
+            # C_T >= C_D #steady level non-accelerating constraint as C_T-C_D = 1
             ]
         return constraints
 class FlightState(Model):
