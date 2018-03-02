@@ -7,8 +7,11 @@ import gpkit
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-from gpkitmodels.SP.aircraft.wing.wing import Wing
-
+# from gpkitmodels.GP.aircraft.wing.wing import Wing
+from gpkitmodels import g
+from gpkitmodels.GP.aircraft.wing.boxspar import BoxSpar
+from gpkitmodels.GP.aircraft.wing.wing_skin import WingSkin
+from gpkitmodels.GP.aircraft.wing.wing import Planform
 pi = math.pi
 class Aircraft(Model):
     """ Aircraft
@@ -38,7 +41,8 @@ class Aircraft(Model):
         return constraints, self.components
     def dynamic(self,state):
         return AircraftP(self,state)
-
+    def loading(self,Wcent,state):
+        return AircraftLoading(self,Wcent,state)
 
 class AircraftP(Model):
     """ AircraftP
@@ -61,6 +65,11 @@ class AircraftP(Model):
                        ]
         return constraints,self.perf_models
 
+class AircraftLoading(Model):
+    def setup(self,aircraft,state,Wcent):
+        self.wingl = aircraft.bw.wing.spar.loading(aircraft.bw.wing)
+        loading = [self.wingl]
+        return loading
 class Fuselage(Model):
     """ Fuselage
 
@@ -168,28 +177,51 @@ class Battery(Model):
         constraints = [m >= E_capacity/Estar]
         return constraints
 
-# class Wing(Model):
-#     """
-#     Variables
-#     ---------
-#     S               [m^2]           reference area
-#     b               [m]             span
-#     AR      8       [-]             aspect ratio
-#     rho     6.05    [kg/m^2]        wing areal density
-#     m               [kg]            mass of wing
-#     e       0.8     [-]             span efficiency
-#     CLmax   3.5     [-]             max CL
-#     c               [m]             chord
-#     """
-#     def setup(self):
-#         exec parse_variables(Wing.__doc__)
-#         constraints = [m >= rho*S,
-#                        AR == b**2/S,
-#                        c == b/AR #rectangular wing
-#                        ]
-#         return constraints
-#     def dynamic(self,state):
-#         return WingP(self,state)
+class Wing(Model):
+    """
+    Wing Model
+    Variables
+    ---------
+    W                   [lbf]       wing weight
+    mfac        1.2     [-]         wing weight margin factor
+    Upper Unbounded
+    ---------------
+    W
+    Lower Unbounded
+    ---------------
+    b, Sy
+    LaTex Strings
+    -------------
+    mfac                m_{\\mathrm{fac}}
+    """
+
+    sparModel = BoxSpar
+    fillModel = False
+    skinModel = WingSkin
+
+    def setup(self, N=5):
+        exec parse_variables(Wing.__doc__)
+
+        self.N = N
+
+        self.planform = Planform(N)
+        self.b = self.planform.b
+        self.components = []
+
+        if self.skinModel:
+            self.skin = self.skinModel(self.planform)
+            self.components.extend([self.skin])
+        if self.sparModel:
+            self.spar = self.sparModel(N, self.planform)
+            self.components.extend([self.spar])
+            self.Sy = self.spar.Sy
+        if self.fillModel:
+            self.foam = self.fillModel(self.planform)
+            self.components.extend([self.foam])
+
+        constraints = [W/mfac >= sum(c["W"] for c in self.components)]
+
+        return constraints, self.planform, self.components
 
 class BlownWing(Model):
     """
@@ -201,11 +233,13 @@ class BlownWing(Model):
     def setup(self):
         exec parse_variables(BlownWing.__doc__)
         self.powertrain = Powertrain()
-        self.wing = Wing(N=14)
-        self.wing.substitutions[self.wing.planform.tau]=0.115
-        constraints = [m >= self.powertrain["m"] + self.wing.topvar("W")/Variable("g",9.8,"m/s/s"),
-        self.wing.mw == 20,
-        self.wing.Sy >= Variable("Sy_lowerb", 1e-6, "m**3")]
+        N = 14
+        self.wing = Wing(N)
+        self.wing.substitutions[self.wing.planform.tau]=0.12
+
+        constraints = [
+        m >= self.powertrain["m"] + self.wing.topvar("W")/Variable("g",9.8,"m/s/s")
+        ]
         return constraints,self.powertrain,self.wing
     def dynamic(self,state):
         return BlownWingP(self,state)
@@ -448,53 +482,54 @@ class Mission(Model):
         climb = Climb(self.aircraft)
         cruise = Cruise(self.aircraft)
         landing = GLanding(self.aircraft)
+        
+        Wcent = Variable("W_{cent}","lbf","center aircraft weight")
+        loading = self.aircraft.loading(cruise.flightstate,Wcent)
+
         self.fs = [takeoff,climb,cruise,landing]
         constraints = [Srunway >= takeoff.Sto*mrunway,
                        Srunway >= landing.Sgr*mrunway,
                        Sobstacle == Srunway*(4/3),
                        Sobstacle >= takeoff.Sto + climb.Sclimb,
                        R <= cruise.R,
-                       self.aircraft.battery.E_capacity >= takeoff.E + climb.E + cruise.E + landing.E]
-        return constraints,self.aircraft,self.fs
+                       self.aircraft.battery.E_capacity >= takeoff.E + climb.E + cruise.E + landing.E,
+                       Wcent >= self.aircraft.mass*g,
+                       Wcent == loading.wingl["W"]
+        ]
+        return constraints,self.aircraft,self.fs, loading
 
 if __name__ == "__main__":
     poweredwheels = False
     M = Mission(poweredwheels=poweredwheels,n_wheels=3)
-    # M.substitutions.update({M.Srunway:('sweep', np.linspace(40,300,10))})
     M.cost = M.aircraft.mass
     # M.debug()
     sol = M.localsolve("mosek")
-    print sol.table()
-    # print M.program.gps[-1].result
-    # print sol(M.Srunway)
-    # print sol(M.aircraft.mass)
-    # plt.plot(sol(M.aircraft.bw.wing.b),sol(M.Srunway))
-    # plt.show()
+    print sol.summary()
 
-# def CLCurves():
-#     M = Mission()
-#     runway_sweep = np.linspace(40,300,20)
-#     obstacle_sweep = runway_sweep*4/3
-#     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
-#     M.cost = M.aircraft.mass
-#     sol = M.localsolve("mosek")
-#     plt.plot(sol(M.Srunway),sol(M.aircraft.mass))
+def CLCurves():
+    M = Mission()
+    runway_sweep = np.linspace(40,300,20)
+    obstacle_sweep = runway_sweep*4/3
+    M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
+    M.cost = M.aircraft.mass
+    sol = M.localsolve("mosek")
+    plt.plot(sol(M.Srunway),sol(M.aircraft.mass))
 
-#     # sol = M.solve()
-#     # # CLmax_set = np.linspace(3.5,8,5)
-#     # for CLmax in CLmax_set:
-#     #     print CLmax
-#     #     # M.substitutions.update({M.aircraft.bw.CLmax:CLmax})
-#     #     sol = M.solve("mosek")
-#     #     print sol(M.aircraft.mass)
+    # sol = M.solve()
+    # # CLmax_set = np.linspace(3.5,8,5)
+    # for CLmax in CLmax_set:
+    #     print CLmax
+    #     # M.substitutions.update({M.aircraft.bw.CLmax:CLmax})
+    #     sol = M.solve("mosek")
+    #     print sol(M.aircraft.mass)
     
-#     plt.grid()
-#     # plt.xlim([0,300])
-#     # plt.ylim([0,1600])
-#     plt.title("Runway length requirement for eSTOL")
-#     plt.xlabel("Runway length [ft]")
-#     plt.ylabel("Takeoff mass [kg]")
-#     # plt.legend()
-#     plt.show()
+    plt.grid()
+    # plt.xlim([0,300])
+    # plt.ylim([0,1600])
+    plt.title("Runway length requirement for eSTOL")
+    plt.xlabel("Runway length [ft]")
+    plt.ylabel("Takeoff mass [kg]")
+    # plt.legend()
+    plt.show()
 
 # CLCurves()
