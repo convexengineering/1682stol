@@ -55,11 +55,13 @@ class AircraftP(Model):
     def setup(self,aircraft,state):
         exec parse_variables(AircraftP.__doc__)
         self.bw_perf = aircraft.bw.dynamic(state)
-        self.perf_models = [self.bw_perf]
+        self.batt_perf = aircraft.battery.dynamic(state)
+        self.perf_models = [self.bw_perf,self.batt_perf]
         self.fs = state
         constraints = [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*state["g"],
-                       P >= self.bw_perf["P"],
+                       P == self.bw_perf["P"],
                        P <= aircraft.bw.powertrain["Pmax"],
+                       self.batt_perf.P >= P,
                        self.bw_perf.C_T >= self.bw_perf.C_D + aircraft.fuselage.cda,
                        # D >= self.wing_aero["D"] + 0.5*state.rho*aircraft.fuselage.cda*aircraft.wing.S*state.V**2,
                        # self.powertrain_perf["T"] >= self.wing_aero["D"]
@@ -171,12 +173,25 @@ class Battery(Model):
     m                   [kg]            total mass
     Estar       210     [Wh/kg]         specific energy
     E_capacity          [Wh]            energy capacity
-
     """
 
     def setup(self):
         exec parse_variables(Battery.__doc__)
         constraints = [m >= E_capacity/Estar]
+        return constraints
+    def dynamic(self,state):
+        return BatteryP(self,state)
+
+class BatteryP(Model):
+    """BatteryP
+    Variables
+    ---------
+    P                   [kW]        battery power draw
+    Pstar      2        [kW/kg]     battery specific power limit
+    """
+    def setup(self,batt,state):
+        exec parse_variables(BatteryP.__doc__)
+        constraints = [P <=  Pstar*batt.m]
         return constraints
 
 class Wing(Model):
@@ -494,7 +509,7 @@ class Mission(Model):
         constraints = [Srunway >= takeoff.Sto*mrunway,
                        Srunway >= landing.Sgr*mrunway,
                        Sobstacle == Srunway*(4/3),
-                       Sobstacle >= takeoff.Sto + climb.Sclimb,
+                       Sobstacle >= mobstacle*(takeoff.Sto + climb.Sclimb),
                        R <= cruise.R,
                        self.aircraft.battery.E_capacity >= takeoff.E + climb.E + cruise.E + landing.E,
                        Wcent >= self.aircraft.mass*g,
