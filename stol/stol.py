@@ -12,6 +12,7 @@ from gpkitmodels import g
 from gpkitmodels.GP.aircraft.wing.boxspar import BoxSpar
 from gpkitmodels.GP.aircraft.wing.wing_skin import WingSkin
 from gpkitmodels.GP.aircraft.wing.wing import Planform
+from decimal import *
 pi = math.pi
 class Aircraft(Model):
     """ Aircraft
@@ -128,7 +129,7 @@ class PoweredWheel(Model):
 
     Variables
     ---------
-    RPMmax          5e3     [rpm]       maximum RPM of motor
+    RPMmax          4e3     [rpm]       maximum RPM of motor
     gear_ratio              [-]         gear ratio of powered wheel
     gear_ratio_max  10      [-]         max gear ratio of powered wheel
     tau_max                 [N*m]       torque of the
@@ -138,9 +139,10 @@ class PoweredWheel(Model):
     """
     def setup(self):
         exec parse_variables(PoweredWheel.__doc__)
+        #Currently using the worst values
         constraints = [gear_ratio <= gear_ratio_max,
                        # RPMmax == Variable("RPM_m",5500/12.3,"rpm/kg")*m,
-                       tau_max <= Variable("tau_m",24.6,"N*m/kg")*m
+                       tau_max <= Variable("tau_m",14.3,"N*m/kg")*m
                        # 27.3*m >= Variable("tau_m",1,"kg/(N*m)")*tau_max + 80.2*m_ref
                        ]
         return constraints
@@ -252,7 +254,7 @@ class BlownWingP(Model):
     Variables
     ---------
     C_L             [-]             total lift coefficient
-    C_LC    3.5     [-]             lift coefficient due to circulation
+    C_LC    2.5     [-]             lift coefficient due to circulation
     C_Q             [-]             mass momentum coefficient
     C_J             [-]             jet momentum coefficient
     C_E             [-]             energy momentum coefficient
@@ -281,19 +283,21 @@ class BlownWingP(Model):
         with gpkit.SignomialsEnabled():
             constraints = [
             A_disk == pi*bw.powertrain.r**2,
-            P >= 0.5*T*state["V"]*((T/(A_disk*(state.V**2)*state.rho/2)+1)**(1/2)+1),
-            u_j <= state.V*(T/(A_disk*(state.V**2)*state.rho/2) + 1)**(1/2),
+            (P/(0.5*T*state["V"]) - 1)**2 >= (T/(A_disk*(state.V**2)*state.rho/2)+1),
+            (u_j/state.V)**2 <= (T/(A_disk*(state.V**2)*state.rho/2) + 1),
+
             P <= bw.powertrain["Pmax"],
             C_L <= C_LC*(1+2*C_J/(pi*bw.wing["AR"]*e)),
-            C_T <= T/((0.5*state.rho*state.V**2)*bw.wing["S"]),
+            
+            C_T == T/((0.5*state.rho*state.V**2)*bw.wing["S"]),
             m_dotprime == rho_j*u_j*h,
-            J_prime ==  rho_j*(u_j**2)*h,
-            E_prime == 0.5*rho_j*(u_j**3)*h,
+            J_prime ==  m_dotprime*u_j,
+            E_prime == 0.5*m_dotprime*u_j**2,
             C_Q ==  m_dotprime/(state.rho*state.V* bw.wing["cmac"]),
             C_J == J_prime/(0.5*state.rho*state.V**2 * bw.wing["cmac"]),
             C_E == E_prime/(0.5*state.rho*state.V**3 * bw.wing["cmac"]),
             h == (bw.n_prop*pi*bw.powertrain.r**2)/bw.wing.b,
-            C_Di >= (C_L**2)/(pi*bw.wing["AR"]*e),
+            C_Di == (C_L**2)/(pi*bw.wing["AR"]*e),
             C_D >= C_Di  + C_Dp,
             C_Dp == mfac*1.328/Re**0.5, #friction drag only, need to add form
             Re == state["V"]*state["rho"]*(bw.wing["S"]/bw.wing["AR"])**0.5/state["mu"],
@@ -499,37 +503,38 @@ class Mission(Model):
         return constraints,self.aircraft,self.fs, loading
 
 if __name__ == "__main__":
-    poweredwheels = False
+    poweredwheels = True
     M = Mission(poweredwheels=poweredwheels,n_wheels=3)
     M.cost = M.aircraft.mass
     # M.debug()
     sol = M.localsolve("mosek")
     print sol.summary()
 
-def CLCurves():
-    M = Mission()
-    runway_sweep = np.linspace(40,300,20)
-    obstacle_sweep = runway_sweep*4/3
-    M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
-    M.cost = M.aircraft.mass
-    sol = M.localsolve("mosek")
-    plt.plot(sol(M.Srunway),sol(M.aircraft.mass))
+# def CLCurves():
+#     M = Mission(poweredwheels=True,n_wheels=3)
+#     runway_sweep = np.linspace(100,300,4)
+#     obstacle_sweep = runway_sweep*4/3
+#     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
+#     M.cost = M.aircraft.mass
+#     sol = M.localsolve("mosek")
+#     print sol.summary()
+#     plt.plot(sol(M.Srunway),sol(M.aircraft.mass))
 
-    # sol = M.solve()
-    # # CLmax_set = np.linspace(3.5,8,5)
-    # for CLmax in CLmax_set:
-    #     print CLmax
-    #     # M.substitutions.update({M.aircraft.bw.CLmax:CLmax})
-    #     sol = M.solve("mosek")
-    #     print sol(M.aircraft.mass)
+#     # sol = M.solve()
+#     # # CLmax_set = np.linspace(3.5,8,5)
+#     # for CLmax in CLmax_set:
+#     #     print CLmax
+#     #     # M.substitutions.update({M.aircraft.bw.CLmax:CLmax})
+#     #     sol = M.solve("mosek")
+#     #     print sol(M.aircraft.mass)
     
-    plt.grid()
-    # plt.xlim([0,300])
-    # plt.ylim([0,1600])
-    plt.title("Runway length requirement for eSTOL")
-    plt.xlabel("Runway length [ft]")
-    plt.ylabel("Takeoff mass [kg]")
-    # plt.legend()
-    plt.show()
+#     plt.grid()
+#     # plt.xlim([0,300])
+#     # plt.ylim([0,1600])
+#     plt.title("Runway length requirement for eSTOL")
+#     plt.xlabel("Runway length [ft]")
+#     plt.ylabel("Takeoff mass [kg]")
+#     # plt.legend()
+#     plt.show()
 
 # CLCurves()
