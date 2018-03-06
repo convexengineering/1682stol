@@ -171,7 +171,7 @@ class Battery(Model):
     Variables
     ---------
     m                   [kg]            total mass
-    Estar       210     [Wh/kg]         specific energy
+    Estar       150     [Wh/kg]         specific energy
     E_capacity          [Wh]            energy capacity
     """
 
