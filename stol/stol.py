@@ -512,7 +512,7 @@ class Mission(Model):
                        Sobstacle == Srunway*(4.0/3.0),
                        Sobstacle >= mobstacle*(takeoff.Sto + climb.Sclimb),
                        R <= cruise.R,
-                       self.aircraft.battery.E_capacity >= takeoff.E + climb.E + cruise.E + landing.E,
+                       self.aircraft.battery.E_capacity*0.8 >= takeoff.E + climb.E + cruise.E + landing.E,
                        Wcent >= self.aircraft.mass*g,
                        Wcent == loading.wingl["W"]
         ]
