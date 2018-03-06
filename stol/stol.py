@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 # from gpkitmodels.GP.aircraft.wing.wing import Wing
 from gpkitmodels import g
-from gpkitmodels.GP.aircraft.wing.boxspar import BoxSpar
+from gpkitmodels.GP.aircraft.wing.capspar import CapSpar
 from gpkitmodels.GP.aircraft.wing.wing_skin import WingSkin
 from gpkitmodels.GP.aircraft.wing.wing import Planform
 from decimal import *
@@ -104,7 +104,7 @@ class Powertrain(Model):
     m           [kg]    powertrain mass
     Pmax        [kW]    maximum power
     Pstar   5   [kW/kg] motor specific power
-    r     0.2   [m]     propeller radius
+    r           [m]     propeller radius
     """
     def setup(self):
         exec parse_variables(Powertrain.__doc__)
@@ -212,7 +212,7 @@ class Wing(Model):
     mfac                m_{\\mathrm{fac}}
     """
 
-    sparModel = BoxSpar
+    sparModel = CapSpar
     fillModel = False
     skinModel = WingSkin
 
@@ -244,7 +244,7 @@ class BlownWing(Model):
     """
     Variables
     ---------
-    n_prop    8     [-]             number of props
+    n_prop          [-]             number of props
     m               [kg]            mass
     """
     def setup(self):
@@ -255,7 +255,8 @@ class BlownWing(Model):
         self.wing.substitutions[self.wing.planform.tau]=0.12
 
         constraints = [
-        m >= self.powertrain["m"] + self.wing.topvar("W")/Variable("g",9.8,"m/s/s")
+        m >= self.powertrain["m"] + self.wing.topvar("W")/Variable("g",9.8,"m/s/s"),
+        0.6*self.wing.b >= 2*n_prop*self.powertrain.r + 0.5*n_prop*self.powertrain.r
         ]
         return constraints,self.powertrain,self.wing
     def dynamic(self,state):
@@ -508,7 +509,7 @@ class Mission(Model):
         self.fs = [takeoff,climb,cruise,landing]
         constraints = [Srunway >= takeoff.Sto*mrunway,
                        Srunway >= landing.Sgr*mrunway,
-                       Sobstacle == Srunway*(4/3),
+                       Sobstacle == Srunway*(4.0/3.0),
                        Sobstacle >= mobstacle*(takeoff.Sto + climb.Sclimb),
                        R <= cruise.R,
                        self.aircraft.battery.E_capacity >= takeoff.E + climb.E + cruise.E + landing.E,
