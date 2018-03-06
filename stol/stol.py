@@ -173,11 +173,18 @@ class Battery(Model):
     m                   [kg]            total mass
     Estar       150     [Wh/kg]         specific energy
     E_capacity          [Wh]            energy capacity
+    P_max_cont          [kW]            continuous power output
+    P_max_burst         [kW]            burst power output
     """
 
     def setup(self):
         exec parse_variables(Battery.__doc__)
-        constraints = [m >= E_capacity/Estar]
+        with gpkit.SignomialsEnabled():
+            constraints = [m >= E_capacity/Estar#,
+                           # P_max_cont/Variable("Pa",1,"kW") <= 513.5+6.17e9/(1+(Variable("Es_n",1,"kg/Wh")*Estar/39.6)**(11.8)),
+                           # P_max_burst/Variable("Pb",1,"kW") <= 944.1+1.10e10/(1+(Variable("Es_n",1,"kg/Wh")*Estar/38.2)**(11.2))
+                           ]
+
         return constraints
     def dynamic(self,state):
         return BatteryP(self,state)
