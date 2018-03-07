@@ -70,7 +70,7 @@ class AircraftP(Model):
 
 class AircraftLoading(Model):
     def setup(self,aircraft,state,Wcent):
-        self.wingl = aircraft.bw.wing.spar.loading(aircraft.bw.wing)
+        self.wingl = aircraft.bw.wing.spar.loading(aircraft.bw.wing, state)
         loading = [self.wingl]
         return loading
 class Fuselage(Model):
