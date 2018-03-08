@@ -287,7 +287,7 @@ class BlownWingP(Model):
     C_T             [-]             thrust coefficient
     Re              [-]             Reynolds number
     e       0.8     [-]             span efficiency
-    mfac    1.1     [-]             profile drag margin factor
+    mcdp    1.1     [-]             profile drag margin factor
     m_dotprime      [kg/(m*s)]      jet mass flow per unit span
     J_prime         [kg/(s^2)]      momentum flow per unit span
     E_prime         [J/(m*s)]       energy flow per unit span
@@ -312,7 +312,7 @@ class BlownWingP(Model):
             P <= bw.powertrain["Pmax"],
             C_L <= C_LC*(1+2*C_J/(pi*bw.wing["AR"]*e)),
             
-            C_T == T/((0.5*state.rho*state.V**2)*bw.wing["S"]),
+            C_T == T/((0.5*state.rho*bw.wing["S"]*state.V**2)),
             m_dotprime == rho_j*u_j*h,
             J_prime ==  m_dotprime*u_j,
             E_prime == 0.5*m_dotprime*u_j**2,
@@ -322,7 +322,7 @@ class BlownWingP(Model):
             h == (bw.n_prop*pi*bw.powertrain.r**2)/bw.wing.b,
             C_Di == (C_L**2)/(pi*bw.wing["AR"]*e),
             C_D >= C_Di  + C_Dp,
-            C_Dp == mfac*1.328/Re**0.5, #friction drag only, need to add form
+            C_Dp == mcdp*1.328/Re**0.5, #friction drag only, need to add form
             Re == state["V"]*state["rho"]*(bw.wing["S"]/bw.wing["AR"])**0.5/state["mu"],
             # C_T >= C_D #steady level non-accelerating constraint as C_T-C_D = 1
             ]
