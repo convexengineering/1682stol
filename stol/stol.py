@@ -289,14 +289,14 @@ class BlownWingP(Model):
     e       0.8     [-]             span efficiency
     mcdp    1.1     [-]             profile drag margin factor
     m_dotprime      [kg/(m*s)]      jet mass flow per unit span
-    J_prime         [kg/(s^2)]      momentum flow per unit span
+    J_prime         [kg/(s**2)]      momentum flow per unit span
     E_prime         [J/(m*s)]       energy flow per unit span
-    rho_j   1.225   [kg/m^3]        density in jet flow
+    rho_j   1.225   [kg/m**3]        density in jet flow
     u_j             [m/s]           velocity in jet flow
     h               [m]             Wake height
     T               [N]             propeller thrust
     P               [kW]            power draw
-    A_disk          [m^2]           area of prop disk
+    A_disk          [m**2]           area of prop disk
 
     """
     def setup(self,bw,state):
@@ -332,7 +332,7 @@ class FlightState(Model):
 
     Variables
     ---------
-    rho         1.225       [kg/m^3]        air density
+    rho         1.225       [kg/m**3]        air density
     mu          1.789e-5    [kg/m/s]        air viscosity
     V                       [knots]         speed
     g           9.8         [m/s/s]         acceleration due to gravity
@@ -513,6 +513,8 @@ class Landing(Model):
     Vs                      [kts]       stall velocity
     nz           1.25       [-]         load factor
     Xla                     [ft]        total landing distance                        
+    mu_b         0.4        [-]         braking friction coefficient
+    Sgr                     [ft]        landing distance
     """
     def setup(self, aircraft):
         exec parse_variables(Landing.__doc__)
@@ -523,25 +525,26 @@ class Landing(Model):
         rho = fs.rho
         mstall = 1.3
         perf = aircraft.dynamic(fs)
-        CL = self.CL = perf.bw_perf.C_L
-        CD = self.CD = perf.bw_perf.C_D
+        CL = perf.bw_perf.C_L
+        CD = perf.bw_perf.C_D
         V = perf.fs.V
         rho = perf.fs.rho
         C_T = perf.bw_perf.C_T
-
-        constraints = [
-            X_a >= -(h_obst-h_r)/tang
-            C_T <= (W*sing)/(0.5*rho*V^2*S)+C_D
-            T_a >= C_T*0.5*rho*V^2*S
-            h_r >= r*(1+cosg)
-            Xro >= -rsing
-            Vs  >= (2.*aircraft.mass*fs.g/rho/S/CL)**0.5
-            r   >= 1/sing*(mstall^2*Vs^2*sing)/(g*(nz-cosg))
-            Xa  >= -1/tang*(h_obst-(mstall^2*Vs^2*(1-cosg))/(g*(nz-cosg)))
-            Xdec >= W*((1.1^2-mstall^2)*Vs^2)/(2*g*0.5*rho*(((mstall-1.1)/2)*Vs)^2*S*(0.1*C_T-C_D))
-            Xgr >= 1.21*Vs^2/(2*g*(0.4-(0.1*C_T*0.5*rho*S*1.21*Vs^2)/W))
-            Xla >= Xa+Xro+Xdec+Xgr
-        ]
+        with gpkit.SignomialsEnabled():
+            constraints = [
+                Xa  >= -(h_obst-h_r)/tang,
+                C_T <= (W*sing)/(0.5*rho*S*V**2)+CD,
+                T_a >= C_T*0.5*rho*S*V**2,
+                h_r >= r*(1+cosg),
+                Xro >= -r*sing,
+                Vs  >= (2.*aircraft.mass*fs.g/rho/S/CL)**0.5,
+                r*(g*(nz-cosg)) >= 1/sing*(mstall**2*Vs**2*sing),
+                # Xa  >= -1/tang*(h_obst-(mstall**2*Vs**2*(1-cosg))/(g*(nz-cosg))),
+                Xdec*(2*g*0.5*rho*(((mstall-1.1)/2)*Vs)**2*S*(0.1*C_T-CD)) >= W*((1.1**2-mstall**2)*Vs**2),
+                Xgr*(2*g*(mu_b-(0.1*C_T*0.5*rho*S*1.21*Vs**2)/W)) >= 1.21*Vs**2,
+                Xla >= Xa+Xro+Xdec+Xgr,
+                Sgr >= Xla
+            ]
 
         return constraints, fs,perf      
 
@@ -564,7 +567,7 @@ class Mission(Model):
         takeoff = TakeOff(self.aircraft,poweredwheels,n_wheels)
         climb = Climb(self.aircraft)
         cruise = Cruise(self.aircraft)
-        landing = GLanding(self.aircraft)
+        landing = Landing(self.aircraft)
         
         Wcent = Variable("W_{cent}","lbf","center aircraft weight")
         loading = self.aircraft.loading(cruise.flightstate,Wcent)
@@ -575,7 +578,7 @@ class Mission(Model):
                        Sobstacle == Srunway*(4.0/3.0),
                        Sobstacle >= mobstacle*(takeoff.Sto + climb.Sclimb),
                        R <= cruise.R,
-                       self.aircraft.battery.E_capacity*0.8 >= takeoff.E + climb.E + cruise.E + landing.E,
+                       self.aircraft.battery.E_capacity*0.8 >= takeoff.E + climb.E + cruise.E,
                        Wcent >= self.aircraft.mass*g,
                        Wcent == loading.wingl["W"]
         ]
