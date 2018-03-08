@@ -491,6 +491,62 @@ class GLanding(Model):
 
         return constraints, fs,perf
 
+class Landing(Model):
+    """ landing model
+
+    Variables
+    ---------
+    g           9.81        [m/s**2]    gravitational constant
+    h_obst      50          [ft]        obstacle height
+    Xgr                     [ft]        landing ground roll
+    Xa                      [ft]        approach distance
+    Xro                     [ft]        round out distance
+    Xdec                    [ft]        deceleration distance
+    msafety     1.4         [-]         landing safety margin
+    tang        -0.0524     [-]         tan(gamma)
+    cosg        0.9986      [-]         cos(gamma)
+    sing        -0.0523     [-]         sin(gamma)
+    h_r                     [ft]        height of roundout
+    T_a                     [N]         approach thrust
+    W                       [N]         aircraft weight
+    r                       [ft]        radius of roundout maneuver
+    Vs                      [kts]       stall velocity
+    nz           1.25       [-]         load factor
+    Xla                     [ft]        total landing distance                        
+    """
+    def setup(self, aircraft):
+        exec parse_variables(Landing.__doc__)
+
+        fs = FlightState()
+
+        S = self.S = aircraft.bw.wing["S"]
+        rho = fs.rho
+        mstall = 1.3
+        perf = aircraft.dynamic(fs)
+        CL = self.CL = perf.bw_perf.C_L
+        CD = self.CD = perf.bw_perf.C_D
+        V = perf.fs.V
+        rho = perf.fs.rho
+        C_T = perf.bw_perf.C_T
+
+        constraints = [
+            X_a >= -(h_obst-h_r)/tang
+            C_T <= (W*sing)/(0.5*rho*V^2*S)+C_D
+            T_a >= C_T*0.5*rho*V^2*S
+            h_r >= r*(1+cosg)
+            Xro >= -rsing
+            Vs  >= (2.*aircraft.mass*fs.g/rho/S/CL)**0.5
+            r   >= 1/sing*(mstall^2*Vs^2*sing)/(g*(nz-cosg))
+            Xa  >= -1/tang*(h_obst-(mstall^2*Vs^2*(1-cosg))/(g*(nz-cosg)))
+            Xdec >= W*((1.1^2-mstall^2)*Vs^2)/(2*g*0.5*rho*(((mstall-1.1)/2)*Vs)^2*S*(0.1*C_T-C_D))
+            Xgr >= 1.21*Vs^2/(2*g*(0.4-(0.1*C_T*0.5*rho*S*1.21*Vs^2)/W))
+            Xla >= Xa+Xro+Xdec+Xgr
+        ]
+
+        return constraints, fs,perf      
+
+
+
 class Mission(Model):
     """ Mission
 
