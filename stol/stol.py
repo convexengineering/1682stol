@@ -406,7 +406,7 @@ class Climb(Model):
     Variables
     ---------
     Sclimb                  [ft]        distance covered in climb
-    h_gain        50        [ft]        height gained in climb
+    h_gain                  [ft]        height gained in climb
     t                       [s]         time of climb
     h_dot                   [m/s]       climb rate
     E                       [kWh]       climb energy usage
@@ -566,6 +566,7 @@ class Mission(Model):
         exec parse_variables(Mission.__doc__)
         self.aircraft = Aircraft(poweredwheels,n_wheels)
         takeoff = TakeOff(self.aircraft,poweredwheels,n_wheels)
+        obstacle_climb = Climb(self.aircraft)
         climb = Climb(self.aircraft)
         cruise = Cruise(self.aircraft)
         landing = Landing(self.aircraft)
@@ -573,16 +574,21 @@ class Mission(Model):
         Wcent = Variable("W_{cent}","lbf","center aircraft weight")
         loading = self.aircraft.loading(cruise.flightstate,Wcent)
 
-        self.fs = [takeoff,climb,cruise,landing]
-        constraints = [Srunway >= takeoff.Sto*mrunway,
+        self.fs = [takeoff,obstacle_climb,climb,cruise,landing]
+
+        constraints = [obstacle_climb.h_gain == Variable("h_obstacle",50,"ft"),
+                       climb.h_gain == Variable("h_cruise",950,"ft"),
+                       climb.Sclimb == Variable("Scruiseclimb",10,"miles"),
+                       Srunway >= takeoff.Sto*mrunway,
                        Srunway >= landing.Sgr*mrunway,
                        Sobstacle == Srunway*(4.0/3.0),
-                       Sobstacle >= mobstacle*(takeoff.Sto + climb.Sclimb),
-                       R <= cruise.R,
-                       self.aircraft.battery.E_capacity*0.8 >= takeoff.E + climb.E + cruise.E,
+                       Sobstacle >= mobstacle*(takeoff.Sto + obstacle_climb.Sclimb),
+                       self.aircraft.battery.E_capacity*0.8 >= takeoff.E + obstacle_climb.E + climb.E + cruise.E,
                        Wcent >= self.aircraft.mass*g,
                        Wcent == loading.wingl["W"]
         ]
+        with gpkit.SignomialsEnabled():
+            constraints += [R <= cruise.R]
         return constraints,self.aircraft,self.fs, loading
 
 def writeSol(sol):
