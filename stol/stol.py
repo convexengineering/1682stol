@@ -251,7 +251,7 @@ class BlownWing(Model):
     """
     Variables
     ---------
-    n_prop          [-]             number of props
+    n_prop     6    [-]             number of props
     m               [kg]            mass
     """
     def setup(self):
