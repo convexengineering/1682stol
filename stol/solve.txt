@@ -575,7 +575,7 @@ Sensitivities
 
                     | Mission/Landing
                   g : -0.0082                                        gravitational constant
-             mstall : -4.6e-11                                       stall
+             mstall : -2.8e-11                                       stall
 
                     | Mission/Landing/AircraftP.4/BatteryP.4
               Pstar : -1.1e-11                                       battery specific power limit

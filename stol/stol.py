@@ -24,21 +24,30 @@ class Aircraft(Model):
     Wpax    90  [kg]    mass of a passenger
     fstruct 0.3 [-]     structural mass fraction
     """
-    def setup(self,poweredwheels=False,n_wheels=3):
+    def setup(self,poweredwheels=False,n_wheels=3,hybrid=False):
         exec parse_variables(Aircraft.__doc__)
-        # self.powertrain = Powertrain()
-        self.battery = Battery()
-        # self.wing = Wing()
-        self.fuselage = Fuselage()
-        self.bw = BlownWing()
-        self.components = [self.bw,self.battery,self.fuselage]
+        if not hybrid:
+            self.battery = Battery()
+            self.fuselage = Fuselage()
+            self.bw = BlownWing()
+            self.components = [self.bw,self.battery,self.fuselage]
+        
+        else:
+            self.tank = Tank()
+            self.generator = Generator()
+            self.battery = Battery()
+            self.fuselage = Fuselage()
+            self.bw = BlownWing()
+            self.components = [self.tank,self.generator,self.battery,self.fuselage,self.bw]
+
         if poweredwheels:
-            self.pw = PoweredWheel()
-            self.wheels = n_wheels*[self.pw]
-            self.components += self.wheels
+                self.pw = PoweredWheel()
+                self.wheels = n_wheels*[self.pw]
+                self.components += self.wheels
         self.mass = m
         constraints = [self.fuselage.m >= fstruct*self.mass,
                         self.mass>=sum(c.topvar("m") for c in self.components) + Wpax*Npax]
+
         return constraints, self.components
     def dynamic(self,state):
         return AircraftP(self,state)
@@ -111,21 +120,6 @@ class Powertrain(Model):
         constraints = [m >= Pmax/Pstar]
         return constraints
 
-# class PowertrainP(Model):
-#     """ PowertrainP
-
-#     Variables
-#     ---------
-#     P               [kW]      power
-#     eta   0.9*0.8   [-]       whole-chain powertrain efficiency
-#     T               [N]       total thrust
-#     """
-#     def setup(self,powertrain,state):
-#         exec parse_variables(PowertrainP.__doc__)
-#         constraints = [T <= P*eta/state["V"],
-#                        P <= powertrain["Pmax"]]
-#         return constraints
-
 class PoweredWheel(Model):
     """Powered Wheels
 
@@ -167,25 +161,12 @@ class PoweredWheelP(Model):
                       tau <= pw.tau_max]
         return constraints
 
-class ICandGen(Model):
-        """ ICandGen Model
+class Generator(Model):
+    """ Generator Model
     Variables
     ---------
-    P_ic_sp_cont    1000    [W/kg]     specific cont power of IC
+    P_ic_sp_cont    1       [kW/kg]     specific cont power of IC
     eta_IC          0.256   [-]        thermal efficiency of IC
-    """
-
-    def setup(self):
-        exec parse_variables(ICandGen.__doc__)
-        constraints = []
-        return constraints
-    def dynamic(self,state):
-        return ICandGenP(self,state)
-
-class ICandGenP(Model):
-    """ICandGenP Model
-    Variables
-    ---------
     m_g                     [kg]       generator mass
     m_gc                    [kg]       generator controller mass
     m_ic                    [kg]       piston mass
@@ -198,18 +179,47 @@ class ICandGenP(Model):
     P_gc_sp_cont            [W/kg]     generator controller cont power
     P_gc_sp_max             [W/kg]     generator controller max power
     P_ic_cont               [W]        piston continous power  
+    m                       [kg]       mass of generator setup
     """
-    def setup(self,ic,state):
-        exec parse_variables(ICandGenP.__doc__)
-        constraints = [P_g_sp_cont ==  -0.228*m_g^2+45.7*m^g+3060,
-                       P_g_sp_max  ==  -0.701*m_g^2+136*m_g+4380,
-                       P_g_cont    <= P_g_sp_cont*m_g,
-                       P_g_max     <= P_g_sp_max*m_g,
-                       P_gc_cont   <= P_gc_sp_cont*m_gc,
-                       P_gc_max    <= P_gc_sp_max*m_gc,
-                       P_ic_cont   <= ic.P_ic_sp_cont*m_ic,
-                       ]
+    def setup(self):
+        exec parse_variables(Generator.__doc__)
+        with gpkit.SignomialsEnabled():
+            constraints = [P_g_sp_cont <=  -0.228*m_g**2+45.7*m_g+3060,
+                   P_g_sp_max  <=  -0.701*m_g^2+136*m_g+4380,
+                   P_g_cont    <= P_g_sp_cont*m_g,
+                   P_g_max     <= P_g_sp_max*m_g,
+                   P_gc_cont   <= P_gc_sp_cont*m_gc,
+                   P_gc_max    <= P_gc_sp_max*m_gc,
+                   P_ic_cont   <= P_ic_sp_cont*m_ic,
+                   m >= m_g + m_gc + m_ic
+            ]
 
+        return constraints
+    def dynamic(self,state):
+        return GeneratorP(self,state)
+
+class GeneratorP(Model):
+    """GeneratorP Model
+    Variables
+    ---------
+
+    """
+    def setup(self,gen,state):
+        exec parse_variables(GeneratorP.__doc__)
+
+        return constraints
+
+class Tank(Model):
+    """Tank Model
+    Variables
+    ---------
+    V           [gallon]
+    m      1    [kg]
+    rho         [kg/gallon]
+    """
+    def setup(self):
+        exec parse_variables(Tank.__doc__)
+        constraints = []
         return constraints
 
 class Fuel(Model):
@@ -222,6 +232,7 @@ class Fuel(Model):
         exec parse_variables(Fuel.__doc__)
         constraints = []
         return constraints
+
     def dynamic(self,state):
         return FuelP(self,state)
 
@@ -635,33 +646,33 @@ class Mission(Model):
     mobstacle   1.4         [-]         obstacle margin
     R           115         [nmi]       mission range
     """
-    def setup(self,poweredwheels=False,n_wheels=3):
+    def setup(self,poweredwheels=False,n_wheels=3,hybrid=False):
         exec parse_variables(Mission.__doc__)
-        self.aircraft = Aircraft(poweredwheels,n_wheels)
-        takeoff = TakeOff(self.aircraft,poweredwheels,n_wheels)
-        obstacle_climb = Climb(self.aircraft)
-        climb = Climb(self.aircraft)
-        cruise = Cruise(self.aircraft)
-        landing = Landing(self.aircraft)
+        self.aircraft = Aircraft(poweredwheels,n_wheels,hybrid)
+        self.takeoff = TakeOff(self.aircraft,poweredwheels,n_wheels)
+        self.obstacle_climb = Climb(self.aircraft)
+        self.climb = Climb(self.aircraft)
+        self.cruise = Cruise(self.aircraft)
+        self.landing = Landing(self.aircraft)
         
         Wcent = Variable("W_{cent}","lbf","center aircraft weight")
-        loading = self.aircraft.loading(cruise.flightstate,Wcent)
+        loading = self.aircraft.loading(self.cruise.flightstate,Wcent)
 
-        self.fs = [takeoff,obstacle_climb,climb,cruise,landing]
+        self.fs = [self.takeoff,self.obstacle_climb,self.climb,self.cruise,self.landing]
 
-        constraints = [obstacle_climb.h_gain == Variable("h_obstacle",50,"ft"),
-                       climb.h_gain == Variable("h_cruise",950,"ft"),
-                       climb.Sclimb == Variable("Scruiseclimb",10,"miles"),
-                       Srunway >= takeoff.Sto*mrunway,
-                       Srunway >= landing.Sgr*mrunway,
+        constraints = [self.obstacle_climb.h_gain == Variable("h_obstacle",50,"ft"),
+                       self.climb.h_gain == Variable("h_cruise",950,"ft"),
+                       self.climb.Sclimb == Variable("Scruiseclimb",10,"miles"),
+                       Srunway >= self.takeoff.Sto*mrunway,
+                       Srunway >= self.landing.Sgr*mrunway,
                        Sobstacle == Srunway*(4.0/3.0),
-                       Sobstacle >= mobstacle*(takeoff.Sto + obstacle_climb.Sclimb),
-                       self.aircraft.battery.E_capacity*0.8 >= takeoff.E + obstacle_climb.E + climb.E + cruise.E,
+                       Sobstacle >= mobstacle*(self.takeoff.Sto + self.obstacle_climb.Sclimb),
+                       self.aircraft.battery.E_capacity*0.8 >= self.takeoff.E + self.obstacle_climb.E + self.climb.E + self.cruise.E,
                        Wcent >= self.aircraft.mass*g,
                        Wcent == loading.wingl["W"]
         ]
         with gpkit.SignomialsEnabled():
-            constraints += [R <= cruise.R]
+            constraints += [R <= self.cruise.R]
         return constraints,self.aircraft,self.fs, loading
 
 def writeSol(sol):
@@ -671,7 +682,7 @@ def writeSol(sol):
 
 if __name__ == "__main__":
     poweredwheels = True
-    M = Mission(poweredwheels=poweredwheels,n_wheels=3)
+    M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=False)
     M.cost = M.aircraft.mass
     # M.debug()
     sol = M.localsolve("mosek")
