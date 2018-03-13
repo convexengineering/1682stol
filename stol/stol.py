@@ -585,6 +585,11 @@ class Mission(Model):
         ]
         return constraints,self.aircraft,self.fs, loading
 
+def writeSol(sol):
+    with open('solve.txt', 'wb') as output:
+        output.write(sol.table())
+
+
 if __name__ == "__main__":
     poweredwheels = True
     M = Mission(poweredwheels=poweredwheels,n_wheels=3)
@@ -592,6 +597,8 @@ if __name__ == "__main__":
     # M.debug()
     sol = M.localsolve("mosek")
     print sol.table()
+    writeSol(sol)
+
 
 # def CLCurves():
 #     M = Mission(poweredwheels=True,n_wheels=3)
