@@ -515,6 +515,7 @@ class Landing(Model):
     Xla                     [ft]        total landing distance                        
     mu_b         0.4        [-]         braking friction coefficient
     Sgr                     [ft]        landing distance
+    mstall       1.3        [-]         stall
     """
     def setup(self, aircraft):
         exec parse_variables(Landing.__doc__)
@@ -523,7 +524,6 @@ class Landing(Model):
 
         S = self.S = aircraft.bw.wing["S"]
         rho = fs.rho
-        mstall = 1.3
         perf = aircraft.dynamic(fs)
         CL = perf.bw_perf.C_L
         CD = perf.bw_perf.C_D
@@ -532,17 +532,18 @@ class Landing(Model):
         C_T = perf.bw_perf.C_T
         with gpkit.SignomialsEnabled():
             constraints = [
-                Xa  >= -(h_obst-h_r)/tang,
-                C_T <= (W*sing)/(0.5*rho*S*V**2)+CD,
-                T_a >= C_T*0.5*rho*S*V**2,
-                h_r >= r*(1+cosg),
+                W == aircraft.mass*g,
+                # Xa  >= -(h_obst-h_r)/tang,
+                C_T >= CD, #+ (W*sing)/(0.5*rho*S*V**2),
+                # T_a <= C_T*0.5*rho*S*V**2,
+                # h_r >= r*(1+cosg),
                 Xro >= -r*sing,
                 Vs**2  >= (2.*aircraft.mass*fs.g/rho/S/CL),
                 r*(g*(nz-cosg)) >= 1/sing*(sing*mstall**2*Vs**2),
                 # Xa  >= -1/tang*(h_obst-(mstall**2*Vs**2*(1-cosg))/(g*(nz-cosg))),
                 Xdec*(2*g*0.5*rho*(((mstall-1.1)/2)*Vs)**2*S*(0.1*C_T-CD)) >= W*((1.1**2-mstall**2)*Vs**2),
                 Xgr*(2*g*(mu_b-(0.1*C_T*0.5*rho*S*1.21*Vs**2)/W)) >= 1.21*Vs**2,
-                Xla >= Xa+Xro+Xdec+Xgr,
+                Xla >= Xro+Xdec+Xgr,
                 Sgr >= Xla
             ]
 
