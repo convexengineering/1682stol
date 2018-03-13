@@ -166,6 +166,79 @@ class PoweredWheelP(Model):
                       T == tau*pw.gear_ratio/pw.r,
                       tau <= pw.tau_max]
         return constraints
+
+class ICandGen(Model):
+        """ ICandGen Model
+    Variables
+    ---------
+    P_ic_sp_cont    1000    [W/kg]     specific cont power of IC
+    eta_IC          0.256   [-]        thermal efficiency of IC
+    """
+
+    def setup(self):
+        exec parse_variables(ICandGen.__doc__)
+        constraints = []
+        return constraints
+    def dynamic(self,state):
+        return ICandGenP(self,state)
+
+class ICandGenP(Model):
+    """ICandGenP Model
+    Variables
+    ---------
+    m_g                     [kg]       generator mass
+    m_gc                    [kg]       generator controller mass
+    m_ic                    [kg]       piston mass
+    P_g_sp_cont             [W/kg]     generator spec power (cont)
+    P_g_sp_max              [W/kg]     generator spec power (max)
+    P_g_cont                [W]        generator cont. power
+    P_g_max                 [W]        generator max power
+    P_gc_cont               [W]        generator controller cont. power
+    P_gc_max                [W]        generator controller max power
+    P_gc_sp_cont            [W/kg]     generator controller cont power
+    P_gc_sp_max             [W/kg]     generator controller max power
+    P_ic_cont               [W]        piston continous power  
+    """
+    def setup(self,ic,state):
+        exec parse_variables(ICandGenP.__doc__)
+        constraints = [P_g_sp_cont ==  -0.228*m_g^2+45.7*m^g+3060,
+                       P_g_sp_max  ==  -0.701*m_g^2+136*m_g+4380,
+                       P_g_cont    <= P_g_sp_cont*m_g,
+                       P_g_max     <= P_g_sp_max*m_g,
+                       P_gc_cont   <= P_gc_sp_cont*m_gc,
+                       P_gc_max    <= P_gc_sp_max*m_gc,
+                       P_ic_cont   <= ic.P_ic_sp_cont*m_ic,
+                       ]
+
+        return constraints
+
+class Fuel(Model):
+    """Fuel Model
+    Variables
+    ---------
+    E_fuel_spec     11900   [Wh/kg]    fuel specific energy
+    """
+    def setup(self):
+        exec parse_variables(Fuel.__doc__)
+        constraints = []
+        return constraints
+    def dynamic(self,state):
+        return FuelP(self,state)
+
+class FuelP(Model):
+    """FuelP
+    Variables
+    ---------
+    E_cruise            [Wh]        Energy used during cruise
+    m_f                 [kg]        mass of fuel
+    eta_IC      0.256   [-]         thermal efficiency of IC
+    """
+    def setup(self,fuel,state):
+        exec parse_variables(FuelP.__doc__)
+        constraints = [E_cruise <=  fuel.E_fuel_spec*eta_IC*m_f]
+        return constraints
+
+
 class Battery(Model):
     """ Battery
     Variables
