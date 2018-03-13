@@ -591,7 +591,7 @@ if __name__ == "__main__":
     M.cost = M.aircraft.mass
     # M.debug()
     sol = M.localsolve("mosek")
-    print sol.summary()
+    print sol.table()
 
 # def CLCurves():
 #     M = Mission(poweredwheels=True,n_wheels=3)
