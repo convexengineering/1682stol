@@ -225,7 +225,7 @@ class Fuel(Model):
     """Fuel Model
     Variables
     ---------
-    E_fuel_spec     11900   [Wh/kg]    fuel specific energy
+    E_fuel_spec     11900/   [Wh/kg]    fuel specific energy
     """
     def setup(self):
         exec parse_variables(Fuel.__doc__)
@@ -256,17 +256,17 @@ class Battery(Model):
     m                   [kg]            total mass
     Estar       150     [Wh/kg]         specific energy
     E_capacity          [Wh]            energy capacity
-    P_max_cont          [kW]            continuous power output
-    P_max_burst         [kW]            burst power output
+    P_max_cont          [W/kg]          continuous power output
+    P_max_burst         [W/kg]          burst power output
     """
 
     def setup(self):
         exec parse_variables(Battery.__doc__)
         with gpkit.SignomialsEnabled():
-            constraints = [m >= E_capacity/Estar#,
-                           # P_max_cont/Variable("Pa",1,"kW") <= 513.5+6.17e9/(1+(Variable("Es_n",1,"kg/Wh")*Estar/39.6)**(11.8)),
-                           # P_max_burst/Variable("Pb",1,"kW") <= 944.1+1.10e10/(1+(Variable("Es_n",1,"kg/Wh")*Estar/38.2)**(11.2))
-                           ]
+            constraints = [m >= E_capacity/Estar,
+                           (P_max_cont/Variable("a",1,"W/kg") - 513.49)*(1+(Estar/Variable("b",40.9911,"Wh/kg"))**(11.79229)) <=  6.17e9,
+                           (P_max_burst/Variable("a",1,"W/kg") - 944.0619)*(1+(Estar/Variable("b",38.21934,"Wh/kg"))**(11.15887)) <=  1.02e10
+                        ]
 
         return constraints
     def dynamic(self,state):
@@ -277,11 +277,10 @@ class BatteryP(Model):
     Variables
     ---------
     P                   [kW]        battery power draw
-    Pstar      2        [kW/kg]     battery specific power limit
     """
     def setup(self,batt,state):
         exec parse_variables(BatteryP.__doc__)
-        constraints = [P <=  Pstar*batt.m]
+        constraints = [P <= batt.m*batt.P_max_burst]
         return constraints
 
 class Wing(Model):
@@ -514,6 +513,7 @@ class Climb(Model):
         rho = perf.fs.rho
 
         constraints = [
+            perf.batt_perf.P <= aircraft.battery.m*aircraft.battery.P_max_cont,
             W ==  aircraft.mass*perf.fs.g,
             W <= 0.5*CL*rho*S*V**2,
             perf.bw_perf.T >= 0.5*CD*rho*S*V**2 + W*h_dot/V,
@@ -539,7 +539,8 @@ class Cruise(Model):
         exec parse_variables(Cruise.__doc__)
         self.flightstate = FlightState()
         self.perf = aircraft.dynamic(self.flightstate)
-        constraints = [R <= t*self.flightstate.V,
+        constraints = [self.perf.batt_perf.P <= aircraft.battery.m*aircraft.battery.P_max_cont,
+                       R <= t*self.flightstate.V,
                        E >= self.perf.topvar("P")*t,
                        self.flightstate["V"] >= Vmin]
         return constraints, self.perf
@@ -620,13 +621,13 @@ class Landing(Model):
                 C_T >= CD, #+ (W*sing)/(0.5*rho*S*V**2),
                 # T_a <= C_T*0.5*rho*S*V**2,
                 # h_r >= r*(1+cosg),
-                Xro >= -r*sing,
+                # Xro >= -r*sing,
                 Vs**2  >= (2.*aircraft.mass*fs.g/rho/S/CL),
-                r*(g*(nz-cosg)) >= 1/sing*(sing*mstall**2*Vs**2),
+                # r*(g*(nz-cosg)) >= 1/sing*(sing*mstall**2*Vs**2),
                 # Xa  >= -1/tang*(h_obst-(mstall**2*Vs**2*(1-cosg))/(g*(nz-cosg))),
-                Xdec*(2*g*0.5*rho*(((mstall-1.1)/2)*Vs)**2*S*(0.1*C_T-CD)) >= W*((1.1**2-mstall**2)*Vs**2),
-                Xgr*(2*g*(mu_b-(0.1*C_T*0.5*rho*S*1.21*Vs**2)/W)) >= 1.21*Vs**2,
-                Xla >= Xro+Xdec+Xgr,
+                # Xdec*(2*g*0.5*rho*(((mstall-1.1)/2)*Vs)**2*S*(C_T-CD)) >= W*((1.1**2-mstall**2)*Vs**2),
+                Xgr*(2*g*(mu_b-(C_T*0.5*rho*S*(mstall*Vs)**2)/W)) >= (mstall*Vs)**2,
+                Xla >= Xgr,
                 Sgr >= Xla
             ]
 
