@@ -30,7 +30,9 @@ class Aircraft(Model):
             self.battery = Battery()
             self.fuselage = Fuselage()
             self.bw = BlownWing()
-            self.components = [self.bw,self.battery,self.fuselage]
+            self.htail = Htail(self.bw)
+            self.vtail = Vtail(self.bw)
+            self.components = [self.bw,self.battery,self.fuselage,self.htail,self.vtail]
         
         else:
             self.tank = Tank()
@@ -38,7 +40,9 @@ class Aircraft(Model):
             self.battery = Battery()
             self.fuselage = Fuselage()
             self.bw = BlownWing()
-            self.components = [self.tank,self.generator,self.battery,self.fuselage,self.bw]
+            self.htail = Htail(self.bw)
+            self.vtail = Vtail(self.bw)
+            self.components = [self.tank,self.generator,self.battery,self.fuselage,self.bw,self.htail,self.vtail]
 
         if poweredwheels:
                 self.pw = PoweredWheel()
@@ -82,6 +86,7 @@ class AircraftLoading(Model):
         self.wingl = aircraft.bw.wing.spar.loading(aircraft.bw.wing, state)
         loading = [self.wingl]
         return loading
+
 class Fuselage(Model):
     """ Fuselage
 
@@ -331,6 +336,39 @@ class Wing(Model):
 
         return constraints, self.planform, self.components
 
+class Vtail(Model):
+     """
+    Variables
+    ---------
+    V_v     0.04    [-]             vertical tail volume coefficent
+    l_v             [m]             vertical tail moment arm
+    S_v             [m**2]          vertical tail surface area
+    """
+    def setup(self,bw):
+        exec parse_variables(Vtail.__doc__)
+        S = bw.wing["S"]
+        b = bw.wing["b"]
+        constraints = [S_v >= S*b*l_v/V_v]
+                         #m >= S_v*m_spec]
+        return constraints
+
+
+class Htail(Model):
+     """
+    Variables
+    ---------
+    V_h     0.8     [-]             horizontal tail volume coefficent
+    l_h             [m]             horizontal tail moment arm
+    S_h             [m**2]          horizontal tail surface area
+    """
+    def setup(self,bw):
+        exec parse_variables(Htail.__doc__)
+        S = bw.wing["S"]
+        c = bw.wing["cmac"]
+        constraints = [S_h >= S*c*l_h/V_h]
+                         #m >= S_h*m_spec]
+        return constraints
+
 class BlownWing(Model):
     """
     Variables
@@ -411,6 +449,7 @@ class BlownWingP(Model):
             # C_T >= C_D #steady level non-accelerating constraint as C_T-C_D = 1
             ]
         return constraints
+
 class FlightState(Model):
     """ Flight State
 
@@ -690,15 +729,15 @@ if __name__ == "__main__":
     writeSol(sol)
 
 
-# def CLCurves():
+def CLCurves():
 #     M = Mission(poweredwheels=True,n_wheels=3)
-#     runway_sweep = np.linspace(100,300,4)
-#     obstacle_sweep = runway_sweep*4/3
-#     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
-#     M.cost = M.aircraft.mass
-#     sol = M.localsolve("mosek")
-#     print sol.summary()
-#     plt.plot(sol(M.Srunway),sol(M.aircraft.mass))
+    runway_sweep = np.linspace(100,300,10)
+    obstacle_sweep = runway_sweep*4/3
+    M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
+    M.cost = M.aircraft.mass
+    sol = M.localsolve("mosek")
+    print sol.summary()
+    plt.plot(sol(M.Srunway),sol(M.aircraft.mass))
 
 #     # sol = M.solve()
 #     # # CLmax_set = np.linspace(3.5,8,5)
@@ -708,13 +747,13 @@ if __name__ == "__main__":
 #     #     sol = M.solve("mosek")
 #     #     print sol(M.aircraft.mass)
     
-#     plt.grid()
+    plt.grid()
 #     # plt.xlim([0,300])
 #     # plt.ylim([0,1600])
-#     plt.title("Runway length requirement for eSTOL")
-#     plt.xlabel("Runway length [ft]")
-#     plt.ylabel("Takeoff mass [kg]")
-#     # plt.legend()
-#     plt.show()
+    plt.title("Runway length requirement for eSTOL")
+    plt.xlabel("Runway length [ft]")
+    plt.ylabel("Takeoff mass [kg]")
+    #plt.legend()
+    plt.show()
 
-# CLCurves()
+CLCurves()
