@@ -1,0 +1,37 @@
+Notes from working through model with Mike:
+- Fuselage area weight buildup, add tail weights (or get fraction from weights spreadsheet)
+- Look at efficiencies in electrical system
+- Skin friction fuselage drag from Solidworks area input
+- fix CD in climb to be the total CD of the aircraft, not just blown wing
+- bring up the charge in flight versus charge on ground tradeoff in infrastructure
+- seperate battery charge power into P_charge variable
+- Implement Alan's fits for Powertrain
+- Look at why propeller radius is not huge, filling maximum space
+- If landing constrained, why powered wheels? Because RPM constrained to mass, fix that
+- Change generator name to GenAndIC
+- Wiring loss and shaft losses in generator
+- Add tank mass that scales with fuel mass
+- Fix Wcent to only be the central masses, not including the wing
+- Impose constraint on capspar thickness and width to be the same throughout sections (no taper)
+- Increase minimum gauge of wing skin by multiplying the current thickness
+- Feed fuselage width into span usability for number of props
+- Add back in the mu*CLg constraint to B for takeoff to be more optimistic
+- Implement Breguet range for cruise
+- Use raymer A and B eqns for landing, make sure to use a different fit appropriate for landing
+- Add climb to altitude range to total range
+- Change Sclimb to reflect steeper angle (20 degrees)
+
+
+
+Priorities:
+Hammer these down
+- Hybrid
+- Powered wheels
+- weights and drag cleanup, integrate sheet
+- Raymer landing model
+
+Solution anal
+- Look at fstruct sensitivitycda
+- Check g-loading on wing
+- Check sensitivity to Pstar for Powertrain
+- check sensitivity of Wing/mfac

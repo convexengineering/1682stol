@@ -14,6 +14,7 @@ from gpkitmodels.GP.aircraft.wing.wing_skin import WingSkin
 from gpkitmodels.GP.aircraft.wing.wing import Planform
 from decimal import *
 pi = math.pi
+
 class Aircraft(Model):
     """ Aircraft
 
@@ -52,7 +53,7 @@ class Aircraft(Model):
     def dynamic(self,state,hybrid=False,powermode="batt-chrg",t_charge=None):
         return AircraftP(self,state,hybrid,powermode=powermode,t_charge=t_charge)
     def loading(self,Wcent,state):
-        return AircraftLoading(self,Wcent,state)
+        return AircraftLoading(self,state)
 
 class AircraftP(Model):
     """ AircraftP
@@ -71,12 +72,12 @@ class AircraftP(Model):
                        P == self.bw_perf["P"],
                        P <= aircraft.bw.powertrain["Pmax"],
                        self.batt_perf.P >= P,
-                       self.bw_perf.C_T >= self.bw_perf.C_D + aircraft.fuselage.cda,
+                       self.bw_perf.C_T >= self.bw_perf.C_D + aircraft.fuselage.cda
                     ]
         if hybrid:
             self.gen_perf = aircraft.generator.dynamic(state)
             if powermode == "batt-chrg":
-                constraints += [self.gen_perf.P_gc >= P + aircraft.battery.E_capacity/t_charge]
+                constraints += [self.gen_perf.P_ic >= P + aircraft.battery.E_capacity/t_charge]
             if powermode == "batt-dischrg":
                 with gpkit.SignomialsEnabled():
                     constraints += [self.batt_perf.P + self.gen_perf.P_gc >= P]
@@ -84,7 +85,7 @@ class AircraftP(Model):
         return constraints,self.perf_models
 
 class AircraftLoading(Model):
-    def setup(self,aircraft,state,Wcent):
+    def setup(self,aircraft,state):
         self.wingl = aircraft.bw.wing.spar.loading(aircraft.bw.wing, state)
         loading = [self.wingl]
         return loading
@@ -172,7 +173,7 @@ class Generator(Model):
     """ Generator Model
     Variables
     ---------
-    P_ic_sp_cont    1              [W/kg]     specific cont power of IC
+    P_ic_sp_cont    1              [kW/kg]     specific cont power of IC
     eta_IC          0.256          [-]        thermal efficiency of IC
     m_g                            [kg]       generator mass
     m_gc                           [kg]       generator controller mass
@@ -213,8 +214,8 @@ class GeneratorP(Model):
         constraints = [P_g <= gen.P_g_cont,
                        P_gc <= gen.P_gc_cont,
                        P_ic <= gen.P_ic_cont,
-                       P_ic >= P_g,
-                       P_g >= P_gc
+                       P_ic == P_g,
+                       P_g == P_gc
                        ]
         return constraints
 
@@ -330,7 +331,7 @@ class BlownWing(Model):
 
         constraints = [
         m >= self.powertrain["m"] + self.wing.topvar("W")/Variable("g",9.8,"m/s/s"),
-        0.6*self.wing.b >= 2*n_prop*self.powertrain.r + 0.5*n_prop*self.powertrain.r
+        0.8*self.wing.b >= 2*n_prop*self.powertrain.r
         ]
         return constraints,self.powertrain,self.wing
     def dynamic(self,state):
@@ -386,7 +387,7 @@ class BlownWingP(Model):
             C_Q ==  m_dotprime/(state.rho*state.V* bw.wing["cmac"]),
             C_J == J_prime/(0.5*state.rho*state.V**2 * bw.wing["cmac"]),
             C_E == E_prime/(0.5*state.rho*state.V**3 * bw.wing["cmac"]),
-            h == (bw.n_prop*pi*bw.powertrain.r**2)/bw.wing.b,
+            h == pi*bw.powertrain.r/2,
             C_Di == (C_L**2)/(pi*bw.wing["AR"]*e),
             C_D >= C_Di  + C_Dp,
             C_Dp == mcdp*1.328/Re**0.5, #friction drag only, need to add form
@@ -592,11 +593,12 @@ class Mission(Model):
 
     Variables
     ---------
-    Srunway     300         [ft]        runway length
-    Sobstacle   400         [ft]        obstacle length
-    mrunway     1.4         [-]         runway margin
-    mobstacle   1.4         [-]         obstacle margin
-    R           115         [nmi]       mission range
+    Srunway_to      300         [ft]        runway length
+    Srunway_land    300         [ft]        runway length
+    Sobstacle       400         [ft]        obstacle length
+    mrunway         1.4         [-]         runway margin
+    mobstacle       1.4         [-]         obstacle margin
+    R               115         [nmi]       mission range
     """
     def setup(self,poweredwheels=False,n_wheels=3,hybrid=False):
         exec parse_variables(Mission.__doc__)
@@ -615,8 +617,9 @@ class Mission(Model):
         constraints = [self.obstacle_climb.h_gain == Variable("h_obstacle",50,"ft"),
                        self.climb.h_gain == Variable("h_cruise",950,"ft"),
                        self.climb.Sclimb == Variable("Scruiseclimb",10,"miles"),
-                       Srunway >= self.takeoff.Sto*mrunway,
-                       Srunway >= self.landing.Sgr*mrunway,
+                       
+                       Srunway_to >= self.takeoff.Sto*mrunway,
+                       Srunway_land >= self.landing.Sgr*mrunway,
                        # Sobstacle >= Srunway*(4.0/3.0),
                        Sobstacle >= mobstacle*(self.takeoff.Sto + self.obstacle_climb.Sclimb),
                        Wcent >= self.aircraft.mass*g,
@@ -642,7 +645,7 @@ if __name__ == "__main__":
     M.cost = M.aircraft.mass
     # M.debug()
     sol = M.localsolve("mosek")
-    print sol.summary()
+    print sol.table()
     writeSol(sol)
 
 
