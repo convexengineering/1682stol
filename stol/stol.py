@@ -178,13 +178,9 @@ class Generator(Model):
     m_gc                           [kg]       generator controller mass
     m_ic                           [kg]       piston mass
     P_g_sp_cont                    [W/kg]     generator spec power (cont)
-    P_g_sp_max                     [W/kg]     generator spec power (max)
     P_g_cont                       [W]        generator cont. power
-    P_g_max                        [W]        generator max power
     P_gc_cont                      [W]        generator controller cont. power
-    P_gc_max                       [W]        generator controller max power
     P_gc_sp_cont   11.8            [kW/kg]     generator controller cont power
-    P_gc_sp_max    15.3            [kW/kg]     generator controller max power
     P_ic_cont                      [W]        piston continous power  
     m                              [kg]       total mass
     m_ref           1              [kg]       reference mass, for meeting units constraints
@@ -194,11 +190,8 @@ class Generator(Model):
         exec parse_variables(Generator.__doc__)
         with gpkit.SignomialsEnabled():
             constraints = [P_g_sp_cont/Pstar_ref <= -0.228*(m_g/m_ref)**2+45.7*(m_g/m_ref)+3060,
-                           P_g_sp_max/Pstar_ref  <= -0.701*(m_g/m_ref)**2+136*(m_g/m_ref)+4380,
                            P_g_cont    <=   P_g_sp_cont*m_g,
-                           P_g_max     <=   P_g_sp_max*m_g,
                            P_gc_cont   <=   P_gc_sp_cont*m_gc,
-                           P_gc_max    <=   P_gc_sp_max*m_gc,
                            P_ic_cont   <=   P_ic_sp_cont*m_ic,
                            m >= m_g + m_gc + m_ic
             ]
@@ -217,8 +210,8 @@ class GeneratorP(Model):
     """
     def setup(self,gen,state):
         exec parse_variables(GeneratorP.__doc__)
-        constraints = [P_g <= gen.P_g_max,
-                       P_gc <= gen.P_gc_max,
+        constraints = [P_g <= gen.P_g_cont,
+                       P_gc <= gen.P_gc_cont,
                        P_ic <= gen.P_ic_cont,
                        P_ic >= P_g,
                        P_g >= P_gc
