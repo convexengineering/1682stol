@@ -49,8 +49,8 @@ class Aircraft(Model):
                         self.mass>=sum(c.topvar("m") for c in self.components) + Wpax*Npax]
 
         return constraints, self.components
-    def dynamic(self,state,hybrid=False):
-        return AircraftP(self,state,hybrid)
+    def dynamic(self,state,hybrid=False,powermode="batt-chrg",t_charge=None):
+        return AircraftP(self,state,hybrid,powermode=powermode,t_charge=t_charge)
     def loading(self,Wcent,state):
         return AircraftLoading(self,Wcent,state)
 
@@ -61,7 +61,7 @@ class AircraftP(Model):
     ---------
     P           [kW]    total power draw
     """
-    def setup(self,aircraft,state,hybrid=False):
+    def setup(self,aircraft,state,hybrid=False,powermode="batt-chrg",t_charge=None):
         exec parse_variables(AircraftP.__doc__)
         self.bw_perf = aircraft.bw.dynamic(state)
         self.batt_perf = aircraft.battery.dynamic(state)
@@ -75,7 +75,11 @@ class AircraftP(Model):
                     ]
         if hybrid:
             self.gen_perf = aircraft.generator.dynamic(state)
-            constraints += [self.gen_perf.P_gc >= P]
+            if powermode == "batt-chrg":
+                constraints += [self.gen_perf.P_gc >= P + aircraft.battery.E_capacity/t_charge]
+            if powermode == "batt-dischrg":
+                with gpkit.SignomialsEnabled():
+                    constraints += [self.batt_perf.P + self.gen_perf.P_gc >= P]
             self.perf_models += [self.gen_perf]
         return constraints,self.perf_models
 
@@ -173,14 +177,14 @@ class Generator(Model):
     m_g                            [kg]       generator mass
     m_gc                           [kg]       generator controller mass
     m_ic                           [kg]       piston mass
-    P_g_sp_cont                    [kW/kg]     generator spec power (cont)
-    P_g_sp_max                     [kW/kg]     generator spec power (max)
+    P_g_sp_cont                    [W/kg]     generator spec power (cont)
+    P_g_sp_max                     [W/kg]     generator spec power (max)
     P_g_cont                       [W]        generator cont. power
     P_g_max                        [W]        generator max power
     P_gc_cont                      [W]        generator controller cont. power
     P_gc_max                       [W]        generator controller max power
-    P_gc_sp_cont   11.8            [W/kg]     generator controller cont power
-    P_gc_sp_max    15.3            [W/kg]     generator controller max power
+    P_gc_sp_cont   11.8            [kW/kg]     generator controller cont power
+    P_gc_sp_max    15.3            [kW/kg]     generator controller max power
     P_ic_cont                      [W]        piston continous power  
     m                              [kg]       total mass
     m_ref           1              [kg]       reference mass, for meeting units constraints
@@ -225,7 +229,6 @@ class Tank(Model):
     """Tank Model
     Variables
     ---------
-    m_tank            10       [kg]          mass of tank structure
     m                          [lb]          total mass
     m_fuel                     [lb]          mass of fuel
     E                          [Wh]          fuel energy
@@ -234,7 +237,7 @@ class Tank(Model):
     def setup(self):
         exec parse_variables(Tank.__doc__)
         constraints = [m_fuel >= E/Estar_fuel,
-                       m >= m_fuel + m_tank]
+                       m >= m_fuel]
         return constraints
 
 
@@ -446,7 +449,7 @@ class TakeOff(Model):
         AR = aircraft.bw.wing.planform.AR
         rho = fs.rho
         V = fs.V
-        perf = aircraft.dynamic(fs,hybrid)
+        perf = aircraft.dynamic(fs,hybrid,powermode="batt-dischrg")
         e = perf.bw_perf.e
         mstall = 1.3
         constraints = [
@@ -493,7 +496,7 @@ class Climb(Model):
     def setup(self,aircraft,hybrid=False):
         exec parse_variables(Climb.__doc__)
         self.flightstate = FlightState()
-        perf = aircraft.dynamic(self.flightstate,hybrid)
+        perf = aircraft.dynamic(self.flightstate,hybrid,powermode="batt-dischrg")
 
         CL = self.CL = perf.bw_perf.C_L
         S = self.S = aircraft.bw.wing["S"]
@@ -527,7 +530,7 @@ class Cruise(Model):
     def setup(self,aircraft,hybrid=False):
         exec parse_variables(Cruise.__doc__)
         self.flightstate = FlightState()
-        self.perf = aircraft.dynamic(self.flightstate,hybrid)
+        self.perf = aircraft.dynamic(self.flightstate,hybrid,powermode="batt-chrg",t_charge=t)
         constraints = [self.perf.batt_perf.P <= aircraft.battery.m*aircraft.battery.P_max_cont,
                        R <= t*self.flightstate.V,
                        E >= self.perf.topvar("P")*t,
@@ -571,7 +574,7 @@ class Landing(Model):
 
         S = self.S = aircraft.bw.wing["S"]
         rho = fs.rho
-        perf = aircraft.dynamic(fs,hybrid)
+        perf = aircraft.dynamic(fs,hybrid,powermode="batt-dischrg")
         CL = perf.bw_perf.C_L
         CD = perf.bw_perf.C_D
         V = perf.fs.V
@@ -642,7 +645,7 @@ def writeSol(sol):
 
 if __name__ == "__main__":
     poweredwheels = True
-    M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=False)
+    M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True)
     M.cost = M.aircraft.mass
     # M.debug()
     sol = M.localsolve("mosek")
