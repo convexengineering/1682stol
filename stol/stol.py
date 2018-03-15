@@ -49,8 +49,8 @@ class Aircraft(Model):
                         self.mass>=sum(c.topvar("m") for c in self.components) + Wpax*Npax]
 
         return constraints, self.components
-    def dynamic(self,state):
-        return AircraftP(self,state)
+    def dynamic(self,state,hybrid=False):
+        return AircraftP(self,state,hybrid)
     def loading(self,Wcent,state):
         return AircraftLoading(self,Wcent,state)
 
@@ -61,7 +61,7 @@ class AircraftP(Model):
     ---------
     P           [kW]    total power draw
     """
-    def setup(self,aircraft,state):
+    def setup(self,aircraft,state,hybrid=False):
         exec parse_variables(AircraftP.__doc__)
         self.bw_perf = aircraft.bw.dynamic(state)
         self.batt_perf = aircraft.battery.dynamic(state)
@@ -73,6 +73,10 @@ class AircraftP(Model):
                        self.batt_perf.P >= P,
                        self.bw_perf.C_T >= self.bw_perf.C_D + aircraft.fuselage.cda,
                     ]
+        if hybrid:
+            self.gen_perf = aircraft.generator.dynamic(state)
+            constraints += [self.gen_perf.P_gc >= P]
+            self.perf_models += [self.gen_perf]
         return constraints,self.perf_models
 
 class AircraftLoading(Model):
@@ -164,33 +168,35 @@ class Generator(Model):
     """ Generator Model
     Variables
     ---------
-    P_ic_sp_cont    1       [kW/kg]     specific cont power of IC
-    eta_IC          0.256   [-]        thermal efficiency of IC
-    m_g                     [kg]       generator mass
-    m_gc                    [kg]       generator controller mass
-    m_ic                    [kg]       piston mass
-    P_g_sp_cont             [W/kg]     generator spec power (cont)
-    P_g_sp_max              [W/kg]     generator spec power (max)
-    P_g_cont                [W]        generator cont. power
-    P_g_max                 [W]        generator max power
-    P_gc_cont               [W]        generator controller cont. power
-    P_gc_max                [W]        generator controller max power
-    P_gc_sp_cont            [W/kg]     generator controller cont power
-    P_gc_sp_max             [W/kg]     generator controller max power
-    P_ic_cont               [W]        piston continous power  
-    m                       [kg]       mass of generator setup
+    P_ic_sp_cont    1              [W/kg]     specific cont power of IC
+    eta_IC          0.256          [-]        thermal efficiency of IC
+    m_g                            [kg]       generator mass
+    m_gc                           [kg]       generator controller mass
+    m_ic                           [kg]       piston mass
+    P_g_sp_cont                    [kW/kg]     generator spec power (cont)
+    P_g_sp_max                     [kW/kg]     generator spec power (max)
+    P_g_cont                       [W]        generator cont. power
+    P_g_max                        [W]        generator max power
+    P_gc_cont                      [W]        generator controller cont. power
+    P_gc_max                       [W]        generator controller max power
+    P_gc_sp_cont   11.8            [W/kg]     generator controller cont power
+    P_gc_sp_max    15.3            [W/kg]     generator controller max power
+    P_ic_cont                      [W]        piston continous power  
+    m                              [kg]       total mass
+    m_ref           1              [kg]       reference mass, for meeting units constraints
+    Pstar_ref       1              [W/kg]     reference specific power, for meeting units constraints
     """
     def setup(self):
         exec parse_variables(Generator.__doc__)
         with gpkit.SignomialsEnabled():
-            constraints = [P_g_sp_cont <=  -0.228*m_g**2+45.7*m_g+3060,
-                   P_g_sp_max  <=  -0.701*m_g^2+136*m_g+4380,
-                   P_g_cont    <= P_g_sp_cont*m_g,
-                   P_g_max     <= P_g_sp_max*m_g,
-                   P_gc_cont   <= P_gc_sp_cont*m_gc,
-                   P_gc_max    <= P_gc_sp_max*m_gc,
-                   P_ic_cont   <= P_ic_sp_cont*m_ic,
-                   m >= m_g + m_gc + m_ic
+            constraints = [P_g_sp_cont/Pstar_ref <= -0.228*(m_g/m_ref)**2+45.7*(m_g/m_ref)+3060,
+                           P_g_sp_max/Pstar_ref  <= -0.701*(m_g/m_ref)**2+136*(m_g/m_ref)+4380,
+                           P_g_cont    <=   P_g_sp_cont*m_g,
+                           P_g_max     <=   P_g_sp_max*m_g,
+                           P_gc_cont   <=   P_gc_sp_cont*m_gc,
+                           P_gc_max    <=   P_gc_sp_max*m_gc,
+                           P_ic_cont   <=   P_ic_sp_cont*m_ic,
+                           m >= m_g + m_gc + m_ic
             ]
 
         return constraints
@@ -201,51 +207,34 @@ class GeneratorP(Model):
     """GeneratorP Model
     Variables
     ---------
-
+    P_g         [kW]        generator power
+    P_gc        [kW]        generator controller power
+    P_ic        [kW]        internal combustion power
     """
     def setup(self,gen,state):
         exec parse_variables(GeneratorP.__doc__)
-
+        constraints = [P_g <= gen.P_g_max,
+                       P_gc <= gen.P_gc_max,
+                       P_ic <= gen.P_ic_cont,
+                       P_ic >= P_g,
+                       P_g >= P_gc
+                       ]
         return constraints
 
 class Tank(Model):
     """Tank Model
     Variables
     ---------
-    V           [gallon]
-    m      1    [kg]
-    rho         [kg/gallon]
+    m_tank            10       [kg]          mass of tank structure
+    m                          [lb]          total mass
+    m_fuel                     [lb]          mass of fuel
+    E                          [Wh]          fuel energy
+    Estar_fuel          11.9   [kWh/kg]      fuel specific energy
     """
     def setup(self):
         exec parse_variables(Tank.__doc__)
-        constraints = []
-        return constraints
-
-class Fuel(Model):
-    """Fuel Model
-    Variables
-    ---------
-    E_fuel_spec     11900/   [Wh/kg]    fuel specific energy
-    """
-    def setup(self):
-        exec parse_variables(Fuel.__doc__)
-        constraints = []
-        return constraints
-
-    def dynamic(self,state):
-        return FuelP(self,state)
-
-class FuelP(Model):
-    """FuelP
-    Variables
-    ---------
-    E_cruise            [Wh]        Energy used during cruise
-    m_f                 [kg]        mass of fuel
-    eta_IC      0.256   [-]         thermal efficiency of IC
-    """
-    def setup(self,fuel,state):
-        exec parse_variables(FuelP.__doc__)
-        constraints = [E_cruise <=  fuel.E_fuel_spec*eta_IC*m_f]
+        constraints = [m_fuel >= E/Estar_fuel,
+                       m >= m_fuel + m_tank]
         return constraints
 
 
@@ -254,7 +243,7 @@ class Battery(Model):
     Variables
     ---------
     m                   [kg]            total mass
-    Estar       150     [Wh/kg]         specific energy
+    Estar       140     [Wh/kg]         specific energy
     E_capacity          [Wh]            energy capacity
     P_max_cont          [W/kg]          continuous power output
     P_max_burst         [W/kg]          burst power output
@@ -387,7 +376,7 @@ class BlownWingP(Model):
         exec parse_variables(BlownWingP.__doc__)
         with gpkit.SignomialsEnabled():
             constraints = [
-            A_disk == pi*bw.powertrain.r**2,
+            A_disk == bw.n_prop*pi*bw.powertrain.r**2,
             (P/(0.5*T*state["V"]) - 1)**2 >= (T/(A_disk*(state.V**2)*state.rho/2)+1),
             (u_j/state.V)**2 <= (T/(A_disk*(state.V**2)*state.rho/2) + 1),
 
@@ -443,7 +432,7 @@ class TakeOff(Model):
     W                       [N]         aircraft weight
     E                       [kWh]       energy consumed in takeoff
     """
-    def setup(self, aircraft,poweredwheels,n_wheels):
+    def setup(self, aircraft,poweredwheels,n_wheels,hybrid=False):
         exec parse_variables(TakeOff.__doc__)
 
         fs = FlightState()
@@ -457,7 +446,7 @@ class TakeOff(Model):
         AR = aircraft.bw.wing.planform.AR
         rho = fs.rho
         V = fs.V
-        perf = aircraft.dynamic(fs)
+        perf = aircraft.dynamic(fs,hybrid)
         e = perf.bw_perf.e
         mstall = 1.3
         constraints = [
@@ -501,10 +490,10 @@ class Climb(Model):
     h_dot       \dot{h}
     """
 
-    def setup(self,aircraft):
+    def setup(self,aircraft,hybrid=False):
         exec parse_variables(Climb.__doc__)
         self.flightstate = FlightState()
-        perf = aircraft.dynamic(self.flightstate)
+        perf = aircraft.dynamic(self.flightstate,hybrid)
 
         CL = self.CL = perf.bw_perf.C_L
         S = self.S = aircraft.bw.wing["S"]
@@ -535,46 +524,20 @@ class Cruise(Model):
     Vmin  120   [kts]       Minimum flight speed
     """
 
-    def setup(self,aircraft):
+    def setup(self,aircraft,hybrid=False):
         exec parse_variables(Cruise.__doc__)
         self.flightstate = FlightState()
-        self.perf = aircraft.dynamic(self.flightstate)
+        self.perf = aircraft.dynamic(self.flightstate,hybrid)
         constraints = [self.perf.batt_perf.P <= aircraft.battery.m*aircraft.battery.P_max_cont,
                        R <= t*self.flightstate.V,
                        E >= self.perf.topvar("P")*t,
                        self.flightstate["V"] >= Vmin]
+        if hybrid:
+            constraints += [self.perf.gen_perf.P_g <= aircraft.generator.P_g_cont,
+                            self.perf.gen_perf.P_gc <= aircraft.generator.P_gc_cont]
+
         return constraints, self.perf
         
-class GLanding(Model):
-    """ Glanding model
-
-    Variables
-    ---------
-    g           9.81        [m/s**2]    gravitational constant
-    gload       0.5         [-]         gloading constant
-    Sgr                     [ft]        landing ground roll
-    msafety     1.4         [-]         Landing safety margin
-    t                       [s]         Time to execute landing
-    E                       [kWh]       Energy used in landing
-    """
-    def setup(self, aircraft):
-        exec parse_variables(GLanding.__doc__)
-
-        fs = FlightState()
-
-        S = self.S = aircraft.bw.wing["S"]
-        rho = fs.rho
-        mstall = 1.3
-        perf = aircraft.dynamic(fs)
-        constraints = [
-            Sgr >= 0.5*fs.V**2/gload/g,
-            fs.V >= mstall*(2.*aircraft.mass*fs.g/rho/S/perf.bw_perf.C_L)**0.5,
-            t >= Sgr/fs.V,
-            E >= t*perf.bw_perf.P
-        ]
-
-        return constraints, fs,perf
-
 class Landing(Model):
     """ landing model
 
@@ -601,14 +564,14 @@ class Landing(Model):
     Sgr                     [ft]        landing distance
     mstall       1.3        [-]         stall
     """
-    def setup(self, aircraft):
+    def setup(self, aircraft,hybrid=False):
         exec parse_variables(Landing.__doc__)
 
         fs = FlightState()
 
         S = self.S = aircraft.bw.wing["S"]
         rho = fs.rho
-        perf = aircraft.dynamic(fs)
+        perf = aircraft.dynamic(fs,hybrid)
         CL = perf.bw_perf.C_L
         CD = perf.bw_perf.C_D
         V = perf.fs.V
@@ -617,16 +580,9 @@ class Landing(Model):
         with gpkit.SignomialsEnabled():
             constraints = [
                 W == aircraft.mass*g,
-                # Xa  >= -(h_obst-h_r)/tang,
                 C_T >= CD, #+ (W*sing)/(0.5*rho*S*V**2),
-                # T_a <= C_T*0.5*rho*S*V**2,
-                # h_r >= r*(1+cosg),
-                # Xro >= -r*sing,
                 Vs**2  >= (2.*aircraft.mass*fs.g/rho/S/CL),
-                # r*(g*(nz-cosg)) >= 1/sing*(sing*mstall**2*Vs**2),
-                # Xa  >= -1/tang*(h_obst-(mstall**2*Vs**2*(1-cosg))/(g*(nz-cosg))),
-                # Xdec*(2*g*0.5*rho*(((mstall-1.1)/2)*Vs)**2*S*(C_T-CD)) >= W*((1.1**2-mstall**2)*Vs**2),
-                Xgr*(2*g*(mu_b-(C_T*0.5*rho*S*(mstall*Vs)**2)/W)) >= (mstall*Vs)**2,
+                Xgr*(2*g*(mu_b)) >= (mstall*Vs)**2,
                 Xla >= Xgr,
                 Sgr >= Xla
             ]
@@ -649,11 +605,11 @@ class Mission(Model):
     def setup(self,poweredwheels=False,n_wheels=3,hybrid=False):
         exec parse_variables(Mission.__doc__)
         self.aircraft = Aircraft(poweredwheels,n_wheels,hybrid)
-        self.takeoff = TakeOff(self.aircraft,poweredwheels,n_wheels)
-        self.obstacle_climb = Climb(self.aircraft)
-        self.climb = Climb(self.aircraft)
-        self.cruise = Cruise(self.aircraft)
-        self.landing = Landing(self.aircraft)
+        self.takeoff = TakeOff(self.aircraft,poweredwheels,n_wheels,hybrid)
+        self.obstacle_climb = Climb(self.aircraft,hybrid)
+        self.climb = Climb(self.aircraft,hybrid)
+        self.cruise = Cruise(self.aircraft,hybrid)
+        self.landing = Landing(self.aircraft,hybrid)
         
         Wcent = Variable("W_{cent}","lbf","center aircraft weight")
         loading = self.aircraft.loading(self.cruise.flightstate,Wcent)
@@ -665,12 +621,16 @@ class Mission(Model):
                        self.climb.Sclimb == Variable("Scruiseclimb",10,"miles"),
                        Srunway >= self.takeoff.Sto*mrunway,
                        Srunway >= self.landing.Sgr*mrunway,
-                       Sobstacle == Srunway*(4.0/3.0),
+                       # Sobstacle >= Srunway*(4.0/3.0),
                        Sobstacle >= mobstacle*(self.takeoff.Sto + self.obstacle_climb.Sclimb),
-                       self.aircraft.battery.E_capacity*0.8 >= self.takeoff.E + self.obstacle_climb.E + self.climb.E + self.cruise.E,
                        Wcent >= self.aircraft.mass*g,
                        Wcent == loading.wingl["W"]
         ]
+        if hybrid:
+            constraints += [self.aircraft.battery.E_capacity*0.8 >= self.takeoff.E + self.obstacle_climb.E,
+                            self.aircraft.tank.E >= self.climb.E + self.cruise.E]
+        else:
+            constraints += [self.aircraft.battery.E_capacity*0.8 >= self.takeoff.E + self.obstacle_climb.E + self.climb.E + self.cruise.E]
         with gpkit.SignomialsEnabled():
             constraints += [R <= self.cruise.R]
         return constraints,self.aircraft,self.fs, loading
