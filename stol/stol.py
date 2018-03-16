@@ -342,7 +342,7 @@ class BlownWing(Model):
         self.wing.substitutions[self.wing.planform.tau]=0.12
 
         constraints = [
-        m >= self.powertrain["m"] + self.wing.topvar("W")/Variable("g",9.8,"m/s/s"),
+        m >= n_props*self.powertrain["m"] + self.wing.topvar("W")/Variable("g",9.8,"m/s/s"),
         0.8*self.wing.b >= 2*n_prop*self.powertrain.r
         ]
         return constraints,self.powertrain,self.wing

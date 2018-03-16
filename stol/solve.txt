@@ -220,7 +220,7 @@ Free Variables
              | Mission/Landing/AircraftP.4/BlownWingP.4
       A_disk : 15.47                                           [m**2]    area of prop disk
          C_D : 0.3026                                                    total drag coefficient
-        C_Di : 0.2441                                                    induced drag coefficient
+        C_Di : 0.244                                                     induced drag coefficient
         C_Dp : 0.001235                                                  profile drag
          C_E : 2.056                                                     energy momentum coefficient
          C_J : 3.397                                                     jet momentum coefficient
@@ -499,12 +499,12 @@ Sensitivities
                     | CFRPFabric
                tmin : +0.046                                         minimum gauge thickness
                 rho : +0.046                                         density of CFRP
-                tau : -2.3e-13                                       torsional stress limit
+                tau : -2.5e-13                                       torsional stress limit
 
                     | CFRPUD
                   E : -0.027                                         Youngs Modulus of CFRP
                 rho : +0.022                                         density of CFRP
-              sigma : -3.9e-11                                       maximum stress limit of CFRP
+              sigma : -4.3e-11                                       maximum stress limit of CFRP
 
                     | FoamHD
                 rho : +0.0049                                        foam density
@@ -515,10 +515,10 @@ Sensitivities
          h_obstacle : +0.097
                   R : +0.0067                                        mission range
        Scruiseclimb : +0.00057
-            mrunway : +1.4e-11                                       runway margin
-           h_cruise : +1.8e-12
-       Srunway_land : -1.3e-11                                       runway length
-         Srunway_to : -8.8e-13                                       runway length
+            mrunway : +1.6e-11                                       runway margin
+           h_cruise : +1.9e-12
+       Srunway_land : -1.5e-11                                       runway length
+         Srunway_to : -9.7e-13                                       runway length
 
                     | Mission/Aircraft
                Npax : +0.82                                          number of passengers
@@ -528,7 +528,7 @@ Sensitivities
                     | Mission/Aircraft/Battery
          P_max_cont : -0.017                                         continuous power output
         P_max_burst : -0.0048                                        burst power output
-              Estar : -5.5e-13                                       specific energy
+              Estar : -6.1e-13                                       specific energy
 
                     | Mission/Aircraft/BlownWing
                   g : -0.073
@@ -542,7 +542,7 @@ Sensitivities
 
                     | Mission/Aircraft/BlownWing/Wing/CapSpar
                mfac : -0.027                                         curvature knockdown factor
-               wlim : -1.1e-11                                       spar width to chord ratio
+               wlim : -1.2e-11                                       spar width to chord ratio
 
                     | Mission/Aircraft/BlownWing/Wing/Planform
                deta : [ +0.0098   +0.01     +0.01     +0.011   ... ] \Delta (2y/b)
@@ -552,10 +552,10 @@ Sensitivities
                 tau : -0.049                                         airfoil thickness ratio
 
                     | Mission/Aircraft/BlownWing/Wing/WingSkin
-                Vne : +4.6e-13                                       never exceed vehicle speed
-                Cmw : +2.3e-13                                       negative wing moment coeff
-              rhosl : +2.3e-13                                       sea level air density
-              Jtbar : -2.3e-13                                       torsional moment of inertia
+                Vne : +5.1e-13                                       never exceed vehicle speed
+                Cmw : +2.5e-13                                       negative wing moment coeff
+              rhosl : +2.5e-13                                       sea level air density
+              Jtbar : -2.5e-13                                       torsional moment of inertia
 
                     | Mission/Aircraft/Cabin
                   m : +0.17                                          total mass
@@ -572,9 +572,9 @@ Sensitivities
                     | Mission/Aircraft/PoweredWheel
                   r : +0.01                                          tire radius
      gear_ratio_max : -0.01                                          max gear ratio of powered wheel
-                  b : +5.3e-12
-                  c : -1.4e-11
-                  a : -1.5e-13
+                  b : +5.9e-12
+                  c : -1.5e-11
+                  a : -1.7e-13
 
                     | Mission/Aircraft/Tank
          Estar_fuel : -0.0075                                        fuel specific energy
@@ -588,14 +588,14 @@ Sensitivities
             \bar{q} : [ +1e-05    +6.1e-05  +0.00018  +0.00038 ... ] normalized loading
       \bar{M}_{tip} : +4.7e-11                                       Tip moment
       \theta_{root} : +2e-11                                         Base angle
-      \bar{S}_{tip} : +1.9e-11                                       Tip loading
+      \bar{S}_{tip} : +2e-11                                         Tip loading
 \bar{\delta}_{root} : +1.8e-11                                       Base deflection
 
                     | Mission/Climb.1/AircraftP.2/BlownWingP.2
                   e : -2.1e-05                                       span efficiency
                mcdp : +8.6e-06                                       profile drag margin factor
-               C_LC : -6.2e-13                                       lift coefficient due to circulation
-              rho_j : -8.7e-14                                       density in jet flow
+               C_LC : -6.8e-13                                       lift coefficient due to circulation
+              rho_j : -9.6e-14                                       density in jet flow
 
                     | Mission/Climb.1/FlightState.2
                 rho : +0.00017                                       air density
@@ -605,8 +605,8 @@ Sensitivities
                     | Mission/Climb/AircraftP.1/BlownWingP.1
                   e : -0.05                                          span efficiency
                mcdp : +0.00022                                       profile drag margin factor
-               C_LC : -1.5e-11                                       lift coefficient due to circulation
-              rho_j : -3.5e-12                                       density in jet flow
+               C_LC : -1.7e-11                                       lift coefficient due to circulation
+              rho_j : -3.9e-12                                       density in jet flow
 
                     | Mission/Climb/FlightState.1
                   g : +0.2                                           acceleration due to gravity
@@ -619,8 +619,8 @@ Sensitivities
                     | Mission/Cruise/AircraftP.3/BlownWingP.3
                   e : -0.0018                                        span efficiency
                mcdp : +0.00099                                       profile drag margin factor
-               C_LC : -6.2e-13                                       lift coefficient due to circulation
-              rho_j : -5.6e-13                                       density in jet flow
+               C_LC : -6.8e-13                                       lift coefficient due to circulation
+              rho_j : -6.2e-13                                       density in jet flow
 
                     | Mission/Cruise/FlightState.3
                 rho : +0.021                                         air density
@@ -628,20 +628,20 @@ Sensitivities
                  mu : +0.00049                                       air viscosity
 
                     | Mission/Landing
-             mstall : +2.7e-11                                       stall
-                  g : -1.3e-11                                       gravitational constant
-               mu_b : -1.3e-11                                       braking friction coefficient
+             mstall : +2.9e-11                                       stall
+                  g : -1.5e-11                                       gravitational constant
+               mu_b : -1.5e-11                                       braking friction coefficient
 
                     | Mission/Landing/AircraftP.4/BlownWingP.4
-               mcdp : +6.1e-13                                       profile drag margin factor
-               C_LC : -1e-11                                         lift coefficient due to circulation
-                  e : -8.2e-12                                       span efficiency
-              rho_j : -2e-12                                         density in jet flow
+               mcdp : +6.7e-13                                       profile drag margin factor
+               C_LC : -1.1e-11                                       lift coefficient due to circulation
+                  e : -9e-12                                         span efficiency
+              rho_j : -2.2e-12                                       density in jet flow
 
                     | Mission/Landing/FlightState.4
-                  g : +2.9e-11                                       acceleration due to gravity
-                 mu : +3e-13                                         air viscosity
-                rho : -1.4e-11                                       air density
+                  g : +3.2e-11                                       acceleration due to gravity
+                 mu : +3.4e-13                                       air viscosity
+                rho : -1.6e-11                                       air density
 
                     | Mission/TakeOff
        m_{fac--fit} : +0.014                                         fit factor

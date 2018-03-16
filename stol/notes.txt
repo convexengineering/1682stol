@@ -1,3 +1,6 @@
+BY FRIDAY NIGHT ALL THIS IS DONE
+
+
 Notes from working through model with Mike:
 - Fuselage area weight buildup, add tail weights (or get fraction from weights spreadsheet)
 - Look at efficiencies in electrical system
@@ -20,15 +23,16 @@ Notes from working through model with Mike:
 - Use raymer A and B eqns for landing, make sure to use a different fit appropriate for landing
 - Add climb to altitude range to total range
 - Change Sclimb to reflect steeper angle (20 degrees)
-
-
+- Why is u_j zero in cruise?
+- Figure out how to get no changes from sol.txt with commits
 
 Priorities:
 Hammer these down
-- Hybrid
-- Powered wheels
-- weights and drag cleanup, integrate sheet
-- Raymer landing model
+- Hybrid (started, very low mass)
+- Powered wheels (favourable atm, getting higher takeoff mass without them)
+- weights and drag cleanup, integrate sheet ()
+- Tails weight and drag
+- Raymer landing model include
 
 Solution anal
 - Look at fstruct sensitivitycda
