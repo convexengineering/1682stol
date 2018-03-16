@@ -175,7 +175,7 @@ class PoweredWheelP(Model):
     def setup(self,pw,state):
         exec parse_variables(PoweredWheelP.__doc__)
         constraints =[RPM <= pw.RPMmax,
-                      state.V <= RPM*2*pi*pw.r/pw.gear_ratio,
+                      state.V <= RPM*pw.r/pw.gear_ratio,
                       T <= tau*pw.gear_ratio/pw.r,
                       P >= RPM*tau,
                       tau <= pw.tau_max]
@@ -342,7 +342,7 @@ class BlownWing(Model):
         self.wing.substitutions[self.wing.planform.tau]=0.12
 
         constraints = [
-        m >= n_props*self.powertrain["m"] + self.wing.topvar("W")/Variable("g",9.8,"m/s/s"),
+        m >= n_prop*self.powertrain["m"] + self.wing.topvar("W")/Variable("g",9.8,"m/s/s"),
         0.8*self.wing.b >= 2*n_prop*self.powertrain.r
         ]
         return constraints,self.powertrain,self.wing
@@ -430,8 +430,8 @@ class TakeOff(Model):
     A                       [m/s**2]    log fit equation helper 1
     B                       [1/m]       log fit equation helper 2
     g           9.81        [m/s**2]    gravitational constant
-    mu          0.025       [-]         coefficient of friction
-    T                       [N]       take off thrust
+    mu          0.025       [-]         coefficient of rolling resistance
+    T                       [N]         take off thrust
     cda         0.015       [-]         parasite drag coefficient
     CDg                     [-]         drag ground coefficient
     cdp         0.025       [-]         profile drag at Vstallx1.2
@@ -440,6 +440,7 @@ class TakeOff(Model):
     Sto                     [ft]        take off distance
     W                       [N]         aircraft weight
     E                       [kWh]       energy consumed in takeoff
+    mu_friction 0.8         [-]         traction limit for powered wheels
     """
     def setup(self, aircraft,poweredwheels,n_wheels,hybrid=False):
         exec parse_variables(TakeOff.__doc__)
@@ -473,8 +474,10 @@ class TakeOff(Model):
             with gpkit.SignomialsEnabled():
                 constraints += [T <= perf.bw_perf.T + sum(model.T for model in wheel_models),
                                 perf.P >= perf.bw_perf.P + sum(model.P for model in wheel_models)
-                                ]
-                
+                                    
+                            ]
+                for model in wheel_models:
+                    constraints += [model.T <= (aircraft.mass*g*mu_friction)/Variable("a",len(wheel_models),"-")]
                 constraints += wheel_models
 
         else:
@@ -572,7 +575,7 @@ class Landing(Model):
     Vs                      [kts]       stall velocity
     nz           1.25       [-]         load factor
     Xla                     [ft]        total landing distance                        
-    mu_b         0.4        [-]         braking friction coefficient
+    mu_b         0.8        [-]         braking friction coefficient
     Sgr                     [ft]        landing distance
     mstall       1.3        [-]         stall
     """
