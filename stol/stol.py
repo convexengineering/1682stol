@@ -135,7 +135,7 @@ class PoweredWheel(Model):
     ---------
     RPMmax                  [rpm]       maximum RPM of motor
     gear_ratio              [-]         gear ratio of powered wheel
-    gear_ratio_max  10      [-]         max gear ratio of powered wheel
+    gear_ratio_max          [-]         max gear ratio of powered wheel
     tau_max                 [N*m]       torque of the
     m                       [kg]        mass of powered wheel motor
     m_ref           1       [kg]        reference mass for equations
@@ -145,7 +145,7 @@ class PoweredWheel(Model):
         exec parse_variables(PoweredWheel.__doc__)
         #Currently using the worst values
         with gpkit.SignomialsEnabled():
-            constraints = [gear_ratio <= gear_ratio_max,
+            constraints = [#gear_ratio <= gear_ratio_max,
                            RPMmax <= Variable("a",4.9,"rpm/kg^2")*m**2 - Variable("b",313.3,"rpm/kg")*m +Variable("c",8721.2,"rpm"),
                            tau_max <= Variable("d",27.3,"N*m/kg")*m - Variable("e",80.2,"N*m")
                            ]
@@ -242,16 +242,16 @@ class Battery(Model):
     m                   [kg]            total mass
     Estar       140     [Wh/kg]         specific energy
     E_capacity          [Wh]            energy capacity
-    P_max_cont          [W/kg]          continuous power output
-    P_max_burst         [W/kg]          burst power output
+    P_max_cont  4.2e3   [W/kg]          continuous power output
+    P_max_burst 7e3     [W/kg]          burst power output
     """
 
     def setup(self):
         exec parse_variables(Battery.__doc__)
         with gpkit.SignomialsEnabled():
             constraints = [m >= E_capacity/Estar,
-                           (P_max_cont/Variable("a",1,"W/kg") - 513.49)*(1+(Estar/Variable("b",40.9911,"Wh/kg"))**(11.79229)) <=  6.17e9,
-                           (P_max_burst/Variable("a",1,"W/kg") - 944.0619)*(1+(Estar/Variable("b",38.21934,"Wh/kg"))**(11.15887)) <=  1.02e10
+                           # (P_max_cont/Variable("a",1,"W/kg") - 513.49)*(1+(Estar/Variable("b",40.9911,"Wh/kg"))**(11.79229)) <=  6.17e9,
+                           # (P_max_burst/Variable("a",1,"W/kg") - 944.0619)*(1+(Estar/Variable("b",38.21934,"Wh/kg"))**(11.15887)) <=  1.02e10
                         ]
 
         return constraints
@@ -640,7 +640,7 @@ def writeSol(sol):
 
 
 if __name__ == "__main__":
-    poweredwheels = True
+    poweredwheels = False
     M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True)
     M.cost = M.aircraft.mass
     # M.debug()
