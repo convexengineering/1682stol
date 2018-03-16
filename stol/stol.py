@@ -69,8 +69,8 @@ class AircraftP(Model):
         self.perf_models = [self.bw_perf,self.batt_perf]
         self.fs = state
         constraints = [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*state["g"],
-                       P == self.bw_perf["P"],
-                       P <= aircraft.bw.powertrain["Pmax"],
+                       P >= self.bw_perf["P"],
+                       P >= aircraft.bw.powertrain["Pmax"],
                        self.batt_perf.P >= P,
                        self.bw_perf.C_T >= self.bw_perf.C_D + aircraft.fuselage.cda
                     ]
@@ -135,19 +135,22 @@ class PoweredWheel(Model):
     ---------
     RPMmax                  [rpm]       maximum RPM of motor
     gear_ratio              [-]         gear ratio of powered wheel
-    gear_ratio_max          [-]         max gear ratio of powered wheel
+    gear_ratio_max  20      [-]         max gear ratio of powered wheel
     tau_max                 [N*m]       torque of the
     m                       [kg]        mass of powered wheel motor
     m_ref           1       [kg]        reference mass for equations
     r               0.2     [m]         tire radius
+    Pstar           5       [kW/kg]     specific power for powered wheel
     """
     def setup(self):
         exec parse_variables(PoweredWheel.__doc__)
         #Currently using the worst values
         with gpkit.SignomialsEnabled():
-            constraints = [#gear_ratio <= gear_ratio_max,
+            constraints = [gear_ratio <= gear_ratio_max,
                            RPMmax <= Variable("a",4.9,"rpm/kg^2")*m**2 - Variable("b",313.3,"rpm/kg")*m +Variable("c",8721.2,"rpm"),
-                           tau_max <= Variable("d",27.3,"N*m/kg")*m - Variable("e",80.2,"N*m")
+                           tau_max <= Variable("d",27.3,"N*m/kg")*m - Variable("e",80.2,"N*m"),
+                           # tau_max <= Variable("tau_m",1e-4,'N*m/kg')*m,
+                           # Pstar*m <= tau_max*RPMmax
                            ]
         return constraints
     def dynamic(self,state):
@@ -160,12 +163,14 @@ class PoweredWheelP(Model):
     RPM             [rpm]       rpm of powered wheel
     tau             [N*m]       torque of powered wheel
     T               [N]         thrust from powered wheel
+    P               [kW]        power draw of powered wheel
     """
     def setup(self,pw,state):
         exec parse_variables(PoweredWheelP.__doc__)
-        constraints =[state.V <= pw.RPMmax*2*pi*pw.r/pw.gear_ratio,
-                      state.V == RPM*2*pi*pw.r/pw.gear_ratio,
-                      T == tau*pw.gear_ratio/pw.r,
+        constraints =[RPM <= pw.RPMmax,
+                      state.V <= RPM*2*pi*pw.r/pw.gear_ratio,
+                      T <= tau*pw.gear_ratio/pw.r,
+                      P >= RPM*tau,
                       tau <= pw.tau_max]
         return constraints
 
@@ -459,7 +464,10 @@ class TakeOff(Model):
         if poweredwheels:
             wheel_models = [wheel.dynamic(fs) for wheel in aircraft.wheels]
             with gpkit.SignomialsEnabled():
-                constraints += [T <= perf.bw_perf.T + sum(model.T for model in wheel_models)]
+                constraints += [T <= perf.bw_perf.T + sum(model.T for model in wheel_models),
+                                perf.P >= perf.bw_perf.P + sum(model.P for model in wheel_models)
+                                ]
+                
                 constraints += wheel_models
 
         else:
@@ -640,7 +648,7 @@ def writeSol(sol):
 
 
 if __name__ == "__main__":
-    poweredwheels = False
+    poweredwheels = True
     M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True)
     M.cost = M.aircraft.mass
     # M.debug()
