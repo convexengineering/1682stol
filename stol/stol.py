@@ -22,24 +22,22 @@ class Aircraft(Model):
     ---------
     m           [kg]    aircraft mass
     Npax    4   [-]     number of passengers
-    Wpax    90  [kg]    mass of a passenger
+    mpax    93  [kg]    mass of a passenger
     fstruct 0.2 [-]     structural mass fraction
     """
     def setup(self,poweredwheels=False,n_wheels=3,hybrid=False):
         exec parse_variables(Aircraft.__doc__)
-        if not hybrid:
-            self.battery = Battery()
-            self.fuselage = Fuselage()
-            self.bw = BlownWing()
-            self.components = [self.bw,self.battery,self.fuselage]
-        
-        else:
+
+        self.battery = Battery()
+        self.fuselage = Fuselage()
+        self.bw = BlownWing()
+        self.cabin = Cabin()
+        self.components = [self.cabin,self.bw,self.battery,self.fuselage]
+    
+        if hybrid:
             self.tank = Tank()
             self.generator = Generator()
-            self.battery = Battery()
-            self.fuselage = Fuselage()
-            self.bw = BlownWing()
-            self.components = [self.tank,self.generator,self.battery,self.fuselage,self.bw]
+            self.components += [self.tank,self.generator]
 
         if poweredwheels:
                 self.pw = PoweredWheel()
@@ -47,7 +45,7 @@ class Aircraft(Model):
                 self.components += self.wheels
         self.mass = m
         constraints = [self.fuselage.m >= fstruct*self.mass,
-                        self.mass>=sum(c.topvar("m") for c in self.components) + Wpax*Npax]
+                        self.mass>=sum(c.topvar("m") for c in self.components) + mpax*Npax]
 
         return constraints, self.components
     def dynamic(self,state,hybrid=False,powermode="batt-chrg",t_charge=None):
@@ -90,6 +88,15 @@ class AircraftLoading(Model):
         loading = [self.wingl]
         return loading
 
+class Cabin(Model):
+    """Cabin
+    Variables
+    ---------
+    m        78.43     [kg]       total mass
+    """
+    def setup(self):
+        exec parse_variables(Cabin.__doc__)
+        return []
 class Fuselage(Model):
     """ Fuselage
 
