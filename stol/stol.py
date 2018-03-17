@@ -36,8 +36,8 @@ class Aircraft(Model):
     
         if hybrid:
             self.tank = Tank()
-            self.generator = Generator()
-            self.components += [self.tank,self.generator]
+            self.genandic = GenAndIC()
+            self.components += [self.tank,self.genandic]
 
         if poweredwheels:
                 self.pw = PoweredWheel()
@@ -73,7 +73,7 @@ class AircraftP(Model):
                        self.bw_perf.C_T >= self.bw_perf.C_D + aircraft.fuselage.cda
                     ]
         if hybrid:
-            self.gen_perf = aircraft.generator.dynamic(state)
+            self.gen_perf = aircraft.genandic.dynamic(state)
             if powermode == "batt-chrg":
                 constraints += [self.gen_perf.P_ic >= P + aircraft.battery.E_capacity/t_charge]
             if powermode == "batt-dischrg":
@@ -181,26 +181,26 @@ class PoweredWheelP(Model):
                       tau <= pw.tau_max]
         return constraints
 
-class Generator(Model):
-    """ Generator Model
+class GenAndIC(Model):
+    """ GenAndIC Model
     Variables
     ---------
     P_ic_sp_cont    1              [kW/kg]     specific cont power of IC
     eta_IC          0.256          [-]        thermal efficiency of IC
-    m_g                            [kg]       generator mass
-    m_gc                           [kg]       generator controller mass
+    m_g                            [kg]       genandic mass
+    m_gc                           [kg]       genandic controller mass
     m_ic                           [kg]       piston mass
-    P_g_sp_cont                    [W/kg]     generator spec power (cont)
-    P_g_cont                       [W]        generator cont. power
-    P_gc_cont                      [W]        generator controller cont. power
-    P_gc_sp_cont   11.8            [kW/kg]     generator controller cont power
+    P_g_sp_cont                    [W/kg]     genandic spec power (cont)
+    P_g_cont                       [W]        genandic cont. power
+    P_gc_cont                      [W]        genandic controller cont. power
+    P_gc_sp_cont   11.8            [kW/kg]     genandic controller cont power
     P_ic_cont                      [W]        piston continous power  
     m                              [kg]       total mass
     m_ref           1              [kg]       reference mass, for meeting units constraints
     Pstar_ref       1              [W/kg]     reference specific power, for meeting units constraints
     """
     def setup(self):
-        exec parse_variables(Generator.__doc__)
+        exec parse_variables(GenAndIC.__doc__)
         with gpkit.SignomialsEnabled():
             constraints = [P_g_sp_cont/Pstar_ref <= -0.228*(m_g/m_ref)**2+45.7*(m_g/m_ref)+3060,
                            P_g_cont    <=   P_g_sp_cont*m_g,
@@ -211,18 +211,18 @@ class Generator(Model):
 
         return constraints
     def dynamic(self,state):
-        return GeneratorP(self,state)
+        return genandicP(self,state)
 
-class GeneratorP(Model):
-    """GeneratorP Model
+class genandicP(Model):
+    """genandicP Model
     Variables
     ---------
-    P_g         [kW]        generator power
-    P_gc        [kW]        generator controller power
+    P_g         [kW]        genandic power
+    P_gc        [kW]        genandic controller power
     P_ic        [kW]        internal combustion power
     """
     def setup(self,gen,state):
-        exec parse_variables(GeneratorP.__doc__)
+        exec parse_variables(genandicP.__doc__)
         constraints = [P_g <= gen.P_g_cont,
                        P_gc <= gen.P_gc_cont,
                        P_ic <= gen.P_ic_cont,
@@ -556,8 +556,8 @@ class Cruise(Model):
                        self.flightstate["V"] >= Vmin,
                        self.perf.bw_perf.C_LC == 0.8]
         if hybrid:
-            constraints += [self.perf.gen_perf.P_g <= aircraft.generator.P_g_cont,
-                            self.perf.gen_perf.P_gc <= aircraft.generator.P_gc_cont]
+            constraints += [self.perf.gen_perf.P_g <= aircraft.genandic.P_g_cont,
+                            self.perf.gen_perf.P_gc <= aircraft.genandic.P_gc_cont]
 
         return constraints, self.perf
         

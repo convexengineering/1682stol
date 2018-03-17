@@ -51,14 +51,14 @@ Free Variables
              | Mission/Aircraft/Fuselage
            m : 169.6                                       [kg]      mass of fuselage
 
-             | Mission/Aircraft/Generator
-    P_g_cont : 5.635e+04                                   [W]       generator cont. power
- P_g_sp_cont : 3703                                        [W/kg]    generator spec power (cont)
-   P_gc_cont : 5.635e+04                                   [W]       generator controller cont. power
+             | Mission/Aircraft/GenAndIC
+    P_g_cont : 5.635e+04                                   [W]       genandic cont. power
+ P_g_sp_cont : 3703                                        [W/kg]    genandic spec power (cont)
+   P_gc_cont : 5.635e+04                                   [W]       genandic controller cont. power
    P_ic_cont : 5.635e+04                                   [W]       piston continous power
            m : 76.34                                       [kg]      total mass
-         m_g : 15.22                                       [kg]      generator mass
-        m_gc : 4.775                                       [kg]      generator controller mass
+         m_g : 15.22                                       [kg]      genandic mass
+        m_gc : 4.775                                       [kg]      genandic controller mass
         m_ic : 56.35                                       [kg]      piston mass
 
              | Mission/Aircraft/PoweredWheel
@@ -128,9 +128,9 @@ Free Variables
   m_dotprime : 108.7                                       [kg/m/s]  jet mass flow per unit span
          u_j : 111.9                                       [kt]      velocity in jet flow
 
-             | Mission/Climb.1/AircraftP.2/GeneratorP.2
-         P_g : 2.413e-06                                   [kW]      generator power
-        P_gc : 2.413e-06                                   [kW]      generator controller power
+             | Mission/Climb.1/AircraftP.2/genandicP.2
+         P_g : 2.413e-06                                   [kW]      genandic power
+        P_gc : 2.413e-06                                   [kW]      genandic controller power
         P_ic : 2.413e-06                                   [kW]      internal combustion power
 
              | Mission/Climb.1/FlightState.2
@@ -162,9 +162,9 @@ Free Variables
   m_dotprime : 48.55                                       [kg/m/s]  jet mass flow per unit span
          u_j : 49.97                                       [kt]      velocity in jet flow
 
-             | Mission/Climb/AircraftP.1/GeneratorP.1
-         P_g : 0.001029                                    [kW]      generator power
-        P_gc : 0.001029                                    [kW]      generator controller power
+             | Mission/Climb/AircraftP.1/genandicP.1
+         P_g : 0.001029                                    [kW]      genandic power
+        P_gc : 0.001029                                    [kW]      genandic controller power
         P_ic : 0.001029                                    [kW]      internal combustion power
 
              | Mission/Climb/FlightState.1
@@ -201,9 +201,9 @@ Free Variables
   m_dotprime : 117.8                                       [kg/m/s]  jet mass flow per unit span
          u_j : 121.3                                       [kt]      velocity in jet flow
 
-             | Mission/Cruise/AircraftP.3/GeneratorP.3
-         P_g : 56.35                                       [kW]      generator power
-        P_gc : 56.35                                       [kW]      generator controller power
+             | Mission/Cruise/AircraftP.3/genandicP.3
+         P_g : 56.35                                       [kW]      genandic power
+        P_gc : 56.35                                       [kW]      genandic controller power
         P_ic : 56.35                                       [kW]      internal combustion power
 
              | Mission/Cruise/FlightState.3
@@ -242,10 +242,10 @@ Free Variables
   m_dotprime : 41.24                                       [kg/m/s]  jet mass flow per unit span
          u_j : 42.44                                       [kt]      velocity in jet flow
 
-             | Mission/Landing/AircraftP.4/GeneratorP.4
-         P_g : 0.006505                                    [kW]      generator power
-        P_gc : 0.006505                                    [kW]      generator controller power
-        P_ic : 0.006505                                    [kW]      internal combustion power
+             | Mission/Landing/AircraftP.4/genandicP.4
+         P_g : 0.006507                                    [kW]      genandic power
+        P_gc : 0.006507                                    [kW]      genandic controller power
+        P_ic : 0.006507                                    [kW]      internal combustion power
 
              | Mission/Landing/FlightState.4
            V : 35.06                                       [kt]      speed
@@ -286,9 +286,9 @@ Free Variables
   m_dotprime : 45.82                                       [kg/m/s]  jet mass flow per unit span
          u_j : 47.16                                       [kt]      velocity in jet flow
 
-             | Mission/TakeOff/AircraftP/GeneratorP
-         P_g : 0.2231                                      [kW]      generator power
-        P_gc : 0.2231                                      [kW]      generator controller power
+             | Mission/TakeOff/AircraftP/genandicP
+         P_g : 0.2231                                      [kW]      genandic power
+        P_gc : 0.2231                                      [kW]      genandic controller power
         P_ic : 0.2231                                      [kW]      internal combustion power
 
              | Mission/TakeOff/FlightState
@@ -388,8 +388,8 @@ Constants
                     | Mission/Aircraft/Fuselage
                 cda : 0.015                                                   parasite drag coefficient
 
-                    | Mission/Aircraft/Generator
-       P_gc_sp_cont : 11.8                                        [kW/kg]     generator controller cont power
+                    | Mission/Aircraft/GenAndIC
+       P_gc_sp_cont : 11.8                                        [kW/kg]     genandic controller cont power
        P_ic_sp_cont : 1                                           [kW/kg]     specific cont power of IC
           Pstar_ref : 1                                           [W/kg]      reference specific power, for meeting units constraints
              eta_IC : 0.256                                                   thermal efficiency of IC
@@ -569,11 +569,11 @@ Sensitivities
                     | Mission/Aircraft/Fuselage
                 cda : +0.11                                      parasite drag coefficient
 
-                    | Mission/Aircraft/Generator
+                    | Mission/Aircraft/GenAndIC
        P_ic_sp_cont : -0.12                                      specific cont power of IC
-              m_ref : -0.052                                     reference mass, for meeting units constraints
-       P_gc_sp_cont : -0.01                                      generator controller cont power
-          Pstar_ref : -0.00041                                   reference specific power, for meeting units constraints
+          Pstar_ref : -0.029                                     reference specific power, for meeting units constraints
+       P_gc_sp_cont : -0.01                                      genandic controller cont power
+              m_ref : +0.0046                                    reference mass, for meeting units constraints
 
                     | Mission/Aircraft/PoweredWheel
                   c : -0.013
@@ -638,7 +638,7 @@ Sensitivities
                mu_b : -2.8e-10                                   braking friction coefficient
 
                     | Mission/Landing/AircraftP.4/BlownWingP.4
-               mcdp : +7.5e-11                                   profile drag margin factor
+               mcdp : +7.4e-11                                   profile drag margin factor
                   e : -9.7e-10                                   span efficiency
               rho_j : -2.7e-11                                   density in jet flow
 
