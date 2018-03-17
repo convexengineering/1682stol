@@ -75,10 +75,10 @@ class AircraftP(Model):
         if hybrid:
             self.gen_perf = aircraft.genandic.dynamic(state)
             if powermode == "batt-chrg":
-                constraints += [self.gen_perf.P_ic >= P + aircraft.battery.E_capacity/t_charge]
+                constraints += [self.gen_perf.P_out >= P + aircraft.battery.E_capacity/t_charge]
             if powermode == "batt-dischrg":
                 with gpkit.SignomialsEnabled():
-                    constraints += [self.batt_perf.P + self.gen_perf.P_gc >= P]
+                    constraints += [self.batt_perf.P + self.gen_perf.P_out >= P]
             self.perf_models += [self.gen_perf]
         return constraints,self.perf_models
 
@@ -217,17 +217,26 @@ class genandicP(Model):
     """genandicP Model
     Variables
     ---------
-    P_g         [kW]        genandic power
-    P_gc        [kW]        genandic controller power
-    P_ic        [kW]        internal combustion power
+    P_g                             [kW]        generator power
+    P_gc                            [kW]        generator controller power
+    P_ic                            [kW]        internal combustion power
+    P_fuel                          [kW]        power coming in from fuel flow
+    P_out                           [kW]        output from generator controller after efficiency
+    eta_wiring      0.98            [-]         efficiency of electrical connections (wiring loss)
+    eta_gc          0.95            [-]         efficiency of generator ontroller
+    eta_shaft       0.98            [-]         shaft losses (two 99% efficient bearings)
+    eta_g           0.9             [-]         generator efficiency
+    eta_ic          0.256           [-]         internal combustion engine efficiency
     """
     def setup(self,gen,state):
         exec parse_variables(genandicP.__doc__)
         constraints = [P_g <= gen.P_g_cont,
                        P_gc <= gen.P_gc_cont,
                        P_ic <= gen.P_ic_cont,
-                       P_ic == P_g,
-                       P_g == P_gc
+                       P_fuel*eta_ic == P_ic,
+                       P_ic*eta_shaft == P_g,
+                       P_g*eta_g == P_gc,
+                       P_gc*eta_gc == P_out 
                        ]
         return constraints
 
@@ -246,7 +255,7 @@ class Tank(Model):
     """
     def setup(self):
         exec parse_variables(Tank.__doc__)
-        constraints = [V_fuel*rho_fuel == m_fuel,
+        constraints = [V_fuel*rho_fuel >= m_fuel,
                        m_tank >= V_fuel*rho_tank,
                        m_fuel >= E/Estar_fuel,
                        m >= m_fuel+m_tank]
@@ -445,8 +454,8 @@ class TakeOff(Model):
     zsto                    [-]         take off distance helper variable
     Sto                     [ft]        take off distance
     W                       [N]         aircraft weight
-    E                       [kWh]       energy consumed in takeoff
     mu_friction 0.8         [-]         traction limit for powered wheels
+    t                       [s]         time of takeoff maneuver
     """
     def setup(self, aircraft,poweredwheels,n_wheels,hybrid=False):
         exec parse_variables(TakeOff.__doc__)
@@ -463,6 +472,7 @@ class TakeOff(Model):
         rho = fs.rho
         V = fs.V
         perf = aircraft.dynamic(fs,hybrid,powermode="batt-dischrg")
+        self.perf = perf
         e = perf.bw_perf.e
         mstall = 1.3
         constraints = [
@@ -474,8 +484,8 @@ class TakeOff(Model):
                 V >= mstall*(2*W/rho/S/perf.bw_perf.C_L)**0.5,
                 FitCS(fd, zsto, [A/g, B*V**2/g]), #fit constraint set, pass in fit data, zsto is the 
                 # y variable, then arr of independent (input) vars, watch the units
-                E >= (Sto/V)*perf.bw_perf.P,
-                Sto >= 1.0/2.0/B*zsto]
+                Sto >= 1.0/2.0/B*zsto,
+                t >= Sto/(0.3*V)]
         if poweredwheels:
             wheel_models = [wheel.dynamic(fs) for wheel in aircraft.wheels]
             with gpkit.SignomialsEnabled():
@@ -502,7 +512,6 @@ class Climb(Model):
     h_gain                  [ft]        height gained in climb
     t                       [s]         time of climb
     h_dot                   [m/s]       climb rate
-    E                       [kWh]       climb energy usage
     W                       [N]         aircraft weight
     
     LaTex Strings
@@ -531,7 +540,6 @@ class Climb(Model):
             h_gain <= h_dot*t,
             Sclimb == V*t, #sketchy constraint, is wrong with cos(climb angle)
             perf.P >= perf.bw_perf.T*V/0.8,
-            E >= perf.P*t
         ]
         return constraints, perf
 
@@ -540,7 +548,6 @@ class Cruise(Model):
 
     Variables
     ---------
-    E           [kWh]       Energy consumed in flight segment
     R           [nmi]       Range flown in flight segment
     t           [min]       Time to fly flight segment
     Vmin  120   [kts]       Minimum flight speed
@@ -552,12 +559,8 @@ class Cruise(Model):
         self.perf = aircraft.dynamic(self.flightstate,hybrid,powermode="batt-chrg",t_charge=t)
         constraints = [self.perf.batt_perf.P <= aircraft.battery.m*aircraft.battery.P_max_cont,
                        R <= t*self.flightstate.V,
-                       E >= self.perf.topvar("P")*t,
                        self.flightstate["V"] >= Vmin,
                        self.perf.bw_perf.C_LC == 0.8]
-        if hybrid:
-            constraints += [self.perf.gen_perf.P_g <= aircraft.genandic.P_g_cont,
-                            self.perf.gen_perf.P_gc <= aircraft.genandic.P_gc_cont]
 
         return constraints, self.perf
         
@@ -586,6 +589,7 @@ class Landing(Model):
     mu_b         0.8        [-]         braking friction coefficient
     Sgr                     [ft]        landing distance
     mstall       1.3        [-]         stall
+    t                       [s]         time of landing maneuver
     """
     def setup(self, aircraft,hybrid=False):
         exec parse_variables(Landing.__doc__)
@@ -600,6 +604,7 @@ class Landing(Model):
         V = perf.fs.V
         rho = perf.fs.rho
         C_T = perf.bw_perf.C_T
+        self.perf = perf
         with gpkit.SignomialsEnabled():
             constraints = [
                 perf.bw_perf.C_LC == 6.78,
@@ -608,7 +613,8 @@ class Landing(Model):
                 Vs**2  >= (2.*aircraft.mass*fs.g/rho/S/CL),
                 Xgr*(2*g*(mu_b)) >= (mstall*Vs)**2,
                 Xla >= Xgr,
-                Sgr >= Xla
+                Sgr >= Xla,
+                t >= Sgr/(0.3*V)
             ]
 
         return constraints, fs,perf      
@@ -653,10 +659,13 @@ class Mission(Model):
                        Wcent == loading.wingl["W"],
                        self.obstacle_climb.perf.bw_perf.C_LC == 1.05,
                        self.climb.perf.bw_perf.C_LC == 0.95,
+                       self.takeoff.perf.gen_perf.P_fuel == self.obstacle_climb.perf.gen_perf.P_fuel,
+                       self.climb.perf.gen_perf.P_fuel == self.cruise.perf.gen_perf.P_fuel,
+                       self.cruise.perf.gen_perf.P_fuel == self.landing.perf.gen_perf.P_fuel
         ]
         if hybrid:
-            constraints += [self.aircraft.battery.E_capacity*0.8 >= self.takeoff.E + self.obstacle_climb.E,
-                            self.aircraft.tank.E >= self.climb.E + self.cruise.E]
+            constraints += [self.aircraft.battery.E_capacity*0.8 >= self.takeoff.perf.bw_perf.P*self.takeoff.t + self.obstacle_climb.perf.bw_perf.P*self.obstacle_climb.t,
+                            self.aircraft.tank.E >= sum(s.t*s.perf.gen_perf.P_fuel for s in self.fs)]
         else:
             constraints += [self.aircraft.battery.E_capacity*0.8 >= self.takeoff.E + self.obstacle_climb.E + self.climb.E + self.cruise.E]
         with gpkit.SignomialsEnabled():
@@ -679,7 +688,7 @@ if __name__ == "__main__":
 
 def CLCurves():
     M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
-    range_sweep = np.linspace(115,200,4)
+    range_sweep = np.linspace(115,600,4)
     M.substitutions.update({M.R:('sweep',range_sweep)})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")

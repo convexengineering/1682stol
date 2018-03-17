@@ -27,6 +27,7 @@ Notes from working through model with Mike:
 - Figure out how to get no changes from sol.txt with commits
 - Figure out why u_j is less than flight velocity
 - Check that you're accounting for gas engine efficiency
+- Get electric going again
 
 Priorities:
 Hammer these down
