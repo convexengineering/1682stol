@@ -25,7 +25,7 @@ Notes from working through model with Mike:
 - Figure out how to get no changes from sol.txt with commits
 - Figure out why u_j is less than flight velocity
 - Get electric going again
-- Add baggage
+- Organize meeting for sunday
 
 Priorities:
 Hammer these down

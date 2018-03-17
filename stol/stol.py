@@ -12,6 +12,9 @@ from gpkitmodels import g
 from gpkitmodels.GP.aircraft.wing.capspar import CapSpar
 from gpkitmodels.GP.aircraft.wing.wing_skin import WingSkin
 from gpkitmodels.GP.aircraft.wing.wing import Planform
+from gpkitmodels.GP.aircraft.tail.empennage import Empennage
+from gpkitmodels.GP.aircraft.tail.tail_boom import TailBoomState
+from gpkitmodels.SP.aircraft.tail.tail_boom_flex import TailBoomFlexibility
 from decimal import *
 pi = math.pi
 
@@ -32,6 +35,12 @@ class Aircraft(Model):
         self.fuselage = Fuselage()
         self.bw = BlownWing()
         self.cabin = Cabin()
+        self.emp = Empennage()
+        self.emp.substitutions[self.emp.vtail.planform.tau] = 0.08
+        self.emp.substitutions[self.emp.htail.planform.tau] = 0.08
+        self.emp.substitutions[self.emp.htail.mh] = 0.8
+        self.emp.substitutions[self.emp.htail.Vh] = 0.4
+
         self.components = [self.cabin,self.bw,self.battery,self.fuselage]
     
         if hybrid:
@@ -44,10 +53,22 @@ class Aircraft(Model):
                 self.wheels = n_wheels*[self.pw]
                 self.components += self.wheels
         self.mass = m
-        constraints = [self.fuselage.m >= 0.4*sum(c.topvar("m") for c in self.components),
-                       self.mass>=sum(c.topvar("m") for c in self.components) + (mpax+mbaggage)*Npax]
+        constraints = [self.emp.htail.Vh <= (self.emp.htail["S"]*self.emp.htail.lh/self.bw.wing["S"]**2 *self.bw.wing["b"]),
+                       self.emp.vtail.Vv == (self.emp.vtail["S"]*self.emp.vtail.lv/self.bw.wing["S"]/self.bw.wing["b"]),
 
-        return constraints, self.components
+                       self.emp.vtail.planform["b"] == Variable("bv",48,"in"),
+                       self.emp.vtail.planform["croot"] == Variable("croot",27,"in"),
+
+                       self.emp.vtail.planform["b"] == Variable("bv",60,"in"),
+                       self.emp.vtail.planform["croot"] == Variable("croot",27,"in"),
+
+                       self.emp.tailboom["l"] >= self.emp.htail.lh,
+                       self.emp.tailboom["l"] == self.emp.vtail.lv,
+                       self.fuselage.m >= 0.4*sum(c.topvar("m") for c in self.components) + self.emp.W/g,
+                       self.mass>=sum(c.topvar("m") for c in self.components) + self.emp.W/g+ (mpax+mbaggage)*Npax]
+
+        return constraints, self.components, self.emp
+
     def dynamic(self,state,hybrid=False,powermode="batt-chrg",t_charge=None):
         return AircraftP(self,state,hybrid,powermode=powermode,t_charge=t_charge)
     def loading(self,Wcent,state):
@@ -64,13 +85,15 @@ class AircraftP(Model):
         exec parse_variables(AircraftP.__doc__)
         self.bw_perf = aircraft.bw.dynamic(state)
         self.batt_perf = aircraft.battery.dynamic(state)
-        self.perf_models = [self.bw_perf,self.batt_perf]
+        self.htail_perf = aircraft.emp.htail.flight_model(aircraft.emp.htail, state)
+        self.vtail_perf = aircraft.emp.vtail.flight_model(aircraft.emp.vtail, state)
+        self.perf_models = [self.bw_perf,self.batt_perf,self.htail_perf,self.vtail_perf]
         self.fs = state
         constraints = [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*state["g"],
                        P >= self.bw_perf["P"],
                        P >= aircraft.bw.powertrain["Pmax"],
                        self.batt_perf.P >= P,
-                       self.bw_perf.C_T >= self.bw_perf.C_D + aircraft.fuselage.cda
+                       self.bw_perf.C_T >= self.bw_perf.C_D + ((aircraft.emp.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.emp.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd) + aircraft.fuselage.cda
                     ]
         if hybrid:
             self.gen_perf = aircraft.genandic.dynamic(state)
@@ -85,7 +108,10 @@ class AircraftP(Model):
 class AircraftLoading(Model):
     def setup(self,aircraft,state):
         self.wingl = aircraft.bw.wing.spar.loading(aircraft.bw.wing, state)
-        loading = [self.wingl]
+        hbend = aircraft.emp.tailboom.tailLoad(aircraft.emp.tailboom,aircraft.emp.htail, state)
+        vbend = aircraft.emp.tailboom.tailLoad(aircraft.emp.tailboom,aircraft.emp.vtail, state)
+        loading = [hbend,vbend,self.wingl]
+        loading.append(TailBoomBending(aircraft.emp.htail,hbend, aircraft.bw.wing))
         return loading
 
 class Cabin(Model):
@@ -303,6 +329,7 @@ class Wing(Model):
     ---------
     W                   [lbf]       wing weight
     mfac        1.2     [-]         wing weight margin factor
+
     Upper Unbounded
     ---------------
     W
@@ -312,6 +339,7 @@ class Wing(Model):
     LaTex Strings
     -------------
     mfac                m_{\\mathrm{fac}}
+
     """
 
     sparModel = CapSpar
@@ -339,7 +367,6 @@ class Wing(Model):
             self.components.extend([self.foam])
 
         constraints = [W/mfac >= sum(c["W"] for c in self.components)]
-
         return constraints, self.planform, self.components
 
 class BlownWing(Model):
@@ -431,10 +458,12 @@ class FlightState(Model):
     mu          1.789e-5    [kg/m/s]        air viscosity
     V                       [knots]         speed
     g           9.8         [m/s/s]         acceleration due to gravity
+    qne                     [kg/s^2/m]      never exceed dynamic pressure
+    Vne         175         [kts]           never exceed speed
     """
     def setup(self):
         exec parse_variables(FlightState.__doc__)
-
+        return [qne == 0.5*rho*Vne**2]
 class TakeOff(Model):
     """
     take off model

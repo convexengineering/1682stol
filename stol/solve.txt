@@ -548,12 +548,12 @@ Sensitivities
                     | CFRPFabric
                 rho : +0.12                                      density of CFRP
                tmin : +0.12                                      minimum gauge thickness
-                tau : -8.8e-13                                   torsional stress limit
+                tau : -8.6e-13                                   torsional stress limit
 
                     | CFRPUD
                   E : -0.054                                     Youngs Modulus of CFRP
                 rho : +0.045                                     density of CFRP
-              sigma : -8.4e-11                                   maximum stress limit of CFRP
+              sigma : -8.2e-11                                   maximum stress limit of CFRP
 
                     | FoamHD
                 rho : +0.01                                      foam density
@@ -564,9 +564,9 @@ Sensitivities
          h_obstacle : +0.36
                   R : +0.089                                     mission range
        Scruiseclimb : +0.0068
-           h_cruise : +9.5e-12
-            mrunway : +7.9e-12                                   runway margin
-         Srunway_to : -5.4e-12                                   runway length
+           h_cruise : +9.3e-12
+            mrunway : +7.7e-12                                   runway margin
+         Srunway_to : -5.2e-12                                   runway length
        Srunway_land : -2.5e-12                                   runway length
 
                     | Mission/Aircraft
@@ -576,7 +576,7 @@ Sensitivities
 
                     | Mission/Aircraft/Battery
         P_max_burst : -0.095                                     burst power output
-         P_max_cont : -1.2e-10                                   continuous power output
+         P_max_cont : -1.1e-10                                   continuous power output
               Estar : -1.9e-12                                   specific energy
 
                     | Mission/Aircraft/BlownWing
@@ -591,7 +591,7 @@ Sensitivities
 
                     | Mission/Aircraft/BlownWing/Wing/CapSpar
                mfac : -0.054                                     curvature knockdown factor
-               wlim : -7.2e-12                                   spar width to chord ratio
+               wlim : -7e-12                                     spar width to chord ratio
 
                     | Mission/Aircraft/BlownWing/Wing/Planform
                 tau : -0.096                                     airfoil thickness ratio
@@ -601,10 +601,10 @@ Sensitivities
               cbave : [ -0.057    -0.031    -0.008   ]           non-dim mid section chord
 
                     | Mission/Aircraft/BlownWing/Wing/WingSkin
-                Vne : +1.8e-12                                   never exceed vehicle speed
-                Cmw : +8.8e-13                                   negative wing moment coeff
-              rhosl : +8.8e-13                                   sea level air density
-              Jtbar : -8.8e-13                                   torsional moment of inertia
+                Vne : +1.7e-12                                   never exceed vehicle speed
+                Cmw : +8.6e-13                                   negative wing moment coeff
+              rhosl : +8.6e-13                                   sea level air density
+              Jtbar : -8.6e-13                                   torsional moment of inertia
 
                     | Mission/Aircraft/Cabin
                   m : +0.24                                      total mass
@@ -622,8 +622,8 @@ Sensitivities
                   c : -0.029
                   b : +0.024
                   a : -0.00046
-                  r : +6.6e-12                                   tire radius
-     gear_ratio_max : -6.8e-12                                   max gear ratio of powered wheel
+                  r : +6.5e-12                                   tire radius
+     gear_ratio_max : -6.6e-12                                   max gear ratio of powered wheel
 
                     | Mission/Aircraft/Tank
          Estar_fuel : -0.097                                     fuel specific energy
@@ -648,10 +648,10 @@ Sensitivities
               rho_j : -4.4e-13                                   density in jet flow
 
                     | Mission/Climb.1/AircraftP.2/genandicP.2
-              eta_g : -3.8e-12                                   generator efficiency
-             eta_gc : -3.8e-12                                   efficiency of generator ontroller
-             eta_ic : -3.8e-12                                   internal combustion engine efficiency
-          eta_shaft : -3.8e-12                                   shaft losses (two 99% efficient bearings)
+              eta_g : -3.7e-12                                   generator efficiency
+             eta_gc : -3.7e-12                                   efficiency of generator ontroller
+             eta_ic : -3.7e-12                                   internal combustion engine efficiency
+          eta_shaft : -3.7e-12                                   shaft losses (two 99% efficient bearings)
 
                     | Mission/Climb.1/FlightState.2
                 rho : +0.0021                                    air density
@@ -664,10 +664,10 @@ Sensitivities
                mcdp : +0.0011                                    profile drag margin factor
 
                     | Mission/Climb/AircraftP.1/genandicP.1
-              eta_g : -6.7e-14                                   generator efficiency
-             eta_gc : -6.7e-14                                   efficiency of generator ontroller
-             eta_ic : -6.7e-14                                   internal combustion engine efficiency
-          eta_shaft : -6.7e-14                                   shaft losses (two 99% efficient bearings)
+              eta_g : -6.5e-14                                   generator efficiency
+             eta_gc : -6.5e-14                                   efficiency of generator ontroller
+             eta_ic : -6.5e-14                                   internal combustion engine efficiency
+          eta_shaft : -6.5e-14                                   shaft losses (two 99% efficient bearings)
 
                     | Mission/Climb/FlightState.1
                   g : +0.62                                      acceleration due to gravity
@@ -680,7 +680,7 @@ Sensitivities
                     | Mission/Cruise/AircraftP.3/BlownWingP.3
                   e : -0.016                                     span efficiency
                mcdp : +0.0086                                    profile drag margin factor
-              rho_j : -4.9e-13                                   density in jet flow
+              rho_j : -4.8e-13                                   density in jet flow
 
                     | Mission/Cruise/AircraftP.3/genandicP.3
              eta_gc : -0.43                                      efficiency of generator ontroller
@@ -706,8 +706,8 @@ Sensitivities
                     | Mission/Landing/AircraftP.4/genandicP.4
              eta_ic : +0.055                                     internal combustion engine efficiency
           eta_shaft : +0.055                                     shaft losses (two 99% efficient bearings)
-              eta_g : -2e-12                                     generator efficiency
-             eta_gc : -2e-12                                     efficiency of generator ontroller
+              eta_g : -1.9e-12                                   generator efficiency
+             eta_gc : -1.9e-12                                   efficiency of generator ontroller
 
                     | Mission/Landing/FlightState.4
                   g : +7.7e-05                                   acceleration due to gravity
@@ -718,8 +718,8 @@ Sensitivities
        m_{fac--fit} : +0.11                                      fit factor
                   g : -0.11                                      gravitational constant
                  mu : +0.0031                                    coefficient of rolling resistance
-                  a : +1.7e-10
-        mu_friction : -1.7e-10                                   traction limit for powered wheels
+                  a : +1.6e-10
+        mu_friction : -1.6e-10                                   traction limit for powered wheels
 
                     | Mission/TakeOff/AircraftP/BlownWingP
               rho_j : -0.036                                     density in jet flow
