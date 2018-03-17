@@ -12,9 +12,8 @@ from gpkitmodels import g
 from gpkitmodels.GP.aircraft.wing.capspar import CapSpar
 from gpkitmodels.GP.aircraft.wing.wing_skin import WingSkin
 from gpkitmodels.GP.aircraft.wing.wing import Planform
-from gpkitmodels.GP.aircraft.tail.empennage import Empennage
-from gpkitmodels.GP.aircraft.tail.tail_boom import TailBoomState
-from gpkitmodels.SP.aircraft.tail.tail_boom_flex import TailBoomFlexibility
+from gpkitmodels.GP.aircraft.tail.horizontal_tail import HorizontalTail
+from gpkitmodels.GP.aircraft.tail.vertical_tail import VerticalTail
 from decimal import *
 pi = math.pi
 
@@ -35,11 +34,12 @@ class Aircraft(Model):
         self.fuselage = Fuselage()
         self.bw = BlownWing()
         self.cabin = Cabin()
-        self.emp = Empennage()
-        self.emp.substitutions[self.emp.vtail.planform.tau] = 0.08
-        self.emp.substitutions[self.emp.htail.planform.tau] = 0.08
-        self.emp.substitutions[self.emp.htail.mh] = 0.8
-        self.emp.substitutions[self.emp.htail.Vh] = 0.4
+        self.htail = HorizontalTail()
+        self.vtail = VerticalTail()
+        self.vtail.substitutions[self.vtail.planform.tau] = 0.08
+        self.htail.substitutions[self.htail.planform.tau] = 0.08
+        self.htail.substitutions[self.htail.mh] = 0.8
+        self.htail.substitutions[self.htail.Vh] = 0.4
 
         self.components = [self.cabin,self.bw,self.battery,self.fuselage]
     
@@ -53,21 +53,22 @@ class Aircraft(Model):
                 self.wheels = n_wheels*[self.pw]
                 self.components += self.wheels
         self.mass = m
-        constraints = [self.emp.htail.Vh <= (self.emp.htail["S"]*self.emp.htail.lh/self.bw.wing["S"]**2 *self.bw.wing["b"]),
-                       self.emp.vtail.Vv == (self.emp.vtail["S"]*self.emp.vtail.lv/self.bw.wing["S"]/self.bw.wing["b"]),
+        constraints = [self.htail.Vh <= (self.htail["S"]*self.htail.lh/self.bw.wing["S"]**2 *self.bw.wing["b"]),
+                       self.vtail.Vv == (self.vtail["S"]*self.vtail.lv/self.bw.wing["S"]/self.bw.wing["b"]),
 
-                       self.emp.vtail.planform["b"] == Variable("bv",48,"in"),
-                       self.emp.vtail.planform["croot"] == Variable("croot",27,"in"),
+                       self.vtail.planform["b"] >= Variable("bv",48,"in"),
+                       self.vtail.planform["croot"] >= Variable("croot",27,"in"),
 
-                       self.emp.vtail.planform["b"] == Variable("bv",60,"in"),
-                       self.emp.vtail.planform["croot"] == Variable("croot",27,"in"),
+                       self.htail.planform["b"] >= Variable("bh",60,"in"),
+                       self.htail.planform["croot"] >= Variable("croot",27,"in"),
 
-                       self.emp.tailboom["l"] >= self.emp.htail.lh,
-                       self.emp.tailboom["l"] == self.emp.vtail.lv,
-                       self.fuselage.m >= 0.4*sum(c.topvar("m") for c in self.components) + self.emp.W/g,
-                       self.mass>=sum(c.topvar("m") for c in self.components) + self.emp.W/g+ (mpax+mbaggage)*Npax]
+                       self.vtail.lv == Variable("lv",180,"in"),
+                       self.htail.lh == Variable("lh",180,"in"),
 
-        return constraints, self.components, self.emp
+                       self.fuselage.m >= 0.4*sum(c.topvar("m") for c in self.components) + (self.vtail.W + self.htail.W)/g,
+                       self.mass>=sum(c.topvar("m") for c in self.components) + (self.vtail.W + self.htail.W)/g+ (mpax+mbaggage)*Npax]
+
+        return constraints, self.components, self.htail, self.vtail
 
     def dynamic(self,state,hybrid=False,powermode="batt-chrg",t_charge=None):
         return AircraftP(self,state,hybrid,powermode=powermode,t_charge=t_charge)
@@ -85,15 +86,15 @@ class AircraftP(Model):
         exec parse_variables(AircraftP.__doc__)
         self.bw_perf = aircraft.bw.dynamic(state)
         self.batt_perf = aircraft.battery.dynamic(state)
-        self.htail_perf = aircraft.emp.htail.flight_model(aircraft.emp.htail, state)
-        self.vtail_perf = aircraft.emp.vtail.flight_model(aircraft.emp.vtail, state)
+        self.htail_perf = aircraft.htail.flight_model(aircraft.htail, state)
+        self.vtail_perf = aircraft.vtail.flight_model(aircraft.vtail, state)
         self.perf_models = [self.bw_perf,self.batt_perf,self.htail_perf,self.vtail_perf]
         self.fs = state
         constraints = [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*state["g"],
                        P >= self.bw_perf["P"],
                        P >= aircraft.bw.powertrain["Pmax"],
                        self.batt_perf.P >= P,
-                       self.bw_perf.C_T >= self.bw_perf.C_D + ((aircraft.emp.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.emp.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd) + aircraft.fuselage.cda
+                       self.bw_perf.C_T >= self.bw_perf.C_D + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd) + aircraft.fuselage.cda
                     ]
         if hybrid:
             self.gen_perf = aircraft.genandic.dynamic(state)
@@ -108,10 +109,7 @@ class AircraftP(Model):
 class AircraftLoading(Model):
     def setup(self,aircraft,state):
         self.wingl = aircraft.bw.wing.spar.loading(aircraft.bw.wing, state)
-        hbend = aircraft.emp.tailboom.tailLoad(aircraft.emp.tailboom,aircraft.emp.htail, state)
-        vbend = aircraft.emp.tailboom.tailLoad(aircraft.emp.tailboom,aircraft.emp.vtail, state)
-        loading = [hbend,vbend,self.wingl]
-        loading.append(TailBoomBending(aircraft.emp.htail,hbend, aircraft.bw.wing))
+        loading = [self.wingl]
         return loading
 
 class Cabin(Model):
@@ -133,19 +131,6 @@ class Fuselage(Model):
     """
     def setup(self):
         exec parse_variables(Fuselage.__doc__)
-
-#   def dynamic(self,state):
-#       return FuselageP(self,state)
-
-# class FuselageP(Model):
-#   """ FuselageP
-
-#   Variables
-#   ---------
-#   D       [N]     total drag force from fuselage
-#   """
-#   def setup(self,state):
-#       exec parse_variables(FuselageP.__doc__)
 
 class Powertrain(Model):
     """ Powertrain

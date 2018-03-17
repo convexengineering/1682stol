@@ -3,7 +3,7 @@ BY FRIDAY NIGHT ALL THIS IS DONE
 
 Notes from working through model with Mike:
 - DONE Improve fuselage weight
-- Improve tail weights (Use JHO model with more plies)
+- DONE Improve tail weights (Use JHO model with more plies)
 - Look at efficiencies in electrical system
 - Skin friction fuselage drag from Solidworks area input
 - fix CD in climb to be the total CD of the aircraft, not just blown wing
@@ -32,7 +32,7 @@ Hammer these down
 - Hybrid (started, very low mass)
 - Powered wheels (favourable atm, getting higher takeoff mass without them)
 - weights and drag cleanup, integrate sheet ()
-- Tails weight and drag
+- DONE Tails weight and drag
 - Raymer landing model include
 
 Solution anal
