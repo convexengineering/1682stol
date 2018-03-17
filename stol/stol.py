@@ -403,7 +403,10 @@ class BlownWingP(Model):
     h               [m]             Wake height
     T               [N]             propeller thrust
     P               [kW]            power draw
-    A_disk          [m**2]           area of prop disk
+    eta_mc    0.95  [-]             motor controller efficiency
+    eta_m     0.9   [-]             motor efficiency
+    eta_prop  0.87  [-]             prop efficiency loss after blade disk actuator
+    A_disk          [m**2]          area of prop disk
 
     """
     def setup(self,bw,state):
@@ -413,7 +416,7 @@ class BlownWingP(Model):
         with gpkit.SignomialsEnabled():
             constraints = [
             A_disk == bw.n_prop*pi*bw.powertrain.r**2,
-            (P/(0.5*T*state["V"]) - 1)**2 >= (T/(A_disk*(state.V**2)*state.rho/2)+1),
+            ((P*eta_prop*eta_m*eta_mc)/(0.5*T*state["V"]) - 1)**2 >= (T/(A_disk*(state.V**2)*state.rho/2)+1),
             (u_j/state.V)**2 <= (T/(A_disk*(state.V**2)*state.rho/2) + 1),
             u_j >= state.V,
             P <= bw.powertrain["Pmax"],
