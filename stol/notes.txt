@@ -25,6 +25,8 @@ Notes from working through model with Mike:
 - Change Sclimb to reflect steeper angle (20 degrees)
 - Why is u_j zero in cruise?
 - Figure out how to get no changes from sol.txt with commits
+- Figure out why u_j is less than flight velocity
+- Check that you're accounting for gas engine efficiency
 
 Priorities:
 Hammer these down

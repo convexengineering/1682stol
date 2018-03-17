@@ -45,7 +45,7 @@ class Aircraft(Model):
                 self.components += self.wheels
         self.mass = m
         constraints = [self.fuselage.m >= fstruct*self.mass,
-                        self.mass>=sum(c.topvar("m") for c in self.components) + mpax*Npax]
+                       self.mass>=sum(c.topvar("m") for c in self.components) + mpax*Npax]
 
         return constraints, self.components
     def dynamic(self,state,hybrid=False,powermode="batt-chrg",t_charge=None):
@@ -239,11 +239,17 @@ class Tank(Model):
     m_fuel                     [lb]          mass of fuel
     E                          [Wh]          fuel energy
     Estar_fuel          11.9   [kWh/kg]      fuel specific energy
+    V_fuel                     [gal]         fuel volume
+    rho_fuel            6.7    [lb/gal]      fuel density
+    m_tank                     [kg]          fuel tank mass
+    rho_tank            0.55   [lb/gal]      empty tank mass (structure mass) per volume
     """
     def setup(self):
         exec parse_variables(Tank.__doc__)
-        constraints = [m_fuel >= E/Estar_fuel,
-                       m >= m_fuel]
+        constraints = [V_fuel*rho_fuel == m_fuel,
+                       m_tank >= V_fuel*rho_tank,
+                       m_fuel >= E/Estar_fuel,
+                       m >= m_fuel+m_tank]
         return constraints
 
 
@@ -337,7 +343,7 @@ class BlownWing(Model):
     def setup(self):
         exec parse_variables(BlownWing.__doc__)
         self.powertrain = Powertrain()
-        N = 14
+        N = 4
         self.wing = Wing(N)
         self.wing.substitutions[self.wing.planform.tau]=0.12
 
@@ -357,7 +363,7 @@ class BlownWingP(Model):
     Variables
     ---------
     C_L             [-]             total lift coefficient
-    C_LC    2.5     [-]             lift coefficient due to circulation
+    C_LC            [-]             lift coefficient due to circulation
     C_Q             [-]             mass momentum coefficient
     C_J             [-]             jet momentum coefficient
     C_E             [-]             energy momentum coefficient
@@ -372,7 +378,7 @@ class BlownWingP(Model):
     J_prime         [kg/(s**2)]      momentum flow per unit span
     E_prime         [J/(m*s)]       energy flow per unit span
     rho_j   1.225   [kg/m**3]        density in jet flow
-    u_j             [m/s]           velocity in jet flow
+    u_j             [kts]           velocity in jet flow
     h               [m]             Wake height
     T               [N]             propeller thrust
     P               [kW]            power draw
@@ -388,7 +394,7 @@ class BlownWingP(Model):
             A_disk == bw.n_prop*pi*bw.powertrain.r**2,
             (P/(0.5*T*state["V"]) - 1)**2 >= (T/(A_disk*(state.V**2)*state.rho/2)+1),
             (u_j/state.V)**2 <= (T/(A_disk*(state.V**2)*state.rho/2) + 1),
-
+            u_j >= state.V,
             P <= bw.powertrain["Pmax"],
             C_L <= C_LC*(1+2*C_J/(pi*bw.wing["AR"]*e)),
             
@@ -460,6 +466,7 @@ class TakeOff(Model):
         e = perf.bw_perf.e
         mstall = 1.3
         constraints = [
+                perf.bw_perf.C_LC == 2.18,
                 W == aircraft.mass*fs.g,
                 T/W >= A/g + mu,
                 B >= g/W*0.5*rho*S*CDg,
@@ -509,7 +516,7 @@ class Climb(Model):
         exec parse_variables(Climb.__doc__)
         self.flightstate = FlightState()
         perf = aircraft.dynamic(self.flightstate,hybrid,powermode="batt-dischrg")
-
+        self.perf = perf
         CL = self.CL = perf.bw_perf.C_L
         S = self.S = aircraft.bw.wing["S"]
         CD = self.CD = perf.bw_perf.C_D
@@ -546,7 +553,8 @@ class Cruise(Model):
         constraints = [self.perf.batt_perf.P <= aircraft.battery.m*aircraft.battery.P_max_cont,
                        R <= t*self.flightstate.V,
                        E >= self.perf.topvar("P")*t,
-                       self.flightstate["V"] >= Vmin]
+                       self.flightstate["V"] >= Vmin,
+                       self.perf.bw_perf.C_LC == 0.8]
         if hybrid:
             constraints += [self.perf.gen_perf.P_g <= aircraft.generator.P_g_cont,
                             self.perf.gen_perf.P_gc <= aircraft.generator.P_gc_cont]
@@ -594,6 +602,7 @@ class Landing(Model):
         C_T = perf.bw_perf.C_T
         with gpkit.SignomialsEnabled():
             constraints = [
+                perf.bw_perf.C_LC == 6.78,
                 W == aircraft.mass*g,
                 C_T >= CD, #+ (W*sing)/(0.5*rho*S*V**2),
                 Vs**2  >= (2.*aircraft.mass*fs.g/rho/S/CL),
@@ -633,7 +642,7 @@ class Mission(Model):
         self.fs = [self.takeoff,self.obstacle_climb,self.climb,self.cruise,self.landing]
 
         constraints = [self.obstacle_climb.h_gain == Variable("h_obstacle",50,"ft"),
-                       self.climb.h_gain == Variable("h_cruise",950,"ft"),
+                       self.climb.h_gain == Variable("h_cruise",1950,"ft"),
                        self.climb.Sclimb == Variable("Scruiseclimb",10,"miles"),
                        
                        Srunway_to >= self.takeoff.Sto*mrunway,
@@ -641,7 +650,9 @@ class Mission(Model):
                        # Sobstacle >= Srunway*(4.0/3.0),
                        Sobstacle >= mobstacle*(self.takeoff.Sto + self.obstacle_climb.Sclimb),
                        Wcent >= self.aircraft.mass*g,
-                       Wcent == loading.wingl["W"]
+                       Wcent == loading.wingl["W"],
+                       self.obstacle_climb.perf.bw_perf.C_LC == 1.05,
+                       self.climb.perf.bw_perf.C_LC == 0.95,
         ]
         if hybrid:
             constraints += [self.aircraft.battery.E_capacity*0.8 >= self.takeoff.E + self.obstacle_climb.E,
@@ -666,32 +677,30 @@ if __name__ == "__main__":
     print sol.table()
     writeSol(sol)
 
+def CLCurves():
+    M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
+    range_sweep = np.linspace(115,200,4)
+    M.substitutions.update({M.R:('sweep',range_sweep)})
+    M.cost = M.aircraft.mass
+    sol = M.localsolve("mosek")
+    print sol.summary()
+    plt.plot(sol(M.R),sol(M.aircraft.mass))
 
-# def CLCurves():
-#     M = Mission(poweredwheels=True,n_wheels=3)
-#     runway_sweep = np.linspace(100,300,4)
-#     obstacle_sweep = runway_sweep*4/3
-#     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
-#     M.cost = M.aircraft.mass
-#     sol = M.localsolve("mosek")
-#     print sol.summary()
-#     plt.plot(sol(M.Srunway),sol(M.aircraft.mass))
-
-#     # sol = M.solve()
-#     # # CLmax_set = np.linspace(3.5,8,5)
-#     # for CLmax in CLmax_set:
-#     #     print CLmax
-#     #     # M.substitutions.update({M.aircraft.bw.CLmax:CLmax})
-#     #     sol = M.solve("mosek")
-#     #     print sol(M.aircraft.mass)
+    # sol = M.solve()
+    # # CLmax_set = np.linspace(3.5,8,5)
+    # for CLmax in CLmax_set:
+    #     print CLmax
+    #     # M.substitutions.update({M.aircraft.bw.CLmax:CLmax})
+    #     sol = M.solve("mosek")
+    #     print sol(M.aircraft.mass)
     
-#     plt.grid()
-#     # plt.xlim([0,300])
-#     # plt.ylim([0,1600])
-#     plt.title("Runway length requirement for eSTOL")
-#     plt.xlabel("Runway length [ft]")
-#     plt.ylabel("Takeoff mass [kg]")
-#     # plt.legend()
-#     plt.show()
+    plt.grid()
+    # plt.xlim([0,300])
+    # plt.ylim([0,1600])
+    plt.title("Impact of range on takeoff mass")
+    plt.xlabel("Cruise segment range [mi]")
+    plt.ylabel("Takeoff mass [kg]")
+    # plt.legend()
+    plt.show()
 
 # CLCurves()
