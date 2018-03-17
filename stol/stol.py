@@ -20,10 +20,10 @@ class Aircraft(Model):
 
     Variables
     ---------
-    m           [kg]    aircraft mass
-    Npax    4   [-]     number of passengers
-    mpax    93  [kg]    mass of a passenger
-    fstruct 0.2 [-]     structural mass fraction
+    m               [kg]    aircraft mass
+    Npax        4   [-]     number of passengers
+    mpax        93  [kg]    mass of a passenger
+    mbaggage    9   [kg]    mass of baggage
     """
     def setup(self,poweredwheels=False,n_wheels=3,hybrid=False):
         exec parse_variables(Aircraft.__doc__)
@@ -44,8 +44,8 @@ class Aircraft(Model):
                 self.wheels = n_wheels*[self.pw]
                 self.components += self.wheels
         self.mass = m
-        constraints = [self.fuselage.m >= fstruct*self.mass,
-                       self.mass>=sum(c.topvar("m") for c in self.components) + mpax*Npax]
+        constraints = [self.fuselage.m >= 0.4*sum(c.topvar("m") for c in self.components),
+                       self.mass>=sum(c.topvar("m") for c in self.components) + (mpax+mbaggage)*Npax]
 
         return constraints, self.components
     def dynamic(self,state,hybrid=False,powermode="batt-chrg",t_charge=None):

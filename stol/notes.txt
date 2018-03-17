@@ -2,7 +2,8 @@ BY FRIDAY NIGHT ALL THIS IS DONE
 
 
 Notes from working through model with Mike:
-- Fuselage area weight buildup, add tail weights (or get fraction from weights spreadsheet)
+- DONE Improve fuselage weight
+- Improve tail weights (Use JHO model with more plies)
 - Look at efficiencies in electrical system
 - Skin friction fuselage drag from Solidworks area input
 - fix CD in climb to be the total CD of the aircraft, not just blown wing
@@ -11,9 +12,6 @@ Notes from working through model with Mike:
 - Implement Alan's fits for Powertrain
 - Look at why propeller radius is not huge, filling maximum space
 - If landing constrained, why powered wheels? Because RPM constrained to mass, fix that
-- Change generator name to GenAndIC
-- Wiring loss and shaft losses in generator
-- Add tank mass that scales with fuel mass
 - Fix Wcent to only be the central masses, not including the wing
 - Impose constraint on capspar thickness and width to be the same throughout sections (no taper)
 - Increase minimum gauge of wing skin by multiplying the current thickness
@@ -26,8 +24,8 @@ Notes from working through model with Mike:
 - Why is u_j zero in cruise?
 - Figure out how to get no changes from sol.txt with commits
 - Figure out why u_j is less than flight velocity
-- Check that you're accounting for gas engine efficiency
 - Get electric going again
+- Add baggage
 
 Priorities:
 Hammer these down
