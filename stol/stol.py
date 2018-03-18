@@ -54,6 +54,7 @@ class Aircraft(Model):
                 self.components += self.wheels
         self.mass = m
         constraints = [
+
                        # self.htail.Vh <= (self.htail["S"]*self.htail.lh/self.bw.wing["S"]**2 *self.bw.wing["b"]),
                        # self.vtail.Vv == (self.vtail["S"]*self.vtail.lv/self.bw.wing["S"]/self.bw.wing["b"]),
                        self.vtail.planform["b"] >= Variable("bv",48,"in"),
@@ -68,6 +69,8 @@ class Aircraft(Model):
                        self.fuselage.m >= 0.4*(sum(c.topvar("m") for c in self.components) + (self.vtail.W + self.htail.W)/g),
                        self.mass>=sum(c.topvar("m") for c in self.components) + (self.vtail.W + self.htail.W)/g+ (mpax+mbaggage)*Npax]
 
+        with gpkit.SignomialsEnabled():
+            constraints += [self.bw.wing.b - Variable("w_fuse",50,"in") >= self.bw.n_prop*2*self.bw.powertrain.r]
         return constraints, self.components, self.htail, self.vtail
 
     def dynamic(self,state,hybrid=False,powermode="batt-chrg",t_charge=None):
@@ -95,8 +98,7 @@ class AircraftP(Model):
         self.fs = state
         constraints = [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*state["g"],
                        P >= self.bw_perf["P"],
-                       P >= aircraft.bw.powertrain["Pmax"],
-                       self.batt_perf.P >= P,
+                       # self.batt_perf.P >= P,
                        CD >= self.bw_perf.C_D + (aircraft.fuselage.Swet/aircraft.bw.wing.planform.S)*self.fuse_perf.Cd + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd),
                        self.bw_perf.C_T >= CD
                     ]
@@ -104,7 +106,8 @@ class AircraftP(Model):
             self.gen_perf = aircraft.genandic.dynamic(state)
             if powermode == "batt-chrg":
                 constraints += [P_charge >= aircraft.battery.E_capacity/t_charge,
-                                self.gen_perf.P_out >= P + P_charge]
+                                self.gen_perf.P_out >= P + P_charge,
+                                self.batt_perf.P >= Variable("P_draw_batt",1e-4,"W")]
             if powermode == "batt-dischrg":
                 with gpkit.SignomialsEnabled():
                     constraints += [self.batt_perf.P + self.gen_perf.P_out >= P]
@@ -405,7 +408,6 @@ class BlownWing(Model):
 
         constraints = [
         m >= n_prop*self.powertrain["m"] + self.wing.topvar("W")/g,
-        0.7*self.wing.b >= n_prop*2*self.powertrain.r
         ]
         return constraints,self.powertrain,self.wing
     def dynamic(self,state):
@@ -457,7 +459,7 @@ class BlownWingP(Model):
             ((P*eta_prop*eta_m*eta_mc)/(0.5*T*state["V"]) - 1)**2 >= (T/(A_disk*(state.V**2)*state.rho/2)+1),
             (u_j/state.V)**2 <= (T/(A_disk*(state.V**2)*state.rho/2) + 1),
             u_j >= state.V,
-            P <= bw.powertrain["Pmax"],
+            P <= bw.n_prop*bw.powertrain["Pmax"],
             C_L <= C_LC*(1+2*C_J/(pi*bw.wing["AR"]*e)),
 
             RPMmax >= Variable("a",4.9,"rpm/kg^2")*bw.powertrain.m_m**2 - Variable("b",313.3,"rpm/kg")*bw.powertrain.m_m +Variable("c",8721.2,"rpm"),
