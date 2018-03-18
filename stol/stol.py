@@ -348,7 +348,7 @@ class Wing(Model):
     ---------
     W                   [lbf]       wing weight
     mfac        1.2     [-]         wing weight margin factor
-    n_plies     2       [-]         number of plies on skin
+    n_plies     5       [-]         number of plies on skin
     Upper Unbounded
     ---------------
     W
