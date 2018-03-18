@@ -81,6 +81,8 @@ class AircraftP(Model):
     Variables
     ---------
     P           [kW]    total power draw
+    CD          [-]     total CD, referenced to wing area
+    P_charge    [kW]    battery charging power
     """
     def setup(self,aircraft,state,hybrid=False,powermode="batt-chrg",t_charge=None):
         exec parse_variables(AircraftP.__doc__)
@@ -95,12 +97,14 @@ class AircraftP(Model):
                        P >= self.bw_perf["P"],
                        P >= aircraft.bw.powertrain["Pmax"],
                        self.batt_perf.P >= P,
-                       self.bw_perf.C_T >= self.bw_perf.C_D + (aircraft.fuselage.Swet/aircraft.bw.wing.planform.S)*self.fuse_perf.Cd + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd)
+                       CD >=self.bw_perf.C_D + (aircraft.fuselage.Swet/aircraft.bw.wing.planform.S)*self.fuse_perf.Cd + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd),
+                       self.bw_perf.C_T >= CD
                     ]
         if hybrid:
             self.gen_perf = aircraft.genandic.dynamic(state)
             if powermode == "batt-chrg":
-                constraints += [self.gen_perf.P_out >= P + aircraft.battery.E_capacity/t_charge]
+                constraints += [P_charge >= aircraft.battery.E_capacity/t_charge,
+                                self.gen_perf.P_out >= P + P_charge]
             if powermode == "batt-dischrg":
                 with gpkit.SignomialsEnabled():
                     constraints += [self.batt_perf.P + self.gen_perf.P_out >= P]
@@ -151,14 +155,24 @@ class Powertrain(Model):
     """ Powertrain
     Variables
     ---------
-    m           [kg]    powertrain mass
-    Pmax        [kW]    maximum power
-    Pstar   5   [kW/kg] motor specific power
-    r           [m]     propeller radius
+    m                   [kg]        powertrain mass
+    m_m                 [kg]        motor mass
+    m_mc                [kg]        motor controller mass
+    Pmax                [kW]        maximum power
+    P_m_sp_cont   7     [kW/kg]      motor specific power
+    P_mc_sp_cont  11.8  [kW/kg]     motor controller specific power
+    r                   [m]         propeller radius
+    Pstar_ref     1     [W]         specific motor power
+    m_ref         1     [kg]        reference motor power
     """
+
     def setup(self):
         exec parse_variables(Powertrain.__doc__)
-        constraints = [m >= Pmax/Pstar]
+        constraints = []
+        constraints+= [#P_m_sp_cont/Pstar_ref <= -0.228*(m_m/m_ref)**2+45.7*(m_m/m_ref)+3060,
+                       m >= m_m+m_mc,
+                       Pmax <= m_m*P_m_sp_cont,
+                       Pmax <= m_mc*P_mc_sp_cont]
         return constraints
 
 class PoweredWheel(Model):
@@ -562,7 +576,7 @@ class Climb(Model):
         self.perf = perf
         CL = self.CL = perf.bw_perf.C_L
         S = self.S = aircraft.bw.wing["S"]
-        CD = self.CD = perf.bw_perf.C_D
+        CD = self.CD = perf.CD
         V = perf.fs.V
         rho = perf.fs.rho
 

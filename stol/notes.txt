@@ -4,12 +4,13 @@ BY FRIDAY NIGHT ALL THIS IS DONE
 Notes from working through model with Mike:
 - DONE Improve fuselage weight
 - DONE Improve tail weights (Use JHO model with more plies)
-- Look at efficiencies in electrical system
-- Skin friction fuselage drag from Solidworks area input
-- fix CD in climb to be the total CD of the aircraft, not just blown wing
-- bring up the charge in flight versus charge on ground tradeoff in infrastructure
-- seperate battery charge power into P_charge variable
-- Implement Alan's fits for Powertrain
+- DONE Look at efficiencies in electrical system in Wing
+- DONE Look at efficiencies in powered wheels
+- DONE Skin friction fuselage drag from Solidworks area input
+- DONE fix CD in climb to be the total CD of the aircraft, not just blown wing
+- DONE bring up the charge in flight versus charge on ground tradeoff in infrastructure
+- DONE seperate battery charge power into P_charge variable
+- DONE Implement Alan's fits for Powertrain
 - Look at why propeller radius is not huge, filling maximum space
 - If landing constrained, why powered wheels? Because RPM constrained to mass, fix that
 - Fix Wcent to only be the central masses, not including the wing
@@ -26,6 +27,7 @@ Notes from working through model with Mike:
 - Figure out why u_j is less than flight velocity
 - Get electric going again
 - Organize meeting for sunday
+- Revisit tail sizing with Ronnies new values
 
 Priorities:
 Hammer these down
