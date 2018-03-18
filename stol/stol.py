@@ -162,7 +162,7 @@ class Powertrain(Model):
     m_m                     [kg]        motor mass
     m_mc                    [kg]        motor controller mass
     Pmax                    [kW]        maximum power
-    P_m_sp_cont   7         [kW/kg]      motor specific power
+    P_m_sp_cont   9         [kW/kg]      motor specific power
     P_mc_sp_cont  11.8      [kW/kg]     motor controller specific power
     r                       [m]         propeller radius
     Pstar_ref     1         [W]         specific motor power reference
@@ -172,11 +172,11 @@ class Powertrain(Model):
     def setup(self):
         exec parse_variables(Powertrain.__doc__)
                        
-
-        constraints = [#P_m_sp_cont <= Pstar_ref*(-0.228*(m_m/m_ref)**2+45.7*(m_m/m_ref)+3060),
-                        m >= m_m+m_mc,
-                        Pmax <= m_m*P_m_sp_cont,
-                        Pmax <= m_mc*P_mc_sp_cont]
+        with gpkit.SignomialsEnabled():
+            constraints = [#P_m_sp_cont/Pstar_ref <= -0.228*(m_m/m_ref)**2+45.7*(m_m/m_ref)+3060,
+                           m >= m_m+m_mc,
+                           Pmax <= m_m*P_m_sp_cont,
+                           Pmax <= m_mc*P_mc_sp_cont]
         return constraints
 
 class PoweredWheel(Model):
@@ -231,8 +231,8 @@ class GenAndIC(Model):
     """ GenAndIC Model
     Variables
     ---------
-    P_ic_sp_cont    1              [kW/kg]     specific cont power of IC
-    eta_IC          0.256          [-]        thermal efficiency of IC
+    P_ic_sp_cont    2.8            [kW/kg]     specific cont power of IC
+    eta_IC          0.15           [-]        thermal efficiency of IC
     m_g                            [kg]       genandic mass
     m_gc                           [kg]       genandic controller mass
     m_ic                           [kg]       piston mass
@@ -397,7 +397,7 @@ class BlownWing(Model):
     """
     Variables
     ---------
-    n_prop     6    [-]             number of props
+    n_prop     8    [-]             number of props
     m               [kg]            mass
     """
 
@@ -616,7 +616,7 @@ class Cruise(Model):
     ---------
     R           [nmi]       Range flown in flight segment
     t           [min]       Time to fly flight segment
-    Vmin  120   [kts]       Minimum flight speed
+    Vmin  160   [kts]       Minimum flight speed
     """
 
     def setup(self,aircraft,hybrid=False):
@@ -691,12 +691,11 @@ class Mission(Model):
 
     Variables
     ---------
-    Srunway_to      300         [ft]        runway length
-    Srunway_land    300         [ft]        runway length
-    Sobstacle       400         [ft]        obstacle length
+    Srunway         100         [ft]        runway length
+    Sobstacle                   [ft]        obstacle length
     mrunway         1.4         [-]         runway margin
     mobstacle       1.4         [-]         obstacle margin
-    R               115         [nmi]       mission range
+    R               400         [nmi]       mission range
     Vstall          61          [kts]       power off stall requirement
     CLstall         2.5         [-]         power off stall CL
     """
@@ -719,9 +718,9 @@ class Mission(Model):
                        self.climb.h_gain == Variable("h_cruise",1950,"ft"),
                        self.climb.Sclimb == Variable("Scruiseclimb",10,"miles"),
                        0.5*state.rho*CLstall*self.aircraft.bw.wing.planform.S*Vstall**2 >= self.aircraft.mass*g,
-                       Srunway_to >= self.takeoff.Sto*mrunway,
-                       Srunway_land >= self.landing.Sgr*mrunway,
-                       # Sobstacle >= Srunway*(4.0/3.0),
+                       Srunway >= self.takeoff.Sto*mrunway,
+                       Srunway >= self.landing.Sgr*mrunway,
+                       Sobstacle == Srunway*(4.0/3.0),
                        Sobstacle >= mobstacle*(self.takeoff.Sto + self.obstacle_climb.Sclimb),
                        loading.wingl["W"] == Wcent,
                        Wcent >= self.aircraft.mass*g,
@@ -781,4 +780,55 @@ def CLCurves():
     # plt.legend()
     plt.show()
 
+def RangeRunway():
+    M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
+    range_sweep = np.linspace(115,615,5)
+    M.substitutions.update({M.R:('sweep',range_sweep)})
+    M.cost = M.aircraft.mass
+    # sol = M.localsolve("mosek")
+    # print sol.summary()
+
+    runway_set = np.linspace(100,200,4)
+    for s in runway_set:
+        M.substitutions.update({M.Srunway:s})
+        sol = M.localsolve("mosek")
+        plt.plot(sol(M.R),sol(M.aircraft.mass),label=str(s)+ " ft")
+
+    # plt.plot(sol(M.R),sol(M.aircraft.mass))
+    plt.grid()
+    # plt.xlim([0,300])
+    # plt.ylim([0,1600])
+    plt.title("Impact of range on takeoff mass")
+    plt.xlabel("Cruise segment range [mi]")
+    plt.ylabel("Takeoff mass [kg]")
+    plt.legend()
+    plt.show()
+
+def RangeSpeed():
+    M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
+    range_sweep = np.linspace(115,615,5)
+    M.substitutions.update({M.Srunway:100})
+    M.substitutions.update({M.R:400})
+    M.cost = M.aircraft.mass
+    # sol = M.localsolve("mosek")
+    # print sol.summary()
+
+    speed_set = np.linspace(146,160,4)
+    for s in speed_set:
+        M.substitutions.update({M.cruise.Vmin:s})
+        sol = M.localsolve("mosek")
+        plt.plot(sol(M.R),sol(M.aircraft.mass),label=str(s)+ " kt")
+
+    # plt.plot(sol(M.R),sol(M.aircraft.mass))
+    plt.grid()
+    # plt.xlim([0,300])
+    # plt.ylim([0,1600])
+    plt.title("Impact of range on takeoff mass")
+    plt.xlabel("Cruise segment range [mi]")
+    plt.ylabel("Takeoff mass [kg]")
+    plt.legend()
+    plt.show()
+
 # CLCurves()
+# RangeRunway()
+# RangeSpeed()
