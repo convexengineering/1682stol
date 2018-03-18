@@ -158,24 +158,25 @@ class Powertrain(Model):
     """ Powertrain
     Variables
     ---------
-    m                   [kg]        powertrain mass
-    m_m                 [kg]        motor mass
-    m_mc                [kg]        motor controller mass
-    Pmax                [kW]        maximum power
-    P_m_sp_cont   7     [kW/kg]      motor specific power
-    P_mc_sp_cont  11.8  [kW/kg]     motor controller specific power
-    r                   [m]         propeller radius
-    Pstar_ref     1     [W]         specific motor power
-    m_ref         1     [kg]        reference motor power
+    m                       [kg]        powertrain mass
+    m_m                     [kg]        motor mass
+    m_mc                    [kg]        motor controller mass
+    Pmax                    [kW]        maximum power
+    P_m_sp_cont   7         [kW/kg]      motor specific power
+    P_mc_sp_cont  11.8      [kW/kg]     motor controller specific power
+    r                       [m]         propeller radius
+    Pstar_ref     1         [W]         specific motor power reference
+    m_ref         1         [kg]        reference motor power
     """
 
     def setup(self):
         exec parse_variables(Powertrain.__doc__)
-        constraints = []
-        constraints+= [#P_m_sp_cont/Pstar_ref <= -0.228*(m_m/m_ref)**2+45.7*(m_m/m_ref)+3060,
-                       m >= m_m+m_mc,
-                       Pmax <= m_m*P_m_sp_cont,
-                       Pmax <= m_mc*P_mc_sp_cont]
+                       
+
+        constraints = [#P_m_sp_cont <= Pstar_ref*(-0.228*(m_m/m_ref)**2+45.7*(m_m/m_ref)+3060),
+                        m >= m_m+m_mc,
+                        Pmax <= m_m*P_m_sp_cont,
+                        Pmax <= m_mc*P_mc_sp_cont]
         return constraints
 
 class PoweredWheel(Model):
@@ -464,6 +465,7 @@ class BlownWingP(Model):
 
             RPMmax >= Variable("a",4.9,"rpm/kg^2")*bw.powertrain.m_m**2 - Variable("b",313.3,"rpm/kg")*bw.powertrain.m_m +Variable("c",8721.2,"rpm"),
             RPMmax*bw.powertrain.r <= a*Mlim,
+
             C_T == T/((0.5*state.rho*bw.wing["S"]*state.V**2)),
             m_dotprime == rho_j*u_j*h,
             J_prime ==  m_dotprime*u_j,
@@ -508,6 +510,7 @@ class TakeOff(Model):
     T                       [N]         take off thrust
     cda         0.015       [-]         parasite drag coefficient
     CDg                     [-]         drag ground coefficient
+    CLg         2.5         [-]         lift coefficient during ground run
     cdp         0.025       [-]         profile drag at Vstallx1.2
     Kg          0.04        [-]         ground-effect induced drag parameter
     zsto                    [-]         take off distance helper variable
@@ -538,13 +541,15 @@ class TakeOff(Model):
                 perf.bw_perf.C_LC == 2.18,
                 W == aircraft.mass*fs.g,
                 T/W >= A/g + mu,
-                B >= g/W*0.5*rho*S*CDg,
+
                 CDg >= perf.bw_perf.C_D,
                 V >= mstall*(2*W/rho/S/perf.bw_perf.C_L)**0.5,
                 FitCS(fd, zsto, [A/g, B*V**2/g]), #fit constraint set, pass in fit data, zsto is the 
                 # y variable, then arr of independent (input) vars, watch the units
                 Sto >= 1.0/2.0/B*zsto,
                 t >= Sto/(0.3*V)]
+        with gpkit.SignomialsEnabled():
+            constraints += [B >= g/W*0.5*rho*S*(CDg)]
         if poweredwheels:
             wheel_models = [wheel.dynamic(fs) for wheel in aircraft.wheels]
             with gpkit.SignomialsEnabled():
@@ -598,7 +603,6 @@ class Climb(Model):
             perf.bw_perf.T >= 0.5*CD*rho*S*V**2 + W*h_dot/V,
             h_gain <= h_dot*t,
             Sclimb == V*t, #sketchy constraint, is wrong with cos(climb angle)
-            perf.P >= perf.bw_perf.T*V/0.8,
         ]
         return constraints, perf
 
@@ -690,6 +694,8 @@ class Mission(Model):
     mrunway         1.4         [-]         runway margin
     mobstacle       1.4         [-]         obstacle margin
     R               115         [nmi]       mission range
+    Vstall          61          [kts]       power off stall performance
+    CLstall         1.
     """
     def setup(self,poweredwheels=False,n_wheels=3,hybrid=False):
         exec parse_variables(Mission.__doc__)
