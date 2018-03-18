@@ -65,7 +65,7 @@ class Aircraft(Model):
                        self.vtail.lv == Variable("lv",180,"in"),
                        self.htail.lh == Variable("lh",180,"in"),
 
-                       self.fuselage.m >= 0.4*sum(c.topvar("m") for c in self.components) + (self.vtail.W + self.htail.W)/g,
+                       self.fuselage.m >= 0.4*(sum(c.topvar("m") for c in self.components) + (self.vtail.W + self.htail.W)/g),
                        self.mass>=sum(c.topvar("m") for c in self.components) + (self.vtail.W + self.htail.W)/g+ (mpax+mbaggage)*Npax]
 
         return constraints, self.components, self.htail, self.vtail
@@ -178,17 +178,19 @@ class PoweredWheelP(Model):
     """ PoweredWheelsP
     Variables
     ---------
-    RPM             [rpm]       rpm of powered wheel
-    tau             [N*m]       torque of powered wheel
-    T               [N]         thrust from powered wheel
-    P               [kW]        power draw of powered wheel
+    RPM                     [rpm]       rpm of powered wheel
+    tau                     [N*m]       torque of powered wheel
+    T                       [N]         thrust from powered wheel
+    P                       [kW]        power draw of powered wheel
+    eta_mc          0.98    [-]         motor controller efficiency
+    eta_m           0.9     [-]         motor efficiency
     """
     def setup(self,pw,state):
         exec parse_variables(PoweredWheelP.__doc__)
         constraints =[RPM <= pw.RPMmax,
                       state.V <= RPM*pw.r/pw.gear_ratio,
                       T <= tau*pw.gear_ratio/pw.r,
-                      P >= RPM*tau,
+                      (P*eta_mc*eta_m) >= RPM*tau,
                       tau <= pw.tau_max]
         return constraints
 
@@ -234,7 +236,7 @@ class genandicP(Model):
     P_fuel                          [kW]        power coming in from fuel flow
     P_out                           [kW]        output from generator controller after efficiency
     eta_wiring      0.98            [-]         efficiency of electrical connections (wiring loss)
-    eta_gc          0.95            [-]         efficiency of generator ontroller
+    eta_gc          0.98            [-]         efficiency of generator ontroller
     eta_shaft       0.98            [-]         shaft losses (two 99% efficient bearings)
     eta_g           0.9             [-]         generator efficiency
     eta_ic          0.256           [-]         internal combustion engine efficiency
@@ -403,7 +405,7 @@ class BlownWingP(Model):
     h               [m]             Wake height
     T               [N]             propeller thrust
     P               [kW]            power draw
-    eta_mc    0.95  [-]             motor controller efficiency
+    eta_mc    0.98  [-]             motor controller efficiency
     eta_m     0.9   [-]             motor efficiency
     eta_prop  0.87  [-]             prop efficiency loss after blade disk actuator
     A_disk          [m**2]          area of prop disk
@@ -700,7 +702,7 @@ if __name__ == "__main__":
     M.cost = M.aircraft.mass
     # M.debug()
     sol = M.localsolve("mosek")
-    print sol.table()
+    print sol.summary()
     writeSol(sol)
 
 def CLCurves():
