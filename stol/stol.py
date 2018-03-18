@@ -697,8 +697,8 @@ class Mission(Model):
     mrunway         1.4         [-]         runway margin
     mobstacle       1.4         [-]         obstacle margin
     R               115         [nmi]       mission range
-    Vstall          61          [kts]       power off stall performance
-    CLstall         1.
+    Vstall          61          [kts]       power off stall requirement
+    CLstall         2.5         [-]         power off stall CL
     """
     def setup(self,poweredwheels=False,n_wheels=3,hybrid=False):
         exec parse_variables(Mission.__doc__)
@@ -713,11 +713,12 @@ class Mission(Model):
         loading = self.aircraft.loading(self.cruise.flightstate,Wcent)
 
         self.fs = [self.takeoff,self.obstacle_climb,self.climb,self.cruise,self.landing]
+        state = FlightState()
 
         constraints = [self.obstacle_climb.h_gain == Variable("h_obstacle",50,"ft"),
                        self.climb.h_gain == Variable("h_cruise",1950,"ft"),
                        self.climb.Sclimb == Variable("Scruiseclimb",10,"miles"),
-                       
+                       0.5*state.rho*CLstall*self.aircraft.bw.wing.planform.S*Vstall**2 >= self.aircraft.mass*g,
                        Srunway_to >= self.takeoff.Sto*mrunway,
                        Srunway_land >= self.landing.Sgr*mrunway,
                        # Sobstacle >= Srunway*(4.0/3.0),
