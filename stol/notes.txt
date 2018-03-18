@@ -11,7 +11,7 @@ Notes from working through model with Mike:
 - DONE bring up the charge in flight versus charge on ground tradeoff in infrastructure
 - DONE seperate battery charge power into P_charge variable
 - DONE Implement Alan's fits for Powertrain
-- Look at why propeller radius is not huge, filling maximum space
+- Propeller tip speed constraint, look at impact of changing n_prop
 - If landing constrained, why powered wheels? Because RPM constrained to mass, fix that
 - Fix Wcent to only be the central masses, not including the wing
 - Impose constraint on capspar thickness and width to be the same throughout sections (no taper)
@@ -28,6 +28,7 @@ Notes from working through model with Mike:
 - Get electric going again
 - Organize meeting for sunday
 - Revisit tail sizing with Ronnies new values
+- 61 knot minimum stall speed wing sizing
 
 Priorities:
 Hammer these down

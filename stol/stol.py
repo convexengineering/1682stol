@@ -39,7 +39,7 @@ class Aircraft(Model):
         self.vtail.substitutions[self.vtail.planform.tau] = 0.08
         self.htail.substitutions[self.htail.planform.tau] = 0.08
         self.htail.substitutions[self.htail.mh] = 0.8
-        self.htail.substitutions[self.htail.Vh] = 0.4
+        # self.htail.substitutions[self.htail.Vh] = 0.4
 
         self.components = [self.cabin,self.bw,self.battery,self.fuselage]
     
@@ -53,9 +53,9 @@ class Aircraft(Model):
                 self.wheels = n_wheels*[self.pw]
                 self.components += self.wheels
         self.mass = m
-        constraints = [self.htail.Vh <= (self.htail["S"]*self.htail.lh/self.bw.wing["S"]**2 *self.bw.wing["b"]),
-                       self.vtail.Vv == (self.vtail["S"]*self.vtail.lv/self.bw.wing["S"]/self.bw.wing["b"]),
-
+        constraints = [
+                       # self.htail.Vh <= (self.htail["S"]*self.htail.lh/self.bw.wing["S"]**2 *self.bw.wing["b"]),
+                       # self.vtail.Vv == (self.vtail["S"]*self.vtail.lv/self.bw.wing["S"]/self.bw.wing["b"]),
                        self.vtail.planform["b"] >= Variable("bv",48,"in"),
                        self.vtail.planform["croot"] >= Variable("croot",27,"in"),
 
@@ -97,7 +97,7 @@ class AircraftP(Model):
                        P >= self.bw_perf["P"],
                        P >= aircraft.bw.powertrain["Pmax"],
                        self.batt_perf.P >= P,
-                       CD >=self.bw_perf.C_D + (aircraft.fuselage.Swet/aircraft.bw.wing.planform.S)*self.fuse_perf.Cd + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd),
+                       CD >= self.bw_perf.C_D + (aircraft.fuselage.Swet/aircraft.bw.wing.planform.S)*self.fuse_perf.Cd + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd),
                        self.bw_perf.C_T >= CD
                     ]
         if hybrid:
@@ -265,7 +265,7 @@ class genandicP(Model):
     P_fuel                          [kW]        power coming in from fuel flow
     P_out                           [kW]        output from generator controller after efficiency
     eta_wiring      0.98            [-]         efficiency of electrical connections (wiring loss)
-    eta_gc          0.98            [-]         efficiency of generator ontroller
+    eta_gc          0.98            [-]         efficiency of generator controller
     eta_shaft       0.98            [-]         shaft losses (two 99% efficient bearings)
     eta_g           0.9             [-]         generator efficiency
     eta_ic          0.256           [-]         internal combustion engine efficiency
@@ -345,7 +345,7 @@ class Wing(Model):
     ---------
     W                   [lbf]       wing weight
     mfac        1.2     [-]         wing weight margin factor
-
+    n_plies     2       [-]         number of plies on skin
     Upper Unbounded
     ---------------
     W
@@ -362,7 +362,7 @@ class Wing(Model):
     fillModel = False
     skinModel = WingSkin
 
-    def setup(self, N=5):
+    def setup(self, N=4):
         exec parse_variables(Wing.__doc__)
 
         self.N = N
@@ -382,7 +382,11 @@ class Wing(Model):
             self.foam = self.fillModel(self.planform)
             self.components.extend([self.foam])
 
-        constraints = [W/mfac >= sum(c["W"] for c in self.components)]
+        constraints = [
+        self.spar.t[0:-2] == self.spar.t[-1],
+        self.spar.w[0:-2] == self.spar.w[-1],
+        self.skin.t >= n_plies*self.skin.material.tmin,
+        W/mfac >= sum(c["W"] for c in self.components)]
         return constraints, self.planform, self.components
 
 class BlownWing(Model):
@@ -395,13 +399,13 @@ class BlownWing(Model):
     def setup(self):
         exec parse_variables(BlownWing.__doc__)
         self.powertrain = Powertrain()
-        N = 4
+        N = 14
         self.wing = Wing(N)
         self.wing.substitutions[self.wing.planform.tau]=0.12
 
         constraints = [
-        m >= n_prop*self.powertrain["m"] + self.wing.topvar("W")/Variable("g",9.8,"m/s/s"),
-        0.8*self.wing.b >= 2*n_prop*self.powertrain.r
+        m >= n_prop*self.powertrain["m"] + self.wing.topvar("W")/g,
+        0.7*self.wing.b >= n_prop*2*self.powertrain.r
         ]
         return constraints,self.powertrain,self.wing
     def dynamic(self,state):
@@ -438,7 +442,10 @@ class BlownWingP(Model):
     eta_m     0.9   [-]             motor efficiency
     eta_prop  0.87  [-]             prop efficiency loss after blade disk actuator
     A_disk          [m**2]          area of prop disk
-
+    Mlim      0.95  [-]             tip limit
+    a         343   [m/s]           speed of sound at sea level
+    k_t       0.2   [-]             propeller torque coefficient
+    RPMmax          [rpm]           maximum rpm of propeller
     """
     def setup(self,bw,state):
         #bw is a BlownWing object
@@ -452,7 +459,9 @@ class BlownWingP(Model):
             u_j >= state.V,
             P <= bw.powertrain["Pmax"],
             C_L <= C_LC*(1+2*C_J/(pi*bw.wing["AR"]*e)),
-            
+
+            RPMmax >= Variable("a",4.9,"rpm/kg^2")*bw.powertrain.m_m**2 - Variable("b",313.3,"rpm/kg")*bw.powertrain.m_m +Variable("c",8721.2,"rpm"),
+            RPMmax*bw.powertrain.r <= a*Mlim,
             C_T == T/((0.5*state.rho*bw.wing["S"]*state.V**2)),
             m_dotprime == rho_j*u_j*h,
             J_prime ==  m_dotprime*u_j,
@@ -703,11 +712,12 @@ class Mission(Model):
                        Srunway_land >= self.landing.Sgr*mrunway,
                        # Sobstacle >= Srunway*(4.0/3.0),
                        Sobstacle >= mobstacle*(self.takeoff.Sto + self.obstacle_climb.Sclimb),
+                       loading.wingl["W"] == Wcent,
                        Wcent >= self.aircraft.mass*g,
-                       Wcent == loading.wingl["W"],
                        self.obstacle_climb.perf.bw_perf.C_LC == 1.05,
                        self.climb.perf.bw_perf.C_LC == 0.95,
                        self.takeoff.perf.gen_perf.P_fuel == self.obstacle_climb.perf.gen_perf.P_fuel,
+                       self.obstacle_climb.perf.gen_perf.P_fuel == self.climb.perf.gen_perf.P_fuel,
                        self.climb.perf.gen_perf.P_fuel == self.cruise.perf.gen_perf.P_fuel,
                        self.cruise.perf.gen_perf.P_fuel == self.landing.perf.gen_perf.P_fuel
         ]
@@ -731,11 +741,11 @@ if __name__ == "__main__":
     M.cost = M.aircraft.mass
     # M.debug()
     sol = M.localsolve("mosek")
-    print sol.summary()
+    print sol.table()
     writeSol(sol)
 
 def CLCurves():
-    M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
+    M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
     range_sweep = np.linspace(115,600,4)
     M.substitutions.update({M.R:('sweep',range_sweep)})
     M.cost = M.aircraft.mass
