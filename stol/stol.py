@@ -148,7 +148,7 @@ class FuselageP(Model):
     """
     def setup(self,fuse,state):
         exec parse_variables(FuselageP.__doc__)
-        constraints = [Cd**2 >= (2.656**2)/(state.rho*state.V*fuse.l/state.mu)]
+        constraints = [Cd >= 0.455/((state.rho*state.V*fuse.l/state.mu)**0.3)]
         return constraints
 
 class Powertrain(Model):
@@ -614,8 +614,7 @@ class Cruise(Model):
         exec parse_variables(Cruise.__doc__)
         self.flightstate = FlightState()
         self.perf = aircraft.dynamic(self.flightstate,hybrid,powermode="batt-chrg",t_charge=t)
-        constraints = [self.perf.batt_perf.P <= aircraft.battery.m*aircraft.battery.P_max_cont,
-                       R <= t*self.flightstate.V,
+        constraints = [R == t*self.flightstate.V,
                        self.flightstate["V"] >= Vmin,
                        self.perf.bw_perf.C_LC == 0.8]
 
@@ -741,7 +740,7 @@ if __name__ == "__main__":
     M.cost = M.aircraft.mass
     # M.debug()
     sol = M.localsolve("mosek")
-    print sol.table()
+    print sol.summary()
     writeSol(sol)
 
 def CLCurves():
