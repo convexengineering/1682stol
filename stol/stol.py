@@ -88,13 +88,14 @@ class AircraftP(Model):
         self.batt_perf = aircraft.battery.dynamic(state)
         self.htail_perf = aircraft.htail.flight_model(aircraft.htail, state)
         self.vtail_perf = aircraft.vtail.flight_model(aircraft.vtail, state)
-        self.perf_models = [self.bw_perf,self.batt_perf,self.htail_perf,self.vtail_perf]
+        self.fuse_perf = aircraft.fuselage.dynamic(state)
+        self.perf_models = [self.bw_perf,self.batt_perf,self.htail_perf,self.vtail_perf,self.fuse_perf]
         self.fs = state
         constraints = [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*state["g"],
                        P >= self.bw_perf["P"],
                        P >= aircraft.bw.powertrain["Pmax"],
                        self.batt_perf.P >= P,
-                       self.bw_perf.C_T >= self.bw_perf.C_D + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd) + aircraft.fuselage.cda
+                       self.bw_perf.C_T >= self.bw_perf.C_D + (aircraft.fuselage.Swet/aircraft.bw.wing.planform.S)*self.fuse_perf.Cd + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd)
                     ]
         if hybrid:
             self.gen_perf = aircraft.genandic.dynamic(state)
@@ -126,11 +127,25 @@ class Fuselage(Model):
 
     Variables
     ---------
-    m               [kg]    mass of fuselage
-    cda     0.015   [-]     parasite drag coefficient
+    m                   [kg]    mass of fuselage
+    l       270         [in]    length
+    Swet    29833.67    [in^2]     wetted area of fuselage    
     """
     def setup(self):
         exec parse_variables(Fuselage.__doc__)
+    def dynamic(self,state):
+        return FuselageP(self,state)
+
+class FuselageP(Model):
+    """FuselageP
+    Variables
+    ---------
+    Cd              [-]     drag coefficient
+    """
+    def setup(self,fuse,state):
+        exec parse_variables(FuselageP.__doc__)
+        constraints = [Cd**2 >= (2.656**2)/(state.rho*state.V*fuse.l/state.mu)]
+        return constraints
 
 class Powertrain(Model):
     """ Powertrain
@@ -445,7 +460,7 @@ class FlightState(Model):
     Variables
     ---------
     rho         1.225       [kg/m**3]        air density
-    mu          1.789e-5    [kg/m/s]        air viscosity
+    mu          1.789e-5    [N*s/m^2]        air viscosity
     V                       [knots]         speed
     g           9.8         [m/s/s]         acceleration due to gravity
     qne                     [kg/s^2/m]      never exceed dynamic pressure
