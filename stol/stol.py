@@ -432,7 +432,7 @@ class BlownWingP(Model):
     C_T             [-]             thrust coefficient
     Re              [-]             Reynolds number
     e       0.8     [-]             span efficiency
-    mcdp    1.1     [-]             profile drag margin factor
+    mfac    1.1     [-]             profile drag margin factor
     m_dotprime      [kg/(m*s)]      jet mass flow per unit span
     J_prime         [kg/(s**2)]      momentum flow per unit span
     E_prime         [J/(m*s)]       energy flow per unit span
@@ -449,6 +449,8 @@ class BlownWingP(Model):
     a         343   [m/s]           speed of sound at sea level
     k_t       0.2   [-]             propeller torque coefficient
     RPMmax          [rpm]           maximum rpm of propeller
+    Kf        1.252 [-]             form factor  
+    C_f             [-]             friction coefficient           
     """
     def setup(self,bw,state):
         #bw is a BlownWing object
@@ -476,7 +478,8 @@ class BlownWingP(Model):
             h == pi*bw.powertrain.r/2,
             C_Di == (C_L**2)/(pi*bw.wing["AR"]*e),
             C_D >= C_Di  + C_Dp,
-            C_Dp**2 == (mcdp*1.328)**2 /(Re), #friction drag only, need to add form
+            C_f**5 == (mfac*0.074)**5 /(Re),
+            C_Dp == C_f*2.1*Kf,
             Re == state["V"]*state["rho"]*(bw.wing["S"]/bw.wing["AR"])**0.5/state["mu"],
             # C_T >= C_D #steady level non-accelerating constraint as C_T-C_D = 1
             ]
