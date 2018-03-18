@@ -400,6 +400,7 @@ class BlownWing(Model):
     n_prop     6    [-]             number of props
     m               [kg]            mass
     """
+
     def setup(self):
         exec parse_variables(BlownWing.__doc__)
         self.powertrain = Powertrain()
@@ -408,7 +409,7 @@ class BlownWing(Model):
         self.wing.substitutions[self.wing.planform.tau]=0.12
 
         constraints = [
-        m >= n_prop*self.powertrain["m"] + self.wing.topvar("W")/g,
+            m >= n_prop*self.powertrain["m"] + self.wing.topvar("W")/g,
         ]
         return constraints,self.powertrain,self.wing
     def dynamic(self,state):
@@ -588,10 +589,10 @@ class Climb(Model):
     h_dot       \dot{h}
     """
 
-    def setup(self,aircraft,hybrid=False):
+    def setup(self,aircraft,hybrid=False,powermode="batt-dischrg"):
         exec parse_variables(Climb.__doc__)
         self.flightstate = FlightState()
-        perf = aircraft.dynamic(self.flightstate,hybrid,powermode="batt-dischrg")
+        perf = aircraft.dynamic(self.flightstate,hybrid,powermode=powermode,t_charge = t)
         self.perf = perf
         CL = self.CL = perf.bw_perf.C_L
         S = self.S = aircraft.bw.wing["S"]
@@ -602,8 +603,7 @@ class Climb(Model):
         constraints = [
             perf.batt_perf.P <= aircraft.battery.m*aircraft.battery.P_max_cont,
             W ==  aircraft.mass*perf.fs.g,
-            W <= 0.5*CL*rho*S*V**2,
-            perf.bw_perf.T >= 0.5*CD*rho*S*V**2 + W*h_dot/V,
+            perf.bw_perf.C_T*rho*S*V**2 >= 0.5*CD*rho*S*V**2 + W*h_dot/V,
             h_gain <= h_dot*t,
             Sclimb == V*t, #sketchy constraint, is wrong with cos(climb angle)
         ]
@@ -705,7 +705,7 @@ class Mission(Model):
         self.aircraft = Aircraft(poweredwheels,n_wheels,hybrid)
         self.takeoff = TakeOff(self.aircraft,poweredwheels,n_wheels,hybrid)
         self.obstacle_climb = Climb(self.aircraft,hybrid)
-        self.climb = Climb(self.aircraft,hybrid)
+        self.climb = Climb(self.aircraft,hybrid,powermode="batt-chrg")
         self.cruise = Cruise(self.aircraft,hybrid)
         self.landing = Landing(self.aircraft,hybrid)
         
