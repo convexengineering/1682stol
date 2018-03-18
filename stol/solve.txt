@@ -881,9 +881,9 @@ Sensitivities
 
                     | Mission/Aircraft/GenAndIC
        P_ic_sp_cont : -0.078                                         specific cont power of IC
-          Pstar_ref : -0.021                                         reference specific power, for meeting units constraints
+              m_ref : -0.039                                         reference mass, for meeting units constraints
        P_gc_sp_cont : -0.0059                                        genandic controller cont power
-              m_ref : +0.002                                         reference mass, for meeting units constraints
+          Pstar_ref : -8.5e-05                                       reference specific power, for meeting units constraints
 
                     | Mission/Aircraft/HorizontalTail
                mfac : +0.0094                                        wing weight margin factor
@@ -907,7 +907,7 @@ Sensitivities
 
                     | Mission/Aircraft/PoweredWheel
                   c : -0.02
-                  b : +0.0035
+                  b : +0.017
                   a : -0.00026
                   r : +7.8e-12                                       tire radius
      gear_ratio_max : -1.5e-11                                       max gear ratio of powered wheel
@@ -1011,12 +1011,12 @@ Sensitivities
 
                     | Mission/Cruise/AircraftP.3/BlownWingP.3
                   e : -0.052                                         span efficiency
-                  c : +0.016
+                  a : +0.016
                Mlim : -0.013                                         tip limit
                   a : -0.013                                         speed of sound at sea level
                mcdp : +0.0087                                        profile drag margin factor
                   b : -0.0026
-                  a : +0.00019
+                  c : +0.00019
               rho_j : -1.4e-12                                       density in jet flow
 
                     | Mission/Cruise/AircraftP.3/TailAero.6
@@ -1042,11 +1042,11 @@ Sensitivities
                mu_b : -2.7e-05                                       braking friction coefficient
 
                     | Mission/Landing/AircraftP.4/BlownWingP.4
-                  a : +0.016
+                  c : +0.016
                Mlim : -0.013                                         tip limit
                   a : -0.013                                         speed of sound at sea level
                   b : -0.0026
-                  c : +0.00019
+                  a : +0.00019
                   e : -1.5e-05                                       span efficiency
                mcdp : +3.8e-09                                       profile drag margin factor
               rho_j : -1.8e-11                                       density in jet flow
@@ -1079,11 +1079,11 @@ Sensitivities
                     | Mission/TakeOff/AircraftP/BlownWingP
               rho_j : -0.048                                         density in jet flow
                   e : +0.031                                         span efficiency
-                  a : +0.016
+                  c : +0.016
                Mlim : -0.013                                         tip limit
                   a : -0.013                                         speed of sound at sea level
                   b : -0.0026
-                  c : +0.00019
+                  a : +0.00019
                mcdp : +4.2e-05                                       profile drag margin factor
 
                     | Mission/TakeOff/AircraftP/TailAero

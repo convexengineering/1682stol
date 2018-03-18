@@ -476,7 +476,7 @@ class BlownWingP(Model):
             h == pi*bw.powertrain.r/2,
             C_Di == (C_L**2)/(pi*bw.wing["AR"]*e),
             C_D >= C_Di  + C_Dp,
-            C_Dp == mcdp*1.328/Re**0.5, #friction drag only, need to add form
+            C_Dp**2 == (mcdp*1.328)**2 /(Re), #friction drag only, need to add form
             Re == state["V"]*state["rho"]*(bw.wing["S"]/bw.wing["AR"])**0.5/state["mu"],
             # C_T >= C_D #steady level non-accelerating constraint as C_T-C_D = 1
             ]
