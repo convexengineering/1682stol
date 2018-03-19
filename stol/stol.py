@@ -98,7 +98,6 @@ class AircraftP(Model):
         self.fs = state
         constraints = [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*state["g"],
                        P >= self.bw_perf["P"],
-                       # self.batt_perf.P >= P,
                        CD >= self.bw_perf.C_D + (aircraft.fuselage.Swet/aircraft.bw.wing.planform.S)*self.fuse_perf.Cd + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd),
                        self.bw_perf.C_T >= CD
                     ]
@@ -112,6 +111,9 @@ class AircraftP(Model):
                 with gpkit.SignomialsEnabled():
                     constraints += [self.batt_perf.P + self.gen_perf.P_out >= P]
             self.perf_models += [self.gen_perf]
+        else:
+            constraints += [self.batt_perf.P >= P]
+
         return constraints,self.perf_models
 
 class AircraftLoading(Model):
@@ -629,7 +631,7 @@ class Cruise(Model):
     ---------
     R           [nmi]       Range flown in flight segment
     t           [min]       Time to fly flight segment
-    Vmin  160   [kts]       Minimum flight speed
+    Vmin  120   [kts]       Minimum flight speed
     """
 
     def setup(self,aircraft,hybrid=False):
@@ -708,7 +710,7 @@ class Mission(Model):
     Sobstacle                   [ft]        obstacle length
     mrunway         1.4         [-]         runway margin
     mobstacle       1.4         [-]         obstacle margin
-    R               400         [nmi]       mission range
+    R               350         [nmi]       mission range
     Vstall          61          [kts]       power off stall requirement
     CLstall         2.5         [-]         power off stall CL
     """
@@ -738,17 +740,17 @@ class Mission(Model):
                        loading.wingl["W"] == Wcent,
                        Wcent >= self.aircraft.mass*g,
                        self.obstacle_climb.perf.bw_perf.C_LC == 1.05,
-                       self.climb.perf.bw_perf.C_LC == 0.95,
-                       self.takeoff.perf.gen_perf.P_fuel == self.obstacle_climb.perf.gen_perf.P_fuel,
-                       self.obstacle_climb.perf.gen_perf.P_fuel == self.climb.perf.gen_perf.P_fuel,
-                       self.climb.perf.gen_perf.P_fuel == self.cruise.perf.gen_perf.P_fuel,
-                       self.cruise.perf.gen_perf.P_fuel == self.landing.perf.gen_perf.P_fuel
+                       self.climb.perf.bw_perf.C_LC == 0.95
         ]
         if hybrid:
-            constraints += [self.aircraft.battery.E_capacity*0.8 >= self.takeoff.perf.bw_perf.P*self.takeoff.t + self.obstacle_climb.perf.bw_perf.P*self.obstacle_climb.t,
+            constraints += [ self.takeoff.perf.gen_perf.P_fuel == self.obstacle_climb.perf.gen_perf.P_fuel,
+                            self.obstacle_climb.perf.gen_perf.P_fuel == self.climb.perf.gen_perf.P_fuel,
+                            self.climb.perf.gen_perf.P_fuel == self.cruise.perf.gen_perf.P_fuel,
+                       self.cruise.perf.gen_perf.P_fuel == self.landing.perf.gen_perf.P_fuel,
+                            self.aircraft.battery.E_capacity*0.8 >= self.takeoff.perf.bw_perf.P*self.takeoff.t + self.obstacle_climb.perf.bw_perf.P*self.obstacle_climb.t,
                             self.aircraft.tank.E >= sum(s.t*s.perf.gen_perf.P_fuel for s in self.fs)]
         else:
-            constraints += [self.aircraft.battery.E_capacity*0.8 >= self.takeoff.E + self.obstacle_climb.E + self.climb.E + self.cruise.E]
+            constraints += [self.aircraft.battery.E_capacity*0.8 >= sum(s.t*s.perf.batt_perf.P for s in self.fs)]
         with gpkit.SignomialsEnabled():
             constraints += [R <= self.cruise.R]
         return constraints,self.aircraft,self.fs, loading
@@ -758,14 +760,14 @@ def writeSol(sol):
         output.write(sol.table())
 
 
-if __name__ == "__main__":
-    poweredwheels = True
-    M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True)
-    M.cost = M.aircraft.mass
-    # M.debug()
-    sol = M.localsolve("mosek")
-    print sol.summary()
-    writeSol(sol)
+# if __name__ == "__main__":
+#     poweredwheels = True
+#     M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True)
+#     M.cost = M.aircraft.mass
+#     # M.debug()
+#     sol = M.localsolve("mosek")
+#     print sol.summary()
+#     writeSol(sol)
 
 def CLCurves():
     M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
@@ -795,13 +797,13 @@ def CLCurves():
 
 def RangeRunway():
     M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
-    range_sweep = np.linspace(115,415,4)
+    range_sweep = np.linspace(250,350,4)
     M.substitutions.update({M.R:('sweep',range_sweep)})
     M.cost = M.aircraft.mass
     # sol = M.localsolve("mosek")
     # print sol.summary()
 
-    runway_set = np.linspace(100,200,4)
+    runway_set = np.linspace(100,200,5)
     for s in runway_set:
         M.substitutions.update({M.Srunway:s})
         sol = M.localsolve("mosek")
@@ -812,7 +814,7 @@ def RangeRunway():
     # plt.xlim([0,300])
     # plt.ylim([0,1600])
     plt.title("Impact of range on takeoff mass")
-    plt.xlabel("Cruise segment range [mi]")
+    plt.xlabel("Cruise segment range [nmi]")
     plt.ylabel("Takeoff mass [kg]")
     plt.legend()
     plt.show()
@@ -826,7 +828,7 @@ def RangeSpeed():
     # sol = M.localsolve("mosek")
     # print sol.summary()
 
-    speed_set = np.linspace(140,160,4)
+    speed_set = np.linspace(120,150,4)
     for s in speed_set:
         M.substitutions.update({M.cruise.Vmin:s})
         sol = M.localsolve("mosek")
@@ -837,11 +839,38 @@ def RangeSpeed():
     # plt.xlim([0,300])
     # plt.ylim([0,1600])
     plt.title("Impact of range on takeoff mass")
-    plt.xlabel("Cruise segment range [mi]")
+    plt.xlabel("Cruise segment range [nmi]")
     plt.ylabel("Takeoff mass [kg]")
     plt.legend()
     plt.show()
 
+def SpeedSweep():
+    M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
+    speed_sweep = np.linspace(120,160,5)
+    M.substitutions.update({M.cruise.Vmin:('sweep',speed_sweep)})
+    M.cost = M.aircraft.mass
+    sol = M.localsolve("mosek")
+
+    plt.plot(sol(M.cruise.Vmin),sol(M.aircraft.mass))
+    plt.grid()
+    # plt.xlim([0,300])
+    # plt.ylim([0,1600])
+    plt.title("Impact of speed on takeoff mass")
+    plt.xlabel("Cruise segment speed [kts]")
+    plt.ylabel("Takeoff mass [kg]")
+    plt.legend()
+    plt.show()
+
+def ElectricVsHybrid():
+    M = Mission(poweredwheels=True,n_wheels=3,hybrid=False)
+    M.substitutions.update({M.R:115})
+    M.substitutions.update({M.Srunway:300})
+    M.substitutions.update({M.aircraft.bw.n_prop:8})
+    M.cost = M.aircraft.mass
+    sol = M.localsolve("mosek")
+    print sol.summary()
 # CLCurves()
 # RangeRunway()
-RangeSpeed()
+# RangeSpeed()
+# SpeedSweep()
+ElectricVsHybrid()
