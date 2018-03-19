@@ -135,11 +135,16 @@ class Fuselage(Model):
     Variables
     ---------
     m                   [kg]    mass of fuselage
-    l       270         [in]    length
-    Swet    29833.67    [in^2]     wetted area of fuselage    
+    l       140         [in]    length
+    w       50          [in]    width
+    h       60          [in]    height
+    f                   [-]     fineness ratio
+    Swet    29833.67    [in^2]  wetted area of fuselage    
     """
     def setup(self):
         exec parse_variables(Fuselage.__doc__)
+        return [f <= l/w,
+                f <= l/h]
     def dynamic(self,state):
         return FuselageP(self,state)
 
@@ -148,10 +153,18 @@ class FuselageP(Model):
     Variables
     ---------
     Cd              [-]     drag coefficient
+    FF              [-]     form factor
+    C_f             [-]     friction coefficient
+    mfac     1.1    [-]     friction margin
+    Re              [-]     Reynolds number
     """
     def setup(self,fuse,state):
         exec parse_variables(FuselageP.__doc__)
-        constraints = [Cd >= 0.455/((state.rho*state.V*fuse.l/state.mu)**0.3)]
+        constraints = [FF >= 1 + 60/(fuse.f)**3 + fuse.f/400,
+                       C_f**5 == (mfac*0.074)**5 /(Re),
+                       Cd >= C_f*FF,
+                       Re == state["V"]*state["rho"]*fuse.l/state["mu"],
+                    ]
         return constraints
 
 class Powertrain(Model):
@@ -450,7 +463,7 @@ class BlownWingP(Model):
     a         343   [m/s]           speed of sound at sea level
     k_t       0.2   [-]             propeller torque coefficient
     RPMmax          [rpm]           maximum rpm of propeller
-    Kf        1.252 [-]             form factor  
+    Kf        1.180 [-]             form factor  
     C_f             [-]             friction coefficient           
     """
     def setup(self,bw,state):
