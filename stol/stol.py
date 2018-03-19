@@ -231,8 +231,8 @@ class GenAndIC(Model):
     """ GenAndIC Model
     Variables
     ---------
-    P_ic_sp_cont    2.8            [kW/kg]     specific cont power of IC
-    eta_IC          0.15           [-]        thermal efficiency of IC
+    P_ic_sp_cont    2.8            [kW/kg]    specific cont power of IC #actuallyaturboshaft
+    eta_IC          0.15           [-]        thermal efficiency of IC #actuallyaturboshaft
     m_g                            [kg]       genandic mass
     m_gc                           [kg]       genandic controller mass
     m_ic                           [kg]       piston mass
@@ -692,7 +692,7 @@ class Mission(Model):
     Variables
     ---------
     Srunway         100         [ft]        runway length
-    Sobstacle                   [ft]        obstacle length
+    Sobstacle       133         [ft]        obstacle length
     mrunway         1.4         [-]         runway margin
     mobstacle       1.4         [-]         obstacle margin
     R               400         [nmi]       mission range
@@ -720,7 +720,7 @@ class Mission(Model):
                        0.5*state.rho*CLstall*self.aircraft.bw.wing.planform.S*Vstall**2 >= self.aircraft.mass*g,
                        Srunway >= self.takeoff.Sto*mrunway,
                        Srunway >= self.landing.Sgr*mrunway,
-                       Sobstacle == Srunway*(4.0/3.0),
+                       # Sobstacle == Srunway*(4.0/3.0),
                        Sobstacle >= mobstacle*(self.takeoff.Sto + self.obstacle_climb.Sclimb),
                        loading.wingl["W"] == Wcent,
                        Wcent >= self.aircraft.mass*g,
@@ -751,7 +751,7 @@ if __name__ == "__main__":
     M.cost = M.aircraft.mass
     # M.debug()
     sol = M.localsolve("mosek")
-    print sol.summary()
+    print sol.table()
     writeSol(sol)
 
 def CLCurves():
