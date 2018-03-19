@@ -705,7 +705,7 @@ class Mission(Model):
     Variables
     ---------
     Srunway         100         [ft]        runway length
-    Sobstacle       133         [ft]        obstacle length
+    Sobstacle                   [ft]        obstacle length
     mrunway         1.4         [-]         runway margin
     mobstacle       1.4         [-]         obstacle margin
     R               400         [nmi]       mission range
@@ -733,7 +733,7 @@ class Mission(Model):
                        0.5*state.rho*CLstall*self.aircraft.bw.wing.planform.S*Vstall**2 >= self.aircraft.mass*g,
                        Srunway >= self.takeoff.Sto*mrunway,
                        Srunway >= self.landing.Sgr*mrunway,
-                       # Sobstacle == Srunway*(4.0/3.0),
+                       Sobstacle == Srunway*(4.0/3.0),
                        Sobstacle >= mobstacle*(self.takeoff.Sto + self.obstacle_climb.Sclimb),
                        loading.wingl["W"] == Wcent,
                        Wcent >= self.aircraft.mass*g,
@@ -764,7 +764,7 @@ if __name__ == "__main__":
     M.cost = M.aircraft.mass
     # M.debug()
     sol = M.localsolve("mosek")
-    print sol.table()
+    print sol.summary()
     writeSol(sol)
 
 def CLCurves():
@@ -795,7 +795,7 @@ def CLCurves():
 
 def RangeRunway():
     M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
-    range_sweep = np.linspace(115,615,5)
+    range_sweep = np.linspace(115,415,4)
     M.substitutions.update({M.R:('sweep',range_sweep)})
     M.cost = M.aircraft.mass
     # sol = M.localsolve("mosek")
@@ -819,14 +819,14 @@ def RangeRunway():
 
 def RangeSpeed():
     M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
-    range_sweep = np.linspace(115,615,5)
+    range_sweep = np.linspace(115,415,4)
     M.substitutions.update({M.Srunway:100})
-    M.substitutions.update({M.R:400})
+    M.substitutions.update({M.R:('sweep',range_sweep)})
     M.cost = M.aircraft.mass
     # sol = M.localsolve("mosek")
     # print sol.summary()
 
-    speed_set = np.linspace(146,160,4)
+    speed_set = np.linspace(140,160,4)
     for s in speed_set:
         M.substitutions.update({M.cruise.Vmin:s})
         sol = M.localsolve("mosek")
@@ -844,4 +844,4 @@ def RangeSpeed():
 
 # CLCurves()
 # RangeRunway()
-# RangeSpeed()
+RangeSpeed()
