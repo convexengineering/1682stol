@@ -11,23 +11,27 @@ Notes from working through model with Mike:
 - DONE bring up the charge in flight versus charge on ground tradeoff in infrastructure
 - DONE seperate battery charge power into P_charge variable
 - DONE Implement Alan's fits for Powertrain
-- Propeller tip speed constraint, look at impact of changing n_prop
-- If landing constrained, why powered wheels? Because RPM constrained to mass, fix that
+- DONE Propeller tip speed constraint, look at impact of changing n_prop
+- DONE If landing constrained, why powered wheels? Because RPM constrained to mass, fix that
 - Fix Wcent to only be the central masses, not including the wing
-- Impose constraint on capspar thickness and width to be the same throughout sections (no taper)
-- Increase minimum gauge of wing skin by multiplying the current thickness
-- Feed fuselage width into span usability for number of props
+- DONE Impose constraint on capspar thickness and width to be the same throughout sections (no taper)
+- DONE Increase minimum gauge of wing skin by multiplying the current thickness
+- DONE Feed fuselage width into span usability for number of props
 - Add back in the mu*CLg constraint to B for takeoff to be more optimistic
 - Implement Breguet range for cruise
 - Use raymer A and B eqns for landing, make sure to use a different fit appropriate for landing
 - Add climb to altitude range to total range
 - Change Sclimb to reflect steeper angle (20 degrees)
-- Why is u_j zero in cruise?
+- DONE Why is u_j zero in cruise?
 - Figure out how to get no changes from sol.txt with commits
 - Figure out why u_j is less than flight velocity
 - Get electric going again
 - Organize meeting for sunday
 - Revisit tail sizing with Ronnies new values
+
+
+
+todo
 - 61 knot minimum stall speed wing sizing
 
 Priorities:

@@ -83,9 +83,10 @@ class AircraftP(Model):
 
     Variables
     ---------
-    P           [kW]    total power draw
-    CD          [-]     total CD, referenced to wing area
-    P_charge    [kW]    battery charging power
+    P                   [kW]    total power draw
+    CD                  [-]     total CD, referenced to wing area
+    P_charge            [kW]    battery charging power
+    P_avionics  0.25    [kW]    avionics continuous power draw
     """
     def setup(self,aircraft,state,hybrid=False,powermode="batt-chrg",t_charge=None):
         exec parse_variables(AircraftP.__doc__)
@@ -97,7 +98,7 @@ class AircraftP(Model):
         self.perf_models = [self.bw_perf,self.batt_perf,self.htail_perf,self.vtail_perf,self.fuse_perf]
         self.fs = state
         constraints = [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*state["g"],
-                       P >= self.bw_perf["P"],
+                       P >= self.bw_perf["P"] + P_avionics,
                        CD >= self.bw_perf.C_D + (aircraft.fuselage.Swet/aircraft.bw.wing.planform.S)*self.fuse_perf.Cd + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd),
                        self.bw_perf.C_T >= CD
                     ]
@@ -246,8 +247,8 @@ class GenAndIC(Model):
     """ GenAndIC Model
     Variables
     ---------
-    P_ic_sp_cont    2.8            [kW/kg]    specific cont power of IC #actuallyaturboshaft
-    eta_IC          0.15           [-]        thermal efficiency of IC #actuallyaturboshaft
+    P_ic_sp_cont    2.8            [kW/kg]    specific cont power of IC (2.8 if turboshaft)
+    eta_IC          0.15           [-]        thermal efficiency of IC (0.15 if turboshaft)
     m_g                            [kg]       genandic mass
     m_gc                           [kg]       genandic controller mass
     m_ic                           [kg]       piston mass
@@ -412,7 +413,7 @@ class BlownWing(Model):
     """
     Variables
     ---------
-    n_prop     8    [-]             number of props
+    n_prop     10   [-]             number of props
     m               [kg]            mass
     """
 
@@ -643,7 +644,24 @@ class Cruise(Model):
                        self.perf.bw_perf.C_LC == 0.8]
 
         return constraints, self.perf
-        
+
+class Reserve(Model):
+    """
+
+    Variables
+    ---------
+    t     30    [min]       Time to fly flight segment
+    Vmin        [kts]       Minimum flight speed
+    """
+
+    def setup(self,aircraft,hybrid=False):
+        exec parse_variables(Reserve.__doc__)
+        self.flightstate = FlightState()
+        self.perf = aircraft.dynamic(self.flightstate,hybrid,powermode="batt-chrg",t_charge=t)
+        constraints = [self.perf.bw_perf.C_LC == 0.8]
+
+        return constraints, self.perf
+     
 class Landing(Model):
     """ landing model
 
@@ -710,7 +728,7 @@ class Mission(Model):
     Sobstacle                   [ft]        obstacle length
     mrunway         1.4         [-]         runway margin
     mobstacle       1.4         [-]         obstacle margin
-    R               350         [nmi]       mission range
+    R               100         [nmi]       mission range
     Vstall          61          [kts]       power off stall requirement
     CLstall         2.5         [-]         power off stall CL
     """
@@ -721,12 +739,13 @@ class Mission(Model):
         self.obstacle_climb = Climb(self.aircraft,hybrid)
         self.climb = Climb(self.aircraft,hybrid,powermode="batt-chrg")
         self.cruise = Cruise(self.aircraft,hybrid)
+        self.reserve = Reserve(self.aircraft,hybrid)
         self.landing = Landing(self.aircraft,hybrid)
         
         Wcent = Variable("W_{cent}","lbf","center aircraft weight")
         loading = self.aircraft.loading(self.cruise.flightstate,Wcent)
 
-        self.fs = [self.takeoff,self.obstacle_climb,self.climb,self.cruise,self.landing]
+        self.fs = [self.takeoff,self.obstacle_climb,self.climb,self.cruise,self.reserve, self.landing]
         state = FlightState()
 
         constraints = [self.obstacle_climb.h_gain == Variable("h_obstacle",50,"ft"),
@@ -760,14 +779,15 @@ def writeSol(sol):
         output.write(sol.table())
 
 
-# if __name__ == "__main__":
-#     poweredwheels = True
-#     M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True)
-#     M.cost = M.aircraft.mass
-#     # M.debug()
-#     sol = M.localsolve("mosek")
-#     print sol.summary()
-#     writeSol(sol)
+if __name__ == "__main__":
+    poweredwheels = True
+    M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True)
+    M.cost = M.aircraft.mass
+    # M.debug()
+    sol = M.localsolve("mosek")
+    print sol.summary()
+    # print sol(M.aircraft.bw.wing.planform.cave)
+    writeSol(sol)
 
 def CLCurves():
     M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
@@ -813,7 +833,7 @@ def RangeRunway():
     plt.grid()
     # plt.xlim([0,300])
     # plt.ylim([0,1600])
-    plt.title("Impact of range on takeoff mass")
+    plt.title("Impact of range, runway on takeoff mass")
     plt.xlabel("Cruise segment range [nmi]")
     plt.ylabel("Takeoff mass [kg]")
     plt.legend()
@@ -864,13 +884,60 @@ def SpeedSweep():
 def ElectricVsHybrid():
     M = Mission(poweredwheels=True,n_wheels=3,hybrid=False)
     M.substitutions.update({M.R:115})
-    M.substitutions.update({M.Srunway:300})
-    M.substitutions.update({M.aircraft.bw.n_prop:8})
+    runway_sweep = np.linspace(300,1000,8)
+    M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
+    M.substitutions.update({M.aircraft.bw.n_prop:6})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
     print sol.summary()
+    
+    plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label='electric')
+
+    M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
+    M.substitutions.update({M.R:115})
+    runway_sweep = np.linspace(300,1000,8)
+    M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
+    M.substitutions.update({M.aircraft.bw.n_prop:6})
+    M.cost = M.aircraft.mass
+    sol = M.localsolve("mosek")
+
+    plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label='hybrid')
+    plt.legend()
+    plt.title("Hybrid vs Electric Tradeoff")
+    plt.xlabel("Runway length [ft]")
+    plt.ylabel("Takeoff mass [kg]")
+    plt.grid()
+    plt.show()
+
+def ICVsTurboshaft():
+    M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
+    runway_sweep = np.linspace(100,300,5)
+    M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
+    M.cost = M.aircraft.mass
+    sol = M.localsolve("mosek")
+    print sol.summary()
+    
+    plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label='turboshaft')
+
+    M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
+    runway_sweep = np.linspace(100,300,5)
+    M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
+    M.substitutions.update({M.aircraft.genandic.P_ic_sp_cont:1})
+    M.substitutions.update({M.aircraft.genandic.eta_IC:0.2656})
+    M.cost = M.aircraft.mass
+    sol = M.localsolve("mosek")
+
+    plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label='IC')
+    plt.legend()
+    plt.title("IC vs Turboshaft")
+    plt.xlabel("Runway length [ft]")
+    plt.ylabel("Takeoff mass [kg]")
+    plt.grid()
+    plt.show()
+
 # CLCurves()
 # RangeRunway()
 # RangeSpeed()
 # SpeedSweep()
-ElectricVsHybrid()
+# ElectricVsHybrid()
+# ICVsTurboshaft()
