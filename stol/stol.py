@@ -864,11 +864,32 @@ def SpeedSweep():
 def ElectricVsHybrid():
     M = Mission(poweredwheels=True,n_wheels=3,hybrid=False)
     M.substitutions.update({M.R:115})
-    M.substitutions.update({M.Srunway:300})
-    M.substitutions.update({M.aircraft.bw.n_prop:8})
+    runway_sweep = np.linspace(300,1000,8)
+    M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
+    M.substitutions.update({M.aircraft.bw.n_prop:6})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
     print sol.summary()
+    
+    plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label='electric')
+
+    M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
+    M.substitutions.update({M.R:115})
+    runway_sweep = np.linspace(300,1000,8)
+    M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
+    M.substitutions.update({M.aircraft.bw.n_prop:6})
+    M.cost = M.aircraft.mass
+    sol = M.localsolve("mosek")
+
+    plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label='hybrid')
+    plt.legend()
+    plt.title("Hybrid vs Electric Tradeoff")
+    plt.xlabel("Runway length [ft]")
+    plt.ylabel("Takeoff mass [kg]")
+    plt.grid()
+    plt.ylim(ymin=0)
+    plt.show()
+
 # CLCurves()
 # RangeRunway()
 # RangeSpeed()
