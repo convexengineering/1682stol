@@ -15,6 +15,7 @@ from gpkitmodels.GP.aircraft.wing.wing import Planform
 from gpkitmodels.GP.aircraft.tail.horizontal_tail import HorizontalTail
 from gpkitmodels.GP.aircraft.tail.vertical_tail import VerticalTail
 from decimal import *
+from sens_chart import *
 pi = math.pi
 
 class Aircraft(Model):
@@ -138,7 +139,7 @@ class Fuselage(Model):
     Variables
     ---------
     m                   [kg]    mass of fuselage
-    l       140         [in]    length
+    l       140         [in]    fuselage length
     w       50          [in]    width
     h       60          [in]    height
     f                   [-]     fineness ratio
@@ -509,7 +510,7 @@ class FlightState(Model):
     rho         1.225       [kg/m**3]        air density
     mu          1.789e-5    [N*s/m^2]        air viscosity
     V                       [knots]         speed
-    g           9.8         [m/s/s]         acceleration due to gravity
+    g           9.81        [m/s/s]         acceleration due to gravity
     qne                     [kg/s^2/m]      never exceed dynamic pressure
     Vne         175         [kts]           never exceed speed
     """
@@ -632,7 +633,7 @@ class Cruise(Model):
     ---------
     R           [nmi]       Range flown in flight segment
     t           [min]       Time to fly flight segment
-    Vmin  120   [kts]       Minimum flight speed
+    Vmin  120   [kts]       minimum flight speed
     """
 
     def setup(self,aircraft,hybrid=False):
@@ -725,11 +726,14 @@ class Mission(Model):
     Variables
     ---------
     Srunway         100         [ft]        runway length
-    Sobstacle                   [ft]        obstacle length
+    Sto             100         [ft]        takeoff field length
+    Sland           100         [ft]        landing field length
+    Sobstacle       133         [ft]        obstacle length
     mrunway         1.4         [-]         runway margin
     mobstacle       1.4         [-]         obstacle margin
     R               100         [nmi]       mission range
     Vstall          61          [kts]       power off stall requirement
+    Vs                          [kts]       power off stall speed
     CLstall         2.5         [-]         power off stall CL
     """
     def setup(self,poweredwheels=False,n_wheels=3,hybrid=False):
@@ -751,10 +755,11 @@ class Mission(Model):
         constraints = [self.obstacle_climb.h_gain == Variable("h_obstacle",50,"ft"),
                        self.climb.h_gain == Variable("h_cruise",1950,"ft"),
                        self.climb.Sclimb == Variable("Scruiseclimb",10,"miles"),
-                       0.5*state.rho*CLstall*self.aircraft.bw.wing.planform.S*Vstall**2 >= self.aircraft.mass*g,
-                       Srunway >= self.takeoff.Sto*mrunway,
-                       Srunway >= self.landing.Sgr*mrunway,
-                       Sobstacle == Srunway*(4.0/3.0),
+                       0.5*state.rho*CLstall*self.aircraft.bw.wing.planform.S*Vs**2 == self.aircraft.mass*g,
+                       Vs <= Vstall,
+                       Sto >= self.takeoff.Sto*mrunway,
+                       Sland >= self.landing.Sgr*mrunway,
+                       # Sobstacle == Srunway*(4.0/3.0),
                        Sobstacle >= mobstacle*(self.takeoff.Sto + self.obstacle_climb.Sclimb),
                        loading.wingl["W"] == Wcent,
                        Wcent >= self.aircraft.mass*g,
@@ -785,7 +790,10 @@ if __name__ == "__main__":
     M.cost = M.aircraft.mass
     # M.debug()
     sol = M.localsolve("mosek")
-    print sol.summary()
+    print sol.table()
+    sd = get_highestsens(M, sol, N=10)
+    f, a = plot_chart(sd)
+    f.savefig("sensbar.pdf", bbox_inches="tight")
     # print sol(M.aircraft.bw.wing.planform.cave)
     writeSol(sol)
 
@@ -917,27 +925,43 @@ def ICVsTurboshaft():
     sol = M.localsolve("mosek")
     print sol.summary()
     
-    plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label='turboshaft')
+    plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label='Powered wheels')
 
-    M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
-    runway_sweep = np.linspace(100,300,5)
+    M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
+    runway_sweep = np.linspace(115,300,5)
     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
     M.substitutions.update({M.aircraft.genandic.P_ic_sp_cont:1})
     M.substitutions.update({M.aircraft.genandic.eta_IC:0.2656})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
 
-    plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label='IC')
+    plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label='No powered wheels')
     plt.legend()
-    plt.title("IC vs Turboshaft")
+    plt.title("Powered wheels trade")
     plt.xlabel("Runway length [ft]")
     plt.ylabel("Takeoff mass [kg]")
     plt.grid()
+    plt.ylim(ymin=0)
     plt.show()
 
+def Runway():
+    M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
+    runway_sweep = np.linspace(70,300,10)
+    M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
+    M.cost = M.aircraft.mass
+    sol = M.localsolve("mosek")
+    print sol.summary()
+
+    plt.plot(sol(M.Srunway),sol(M.aircraft.mass))
+    plt.title("Runway trade")
+    plt.xlabel("Runway length [ft]")
+    plt.ylabel("Takeoff mass [kg]")
+    plt.grid()
+    plt.show()    
 # CLCurves()
 # RangeRunway()
 # RangeSpeed()
 # SpeedSweep()
 # ElectricVsHybrid()
 # ICVsTurboshaft()
+# Runway()
