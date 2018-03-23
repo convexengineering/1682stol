@@ -43,7 +43,7 @@ class Aircraft(Model):
         # self.htail.substitutions[self.htail.Vh] = 0.4
 
         self.components = [self.cabin,self.bw,self.battery,self.fuselage]
-    
+
         if hybrid:
             self.tank = Tank()
             self.genandic = GenAndIC()
@@ -143,7 +143,7 @@ class Fuselage(Model):
     w       50          [in]    width
     h       60          [in]    height
     f                   [-]     fineness ratio
-    Swet    29833.67    [in^2]  wetted area of fuselage    
+    Swet    29833.67    [in^2]  wetted area of fuselage
     """
     def setup(self):
         exec parse_variables(Fuselage.__doc__)
@@ -188,7 +188,7 @@ class Powertrain(Model):
 
     def setup(self):
         exec parse_variables(Powertrain.__doc__)
-                       
+
         with gpkit.SignomialsEnabled():
             constraints = [#P_m_sp_cont/Pstar_ref <= -0.228*(m_m/m_ref)**2+45.7*(m_m/m_ref)+3060,
                            m >= m_m+m_mc,
@@ -257,7 +257,7 @@ class GenAndIC(Model):
     P_g_cont                       [W]        genandic cont. power
     P_gc_cont                      [W]        genandic controller cont. power
     P_gc_sp_cont   11.8            [kW/kg]     genandic controller cont power
-    P_ic_cont                      [W]        piston continous power  
+    P_ic_cont                      [W]        piston continous power
     m                              [kg]       total mass
     m_ref           1              [kg]       reference mass, for meeting units constraints
     Pstar_ref       1              [W/kg]     reference specific power, for meeting units constraints
@@ -299,7 +299,7 @@ class genandicP(Model):
                        P_fuel*eta_ic == P_ic,
                        P_ic*eta_shaft == P_g,
                        P_g*eta_g == P_gc,
-                       P_gc*eta_gc == P_out 
+                       P_gc*eta_gc == P_out
                        ]
         return constraints
 
@@ -367,12 +367,15 @@ class Wing(Model):
     W                   [lbf]       wing weight
     mfac        1.2     [-]         wing weight margin factor
     n_plies     5       [-]         number of plies on skin
+
     Upper Unbounded
     ---------------
-    W
+    W, planform.tau
+
     Lower Unbounded
     ---------------
     b, Sy
+
     LaTex Strings
     -------------
     mfac                m_{\\mathrm{fac}}
@@ -467,8 +470,8 @@ class BlownWingP(Model):
     a         343   [m/s]           speed of sound at sea level
     k_t       0.2   [-]             propeller torque coefficient
     RPMmax          [rpm]           maximum rpm of propeller
-    Kf        1.180 [-]             form factor  
-    C_f             [-]             friction coefficient           
+    Kf        1.180 [-]             form factor
+    C_f             [-]             friction coefficient
     """
     def setup(self,bw,state):
         #bw is a BlownWing object
@@ -565,7 +568,7 @@ class TakeOff(Model):
 
                 CDg >= perf.bw_perf.C_D,
                 V >= mstall*(2*W/rho/S/perf.bw_perf.C_L)**0.5,
-                FitCS(fd, zsto, [A/g, B*V**2/g]), #fit constraint set, pass in fit data, zsto is the 
+                FitCS(fd, zsto, [A/g, B*V**2/g]), #fit constraint set, pass in fit data, zsto is the
                 # y variable, then arr of independent (input) vars, watch the units
                 Sto >= 1.0/2.0/B*zsto,
                 t >= Sto/(0.3*V)]
@@ -576,7 +579,7 @@ class TakeOff(Model):
             with gpkit.SignomialsEnabled():
                 constraints += [T <= perf.bw_perf.T + sum(model.T for model in wheel_models),
                                 perf.P >= perf.bw_perf.P + sum(model.P for model in wheel_models)
-                                    
+
                             ]
                 for model in wheel_models:
                     constraints += [model.T <= (aircraft.mass*g*mu_friction)/Variable("a",len(wheel_models),"-")]
@@ -598,7 +601,7 @@ class Climb(Model):
     t                       [s]         time of climb
     h_dot                   [m/s]       climb rate
     W                       [N]         aircraft weight
-    
+
     LaTex Strings
     -------------
     Sclimb      S_{\\mathrm{climb}}
@@ -624,7 +627,7 @@ class Climb(Model):
             h_gain <= h_dot*t,
             Sclimb == V*t, #sketchy constraint, is wrong with cos(climb angle)
         ]
-        return constraints, perf
+        return constraints, perf, self.flightstate
 
 class Cruise(Model):
     """
@@ -644,7 +647,7 @@ class Cruise(Model):
                        self.flightstate["V"] >= Vmin,
                        self.perf.bw_perf.C_LC == 0.8]
 
-        return constraints, self.perf
+        return constraints, self.perf, self.flightstate
 
 class Reserve(Model):
     """
@@ -661,8 +664,8 @@ class Reserve(Model):
         self.perf = aircraft.dynamic(self.flightstate,hybrid,powermode="batt-chrg",t_charge=t)
         constraints = [self.perf.bw_perf.C_LC == 0.8]
 
-        return constraints, self.perf
-     
+        return constraints, self.perf, self.flightstate
+
 class Landing(Model):
     """ landing model
 
@@ -684,7 +687,7 @@ class Landing(Model):
     r                       [ft]        radius of roundout maneuver
     Vs                      [kts]       stall velocity
     nz           1.25       [-]         load factor
-    Xla                     [ft]        total landing distance                        
+    Xla                     [ft]        total landing distance
     mu_b         0.8        [-]         braking friction coefficient
     Sgr                     [ft]        landing distance
     mstall       1.3        [-]         stall
@@ -716,7 +719,7 @@ class Landing(Model):
                 t >= Sgr/(0.3*V)
             ]
 
-        return constraints, fs,perf      
+        return constraints, fs,perf
 
 
 
@@ -745,7 +748,7 @@ class Mission(Model):
         self.cruise = Cruise(self.aircraft,hybrid)
         self.reserve = Reserve(self.aircraft,hybrid)
         self.landing = Landing(self.aircraft,hybrid)
-        
+
         Wcent = Variable("W_{cent}","lbf","center aircraft weight")
         loading = self.aircraft.loading(self.cruise.flightstate,Wcent)
 
@@ -777,7 +780,7 @@ class Mission(Model):
             constraints += [self.aircraft.battery.E_capacity*0.8 >= sum(s.t*s.perf.batt_perf.P for s in self.fs)]
         with gpkit.SignomialsEnabled():
             constraints += [R <= self.cruise.R]
-        return constraints,self.aircraft,self.fs, loading
+        return constraints,self.aircraft,self.fs, loading, state
 
 def writeSol(sol):
     with open('solve.txt', 'wb') as output:
@@ -813,7 +816,7 @@ def CLCurves():
     #     # M.substitutions.update({M.aircraft.bw.CLmax:CLmax})
     #     sol = M.solve("mosek")
     #     print sol(M.aircraft.mass)
-    
+
     plt.grid()
     # plt.xlim([0,300])
     # plt.ylim([0,1600])
@@ -898,7 +901,7 @@ def ElectricVsHybrid():
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
     print sol.summary()
-    
+
     plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label='electric')
 
     M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
@@ -924,7 +927,7 @@ def ICVsTurboshaft():
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
     print sol.summary()
-    
+
     plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label='Powered wheels')
 
     M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
@@ -957,7 +960,7 @@ def Runway():
     plt.xlabel("Runway length [ft]")
     plt.ylabel("Takeoff mass [kg]")
     plt.grid()
-    plt.show()    
+    plt.show()
 # CLCurves()
 # RangeRunway()
 # RangeSpeed()
