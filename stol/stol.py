@@ -30,6 +30,7 @@ class Aircraft(Model):
     mpax        93      [kg]    mass of a passenger
     mbaggage    9       [kg]    mass of baggage
     tangamma    0.5     [-]     tan of the gamma climb angle
+    d                   [in]    spar diam
     """
     def setup(self,poweredwheels=False,n_wheels=3,hybrid=False):
         exec parse_variables(Aircraft.__doc__)
@@ -45,11 +46,11 @@ class Aircraft(Model):
         self.vtail.substitutions[self.vtail.planform.tau] = 0.08
         self.htail.substitutions[self.htail.planform.tau] = 0.08
         self.htail.substitutions[self.htail.mh] = 0.8
-        self.htail.substitutions[self.htail.Vh] = 0.5
-        self.htail.substitutions[self.vtail.Vv] = 1.7
+        self.htail.substitutions[self.htail.Vh] = 1.7
+        self.htail.substitutions[self.vtail.Vv] = 0.4
         self.htail.substitutions[self.htail.planform.CLmax] = 3
         self.vtail.substitutions[self.vtail.planform.CLmax] = 3
-        
+
         self.components = [self.cabin,self.bw,self.battery,self.fuselage,self.gear]
     
         if hybrid:
@@ -77,12 +78,12 @@ class Aircraft(Model):
                        # self.boom["l"] <= Variable("a",20,"ft"),
                        # self.vtail.lv == Variable("lv",180,"in"),
                        # self.htail.lh == Variable("lh",180,"in"),
-
                        self.fuselage.m >= 0.4*(sum(c.topvar("m") for c in self.components) + (self.vtail.W + self.htail.W)/g),
                        self.mass>=sum(c.topvar("m") for c in self.components) + (self.boom.W + self.vtail.W + self.htail.W)/g+ (mpax+mbaggage)*Npax]
-
+        for s in self.boom.d:
+            constraints+=[s == d]
         with gpkit.SignomialsEnabled():
-            constraints += [self.boom["l"]*0.17 <= self.gear.l + self.fuselage.h,
+            constraints += [self.boom["l"]*0.36 <= self.gear.l + self.fuselage.h,
                             self.bw.wing.b - Variable("w_fuse",50,"in") >= self.bw.n_prop*2*self.bw.powertrain.r]
         return constraints, self.components, self.htail, self.vtail, self.boom
 
@@ -133,7 +134,6 @@ class AircraftP(Model):
 
 class AircraftLoading(Model):
     def setup(self,aircraft,state):
-        print state
         hbend = aircraft.boom.tailLoad(aircraft.boom,aircraft.htail,state)
         vbend = aircraft.boom.tailLoad(aircraft.boom,aircraft.vtail,state)
         self.wingl = aircraft.bw.wing.spar.loading(aircraft.bw.wing, state)
@@ -198,29 +198,34 @@ class FuselageP(Model):
                     ]
         return constraints
 
+#Combination of electric motor and motor controller
 class Powertrain(Model):
     """ Powertrain
     Variables
     ---------
-    m                       [kg]        powertrain mass
-    m_m                     [kg]        motor mass
-    m_mc                    [kg]        motor controller mass
-    Pmax                    [kW]        maximum power
-    P_m_sp_cont   9         [kW/kg]      motor specific power
-    P_mc_sp_cont  11.8      [kW/kg]     motor controller specific power
-    r                       [m]         propeller radius
-    Pstar_ref     1         [W]         specific motor power reference
-    m_ref         1         [kg]        reference motor power
+    m                       [kg]            powertrain mass
+    Pmax                    [kW]            maximum power
+    P_m_sp_cont             [W/kg]         continuous motor specific power
+    P_m_sp_max              [W/kg]         maximum motor specific power
+    tau_sp_max              [N*m/kg]        max specific torque
+    RPMmax                 [rpm]           max rpm
+    r                       [m]             propeller radius
+    Pstar_ref     1         [W]             specific motor power reference
+    m_ref         1         [kg]            reference motor power
+    eta                     [-]             efficiency
+    a             1         [W/kg]          dummy
     """
 
     def setup(self):
         exec parse_variables(Powertrain.__doc__)
                        
         with gpkit.SignomialsEnabled():
-            constraints = [#P_m_sp_cont/Pstar_ref <= -0.228*(m_m/m_ref)**2+45.7*(m_m/m_ref)+3060,
-                           m >= m_m+m_mc,
-                           Pmax <= m_m*P_m_sp_cont,
-                           Pmax <= m_mc*P_mc_sp_cont]
+            constraints = [P_m_sp_cont <= (Variable("a",46.4,"W/kg**2")*m + Variable("b",5032,"W/kg")), #magicALL motor fits
+                           P_m_sp_max <= (Variable("c",69.0,"W/kg**2")*m + Variable("d",6144,"W/kg")),  #magicALL motor fits
+                           # tau_sp_max + Variable("d",2.20e-3,"N*m/kg**3")*m**2 <= Variable("e",0.447,"N*m/kg**2")*m + Variable("f",6.71,"N*m/kg"),
+                           eta/Variable("f",1,"1/kg**0.0134") <= 0.861*m**(0.0134),
+                           RPMmax*m**(0.201) == Variable("g",7145,"rpm*kg**0.201"),
+                           Pmax <= m*P_m_sp_max]
         return constraints
 
 class PoweredWheel(Model):
@@ -486,8 +491,6 @@ class BlownWingP(Model):
     h               [m]             Wake height
     T               [N]             propeller thrust
     P               [kW]            power draw
-    eta_mc    0.98  [-]             motor controller efficiency
-    eta_m     0.9   [-]             motor efficiency
     eta_prop  0.87  [-]             prop efficiency loss after blade disk actuator
     A_disk          [m**2]          area of prop disk
     Mlim      0.95  [-]             tip limit
@@ -504,14 +507,13 @@ class BlownWingP(Model):
         with gpkit.SignomialsEnabled():
             constraints = [
             A_disk == bw.n_prop*pi*bw.powertrain.r**2,
-            ((P*eta_prop*eta_m*eta_mc)/(0.5*T*state["V"]) - 1)**2 >= (T/(A_disk*(state.V**2)*state.rho/2)+1),
+            ((P*eta_prop*bw.powertrain.eta)/(0.5*T*state["V"]) - 1)**2 >= (T/(A_disk*(state.V**2)*state.rho/2)+1),
             (u_j/state.V)**2 <= (T/(A_disk*(state.V**2)*state.rho/2) + 1),
             u_j >= state.V,
             P <= bw.n_prop*bw.powertrain["Pmax"],
             C_L <= C_LC*(1+2*C_J/(pi*bw.wing["AR"]*e)),
 
-            RPMmax >= Variable("a",4.9,"rpm/kg^2")*bw.powertrain.m_m**2 - Variable("b",313.3,"rpm/kg")*bw.powertrain.m_m +Variable("c",8721.2,"rpm"),
-            RPMmax*bw.powertrain.r <= a*Mlim,
+            bw.powertrain.RPMmax*bw.powertrain.r <= a*Mlim,
 
             C_T == T/((0.5*state.rho*bw.wing["S"]*state.V**2)),
             m_dotprime == rho_j*u_j*h,
@@ -791,8 +793,10 @@ class Mission(Model):
                        loading.wingl["W"] == Wcent,
                        Wcent >= self.aircraft.mass*g,
                        self.obstacle_climb.perf.bw_perf.C_LC == 1.05,
-                       self.climb.perf.bw_perf.C_LC == 0.95
-        ]
+                       self.climb.perf.bw_perf.C_LC == 0.95,
+                       self.climb.perf.bw_perf.P <=  self.aircraft.bw.n_prop*self.aircraft.bw.powertrain.P_m_sp_cont*self.aircraft.bw.powertrain.m,
+                       self.cruise.perf.bw_perf.P <= self.aircraft.bw.n_prop*self.aircraft.bw.powertrain.P_m_sp_cont*self.aircraft.bw.powertrain.m
+                    ]
         if hybrid:
             constraints += [ self.takeoff.perf.gen_perf.P_fuel == self.obstacle_climb.perf.gen_perf.P_fuel,
                             self.obstacle_climb.perf.gen_perf.P_fuel == self.climb.perf.gen_perf.P_fuel,
