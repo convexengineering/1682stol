@@ -287,8 +287,6 @@ class GenAndIC(Model):
     m_ic                           [kg]       piston mass
     P_g_sp_cont                    [W/kg]     genandic spec power (cont)
     P_g_cont                       [W]        genandic cont. power
-    P_gc_cont                      [W]        genandic controller cont. power
-    P_gc_sp_cont   11.8            [kW/kg]     genandic controller cont power
     P_ic_cont                      [W]        piston continous power  
     m                              [kg]       total mass
     m_ref           1              [kg]       reference mass, for meeting units constraints
@@ -297,11 +295,10 @@ class GenAndIC(Model):
     def setup(self):
         exec parse_variables(GenAndIC.__doc__)
         with gpkit.SignomialsEnabled():
-            constraints = [P_g_sp_cont/Pstar_ref <= -0.228*(m_g/m_ref)**2+45.7*(m_g/m_ref)+3060,
+            constraints = [P_g_sp_cont <= (Variable("a",46.4,"W/kg**2")*m_g + Variable("b",5032,"W/kg")), #magicALL motor fits
                            P_g_cont    <=   P_g_sp_cont*m_g,
-                           P_gc_cont   <=   P_gc_sp_cont*m_gc,
                            P_ic_cont   <=   P_ic_sp_cont*m_ic,
-                           m >= m_g + m_gc + m_ic
+                           m >= m_g + m_ic
             ]
 
         return constraints
@@ -318,20 +315,17 @@ class genandicP(Model):
     P_fuel                          [kW]        power coming in from fuel flow
     P_out                           [kW]        output from generator controller after efficiency
     eta_wiring      0.98            [-]         efficiency of electrical connections (wiring loss)
-    eta_gc          0.98            [-]         efficiency of generator controller
     eta_shaft       0.98            [-]         shaft losses (two 99% efficient bearings)
-    eta_g           0.9             [-]         generator efficiency
+    eta_g           0.9             [-]         genertor efficiency
     eta_ic          0.256           [-]         internal combustion engine efficiency
     """
     def setup(self,gen,state):
         exec parse_variables(genandicP.__doc__)
         constraints = [P_g <= gen.P_g_cont,
-                       P_gc <= gen.P_gc_cont,
                        P_ic <= gen.P_ic_cont,
                        P_fuel*eta_ic == P_ic,
                        P_ic*eta_shaft == P_g,
-                       P_g*eta_g == P_gc,
-                       P_gc*eta_gc == P_out 
+                       P_g*eta_g == P_out,
                        ]
         return constraints
 
@@ -822,9 +816,9 @@ if __name__ == "__main__":
     # M.debug()
     sol = M.localsolve("mosek")
     print sol.summary()
-    sd = get_highestsens(M, sol, N=10)
-    f, a = plot_chart(sd)
-    f.savefig("sensbar.pdf", bbox_inches="tight")
+    # sd = get_highestsens(M, sol, N=10)
+    # f, a = plot_chart(sd)
+    # f.savefig("sensbar.pdf", bbox_inches="tight")
     # print sol(M.aircraft.bw.wing.planform.cave)
     writeSol(sol)
 
