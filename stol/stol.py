@@ -14,6 +14,8 @@ from gpkitmodels.GP.aircraft.wing.wing_skin import WingSkin
 from gpkitmodels.GP.aircraft.wing.wing import Planform
 from gpkitmodels.GP.aircraft.tail.horizontal_tail import HorizontalTail
 from gpkitmodels.GP.aircraft.tail.vertical_tail import VerticalTail
+from gpkitmodels.GP.aircraft.tail.tail_boom import *
+
 from decimal import *
 from sens_chart import *
 pi = math.pi
@@ -23,10 +25,11 @@ class Aircraft(Model):
 
     Variables
     ---------
-    m               [kg]    aircraft mass
-    Npax        4   [-]     number of passengers
-    mpax        93  [kg]    mass of a passenger
-    mbaggage    9   [kg]    mass of baggage
+    m                   [kg]    aircraft mass
+    Npax        4       [-]     number of passengers
+    mpax        93      [kg]    mass of a passenger
+    mbaggage    9       [kg]    mass of baggage
+    tangamma    0.5     [-]     tan of the gamma climb angle
     """
     def setup(self,poweredwheels=False,n_wheels=3,hybrid=False):
         exec parse_variables(Aircraft.__doc__)
@@ -37,12 +40,17 @@ class Aircraft(Model):
         self.cabin = Cabin()
         self.htail = HorizontalTail()
         self.vtail = VerticalTail()
+        self.boom =  TailBoom()
+        self.gear = Gear()
         self.vtail.substitutions[self.vtail.planform.tau] = 0.08
         self.htail.substitutions[self.htail.planform.tau] = 0.08
         self.htail.substitutions[self.htail.mh] = 0.8
-        # self.htail.substitutions[self.htail.Vh] = 0.4
-
-        self.components = [self.cabin,self.bw,self.battery,self.fuselage]
+        self.htail.substitutions[self.htail.Vh] = 0.5
+        self.htail.substitutions[self.vtail.Vv] = 1.7
+        self.htail.substitutions[self.htail.planform.CLmax] = 3
+        self.vtail.substitutions[self.vtail.planform.CLmax] = 3
+        
+        self.components = [self.cabin,self.bw,self.battery,self.fuselage,self.gear]
     
         if hybrid:
             self.tank = Tank()
@@ -56,27 +64,31 @@ class Aircraft(Model):
         self.mass = m
         constraints = [
 
-                       # self.htail.Vh <= (self.htail["S"]*self.htail.lh/self.bw.wing["S"]**2 *self.bw.wing["b"]),
-                       # self.vtail.Vv == (self.vtail["S"]*self.vtail.lv/self.bw.wing["S"]/self.bw.wing["b"]),
-                       self.vtail.planform["b"] >= Variable("bv",48,"in"),
-                       self.vtail.planform["croot"] >= Variable("croot",27,"in"),
+                       self.htail.Vh <= (self.htail["S"]*self.htail.lh/self.bw.wing["S"]**2 *self.bw.wing["b"]),
+                       self.vtail.Vv == (self.vtail["S"]*self.vtail.lv/self.bw.wing["S"]/self.bw.wing["b"]),
+                       # self.vtail.planform["b"] >= Variable("bv",48,"in"),
+                       # self.vtail.planform["croot"] >= Variable("croot",27,"in"),
 
-                       self.htail.planform["b"] >= Variable("bh",60,"in"),
-                       self.htail.planform["croot"] >= Variable("croot",27,"in"),
+                       # self.htail.planform["b"] >= Variable("bh",60,"in"),
+                       # self.htail.planform["croot"] >= Variable("croot",27,"in"),
+                       self.boom["l"] >= self.htail.lh + self.htail.planform.croot,
+                       self.boom["l"] >= self.vtail.lv + self.vtail.planform.croot,
 
-                       self.vtail.lv == Variable("lv",180,"in"),
-                       self.htail.lh == Variable("lh",180,"in"),
+                       # self.boom["l"] <= Variable("a",20,"ft"),
+                       # self.vtail.lv == Variable("lv",180,"in"),
+                       # self.htail.lh == Variable("lh",180,"in"),
 
                        self.fuselage.m >= 0.4*(sum(c.topvar("m") for c in self.components) + (self.vtail.W + self.htail.W)/g),
-                       self.mass>=sum(c.topvar("m") for c in self.components) + (self.vtail.W + self.htail.W)/g+ (mpax+mbaggage)*Npax]
+                       self.mass>=sum(c.topvar("m") for c in self.components) + (self.boom.W + self.vtail.W + self.htail.W)/g+ (mpax+mbaggage)*Npax]
 
         with gpkit.SignomialsEnabled():
-            constraints += [self.bw.wing.b - Variable("w_fuse",50,"in") >= self.bw.n_prop*2*self.bw.powertrain.r]
-        return constraints, self.components, self.htail, self.vtail
+            constraints += [self.boom["l"]*0.17 <= self.gear.l + self.fuselage.h,
+                            self.bw.wing.b - Variable("w_fuse",50,"in") >= self.bw.n_prop*2*self.bw.powertrain.r]
+        return constraints, self.components, self.htail, self.vtail, self.boom
 
     def dynamic(self,state,hybrid=False,powermode="batt-chrg",t_charge=None):
         return AircraftP(self,state,hybrid,powermode=powermode,t_charge=t_charge)
-    def loading(self,Wcent,state):
+    def loading(self,state,Wcent):
         return AircraftLoading(self,state)
 
 class AircraftP(Model):
@@ -95,12 +107,13 @@ class AircraftP(Model):
         self.batt_perf = aircraft.battery.dynamic(state)
         self.htail_perf = aircraft.htail.flight_model(aircraft.htail, state)
         self.vtail_perf = aircraft.vtail.flight_model(aircraft.vtail, state)
+        self.boom_perf = aircraft.boom.flight_model(aircraft.boom, state)
         self.fuse_perf = aircraft.fuselage.dynamic(state)
-        self.perf_models = [self.bw_perf,self.batt_perf,self.htail_perf,self.vtail_perf,self.fuse_perf]
+        self.perf_models = [self.bw_perf,self.batt_perf,self.htail_perf,self.vtail_perf,self.boom_perf,self.fuse_perf]
         self.fs = state
         constraints = [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*state["g"],
                        P >= self.bw_perf["P"] + P_avionics,
-                       CD >= self.bw_perf.C_D + (aircraft.fuselage.Swet/aircraft.bw.wing.planform.S)*self.fuse_perf.Cd + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd),
+                       CD >= self.bw_perf.C_D + (aircraft.fuselage.Swet/aircraft.bw.wing.planform.S)*self.fuse_perf.Cd + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd) + (aircraft.boom.S/aircraft.bw.wing.planform.S)*self.boom_perf.Cf,
                        self.bw_perf.C_T >= CD
                     ]
         if hybrid:
@@ -120,9 +133,23 @@ class AircraftP(Model):
 
 class AircraftLoading(Model):
     def setup(self,aircraft,state):
+        print state
+        hbend = aircraft.boom.tailLoad(aircraft.boom,aircraft.htail,state)
+        vbend = aircraft.boom.tailLoad(aircraft.boom,aircraft.vtail,state)
         self.wingl = aircraft.bw.wing.spar.loading(aircraft.bw.wing, state)
-        loading = [self.wingl]
+        loading = [self.wingl,hbend,vbend]
         return loading
+
+class Gear(Model):
+    """Gear
+    Variables
+    ---------
+    m    113   [lb]    mass
+    l    3     [ft]    landing gear length
+    """
+    def setup(self):
+        exec parse_variables(Gear.__doc__)
+        return []
 
 class Cabin(Model):
     """Cabin
@@ -644,7 +671,7 @@ class Cruise(Model):
                        self.flightstate["V"] >= Vmin,
                        self.perf.bw_perf.C_LC == 0.8]
 
-        return constraints, self.perf
+        return constraints, self.flightstate, self.perf
 
 class Reserve(Model):
     """
@@ -725,10 +752,10 @@ class Mission(Model):
 
     Variables
     ---------
-    Srunway         100         [ft]        runway length
-    Sto             100         [ft]        takeoff field length
-    Sland           100         [ft]        landing field length
-    Sobstacle       133         [ft]        obstacle length
+    Srunway         300         [ft]        runway length
+    Sto             300         [ft]        takeoff field length
+    Sland           300         [ft]        landing field length
+    Sobstacle       400         [ft]        obstacle length
     mrunway         1.4         [-]         runway margin
     mobstacle       1.4         [-]         obstacle margin
     R               100         [nmi]       mission range
@@ -790,7 +817,7 @@ if __name__ == "__main__":
     M.cost = M.aircraft.mass
     # M.debug()
     sol = M.localsolve("mosek")
-    print sol.table()
+    print sol.summary()
     sd = get_highestsens(M, sol, N=10)
     f, a = plot_chart(sd)
     f.savefig("sensbar.pdf", bbox_inches="tight")
