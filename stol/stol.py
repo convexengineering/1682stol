@@ -493,7 +493,7 @@ class BlownWingP(Model):
     P               [kW]            power draw
     eta_prop  0.87  [-]             prop efficiency loss after blade disk actuator
     A_disk          [m**2]          area of prop disk
-    Mlim      0.95  [-]             tip limit
+    Mlim      0.5   [-]             tip limit
     a         343   [m/s]           speed of sound at sea level
     k_t       0.2   [-]             propeller torque coefficient
     RPMmax          [rpm]           maximum rpm of propeller
