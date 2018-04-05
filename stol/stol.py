@@ -248,8 +248,8 @@ class PoweredWheel(Model):
         #Currently using the worst values
         with gpkit.SignomialsEnabled():
             constraints = [gear_ratio <= gear_ratio_max,
-                           RPMmax <= Variable("a",4.9,"rpm/kg^2")*m**2 - Variable("b",313.3,"rpm/kg")*m +Variable("c",8721.2,"rpm"),
-                           tau_max <= Variable("d",27.3,"N*m/kg")*m - Variable("e",80.2,"N*m"),
+                           RPMmax*m**(0.201) == Variable("g",7145,"rpm*kg**0.201"),
+                           tau_max/m + Variable("d",2.20e-3,"N*m/kg**3")*m**2 <= Variable("e",0.447,"N*m/kg**2")*m + Variable("f",6.71,"N*m/kg"),
                            # tau_max <= Variable("tau_m",1e-4,'N*m/kg')*m,
                            # Pstar*m <= tau_max*RPMmax
                            ]
