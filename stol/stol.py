@@ -566,7 +566,7 @@ class TakeOff(Model):
     zsto                    [-]         take off distance helper variable
     Sto                     [ft]        take off distance
     W                       [N]         aircraft weight
-    mu_friction 0.8         [-]         traction limit for powered wheels
+    mu_friction 0.6         [-]         traction limit for powered wheels
     t                       [s]         time of takeoff maneuver
     Vto                     [m/s]       required velocity
     """
@@ -714,7 +714,7 @@ class Landing(Model):
     Vs                      [kts]       stall velocity
     nz           1.25       [-]         load factor
     Xla                     [ft]        total landing distance                        
-    mu_b         0.8        [-]         braking friction coefficient
+    mu_b         0.6        [-]         braking friction coefficient
     Sgr                     [ft]        landing distance
     mstall       1.3        [-]         stall
     t                       [s]         time of landing maneuver
