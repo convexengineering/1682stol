@@ -144,10 +144,11 @@ class Gear(Model):
     """Gear
     Variables
     ---------
-    m    113   [lb]    mass
+    m    60.3  [lb]    mass
     l    3     [ft]    landing gear length
     """
     def setup(self):
+        #values are from C172 POH
         exec parse_variables(Gear.__doc__)
         return []
 
@@ -540,6 +541,11 @@ class FlightState(Model):
     def setup(self):
         exec parse_variables(FlightState.__doc__)
         return [qne == 0.5*rho*Vne**2]
+
+class VectorTakeOff(Model):
+    """
+    Vector take off model
+    """
 class TakeOff(Model):
     """
     take off model
@@ -562,8 +568,9 @@ class TakeOff(Model):
     W                       [N]         aircraft weight
     mu_friction 0.8         [-]         traction limit for powered wheels
     t                       [s]         time of takeoff maneuver
+    Vto                     [m/s]       required velocity
     """
-    def setup(self, aircraft,poweredwheels,n_wheels,hybrid=False):
+    def setup(self, aircraft,poweredwheels,n_wheels,hybrid=False,N=5):
         exec parse_variables(TakeOff.__doc__)
 
         fs = FlightState()
@@ -576,16 +583,15 @@ class TakeOff(Model):
         Pmax = aircraft.bw.powertrain.Pmax
         AR = aircraft.bw.wing.planform.AR
         rho = fs.rho
-        V = fs.V
         perf = aircraft.dynamic(fs,hybrid,powermode="batt-dischrg")
         self.perf = perf
         e = perf.bw_perf.e
         mstall = 1.3
+        V = fs.V
         constraints = [
                 perf.bw_perf.C_LC == 2.18,
                 W == aircraft.mass*fs.g,
                 T/W >= A/g + mu,
-
                 CDg >= perf.bw_perf.C_D,
                 V >= mstall*(2*W/rho/S/perf.bw_perf.C_L)**0.5,
                 FitCS(fd, zsto, [A/g, B*V**2/g]), #fit constraint set, pass in fit data, zsto is the 
