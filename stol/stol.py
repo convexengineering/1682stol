@@ -215,17 +215,19 @@ class Powertrain(Model):
     m_ref         1         [kg]            reference motor power
     eta                     [-]             efficiency
     a             1         [W/kg]          dummy
+    RPM_margin    0.9       [-]             margin for rpm
+    tau_margin    0.95      [-]             margin for torque
+    P_margin      0.8       [-]             margin for power (helpful for tail sizing)
     """
 
     def setup(self):
         exec parse_variables(Powertrain.__doc__)
                        
         with gpkit.SignomialsEnabled():
-            constraints = [P_m_sp_cont <= (Variable("a",46.4,"W/kg**2")*m + Variable("b",5032,"W/kg")), #magicALL motor fits
-                           P_m_sp_max <= (Variable("c",69.0,"W/kg**2")*m + Variable("d",6144,"W/kg")),  #magicALL motor fits
-                           # tau_sp_max + Variable("d",2.20e-3,"N*m/kg**3")*m**2 <= Variable("e",0.447,"N*m/kg**2")*m + Variable("f",6.71,"N*m/kg"),
-                           eta/Variable("f",1,"1/kg**0.0134") <= 0.861*m**(0.0134),
-                           RPMmax*m**(0.201) == Variable("g",7145,"rpm*kg**0.201"),
+            constraints = [P_m_sp_cont <= P_margin*((Variable("a",61.8,"W/kg**2")*m + Variable("b",6290,"W/kg"))), #magicALL motor fits
+                           P_m_sp_max <= P_margin*((Variable("c",86.2,"W/kg**2")*m + Variable("d",7860,"W/kg"))),  #magicALL motor fits
+                           eta/Variable("f",1,"1/kg**0.0134") <= 0.906*m**(0.0134),
+                           (RPMmax/RPM_margin)*m**(0.201) == Variable("g",7939,"rpm*kg**0.201"),
                            Pmax <= m*P_m_sp_max]
         return constraints
 
