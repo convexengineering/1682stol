@@ -361,12 +361,13 @@ class Battery(Model):
     E_capacity          [Wh]            energy capacity
     P_max_cont  4.2e3   [W/kg]          continuous power output
     P_max_burst 7e3     [W/kg]          burst power output
+    eta_pack    0.8     [-]             add packing efficiency for battery
     """
 
     def setup(self):
         exec parse_variables(Battery.__doc__)
         with gpkit.SignomialsEnabled():
-            constraints = [m >= E_capacity/Estar,
+            constraints = [m >= E_capacity/(eta_pack*Estar),
                            # (P_max_cont/Variable("a",1,"W/kg") - 513.49)*(1+(Estar/Variable("b",40.9911,"Wh/kg"))**(11.79229)) <=  6.17e9,
                            # (P_max_burst/Variable("a",1,"W/kg") - 944.0619)*(1+(Estar/Variable("b",38.21934,"Wh/kg"))**(11.15887)) <=  1.02e10
                         ]
