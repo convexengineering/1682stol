@@ -454,6 +454,7 @@ class BlownWing(Model):
         N = 14
         self.wing = Wing(N)
         self.wing.substitutions[self.wing.planform.tau]=0.12
+        self.wing.substitutions[self.wing.planform.lam]=1
 
         constraints = [
             m >= n_prop*self.powertrain["m"] + self.wing.topvar("W")/g,
