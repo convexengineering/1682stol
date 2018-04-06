@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from gpkit import Model, parse_variables, Vectorize
+from gpkit import Model, parse_variables, Vectorize, SignomialEquality
 from gpkit.constraints.tight import Tight as TCS
 from gpfit.fit_constraintset import FitCS
 import gpkit
@@ -602,8 +602,7 @@ class TakeOff(Model):
                 Sto >= 1.0/2.0/B*zsto,
                 t >= Sto/(0.3*Vf)]
         with gpkit.SignomialsEnabled():
-            constraints += [B >= g/W*0.5*rho*S*(CDg),
-                            dV >= Vf - Vi]
+            constraints += [B >= g/W*0.5*rho*S*(CDg)]
         if poweredwheels:
             wheel_models = [wheel.dynamic(fs) for wheel in aircraft.wheels]
             with gpkit.SignomialsEnabled():
@@ -795,7 +794,7 @@ class Mission(Model):
                            self.takeoff.Vf[-1] == self.takeoff.mstall*(2*self.takeoff.W/self.takeoff.rho/self.takeoff.S/self.takeoff.perf.bw_perf.C_L[-1])**0.5,
                            self.takeoff.Vf[-1] <= sum(self.takeoff.dV),
                            self.takeoff.Vi[1:] == self.takeoff.Vf[:-1],
-                           
+                           self.takeoff.dV[1:] <= self.takeoff.Vf[1:] - self.takeoff.Vf[:-1],
                            Srunway <= mrunway*sum(self.takeoff.Sto),
 
                            Srunway >= self.landing.Sgr*mrunway,
@@ -828,7 +827,7 @@ def writeSol(sol):
 
 
 if __name__ == "__main__":
-    poweredwheels = True
+    poweredwheels = False
     M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True)
     M.cost = M.aircraft.mass
     # M.debug()
@@ -838,7 +837,7 @@ if __name__ == "__main__":
     sd = get_highestsens(M, sol, N=10)
     f, a = plot_chart(sd)
     f.savefig("sensbar.pdf", bbox_inches="tight")
-    print sol(M.aircraft.bw.wing.planform.cave)
+    print sol(M.aircraft.mass)
     writeSol(sol)
 
 def CLCurves():
@@ -963,7 +962,7 @@ def ElectricVsHybrid():
 
 def ICVsTurboshaft():
     M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
-    runway_sweep = np.linspace(100,300,5)
+    runway_sweep = np.linspace(200,300,5)
     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
@@ -972,10 +971,10 @@ def ICVsTurboshaft():
     plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label='Powered wheels')
 
     M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
-    runway_sweep = np.linspace(115,300,5)
+    runway_sweep = np.linspace(200,300,5)
     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
-    M.substitutions.update({M.aircraft.genandic.P_ic_sp_cont:1})
-    M.substitutions.update({M.aircraft.genandic.eta_IC:0.2656})
+    # M.substitutions.update({M.aircraft.genandic.P_ic_sp_cont:1})
+    # M.substitutions.update({M.aircraft.genandic.eta_IC:0.2656})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
 
