@@ -42,7 +42,7 @@ def get_highestsens(model, res, varnames=None, N=10):
             uts = unitstr(vk.descr["units"])
         else:
             uts = ""
-
+        print vk
         lbl = vk.descr["label"]
         labels.append(lbl + "$ =%.2f$ %s" % (val, uts.replace("*", "")))
         if s[1] > 0:

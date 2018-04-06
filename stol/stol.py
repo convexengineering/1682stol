@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from gpkit import Model, parse_variables
+from gpkit import Model, parse_variables, Vectorize
 from gpkit.constraints.tight import Tight as TCS
 from gpfit.fit_constraintset import FitCS
 import gpkit
@@ -169,7 +169,7 @@ class Fuselage(Model):
     m                   [kg]    mass of fuselage
     l       140         [in]    fuselage length
     w       50          [in]    width
-    h       60          [in]    height
+    h       60          [in]    fuselage height
     f                   [-]     fineness ratio
     Swet    29833.67    [in^2]  wetted area of fuselage    
     """
@@ -224,10 +224,10 @@ class Powertrain(Model):
         exec parse_variables(Powertrain.__doc__)
                        
         with gpkit.SignomialsEnabled():
-            constraints = [P_m_sp_cont <= P_margin*((Variable("a",61.8,"W/kg**2")*m + Variable("b",6290,"W/kg"))), #magicALL motor fits
-                           P_m_sp_max <= P_margin*((Variable("c",86.2,"W/kg**2")*m + Variable("d",7860,"W/kg"))),  #magicALL motor fits
-                           eta/Variable("f",1,"1/kg**0.0134") <= 0.906*m**(0.0134),
-                           (RPMmax/RPM_margin)*m**(0.201) == Variable("g",7939,"rpm*kg**0.201"),
+            constraints = [P_m_sp_cont <= P_margin*((Variable("a",61.8,"W/kg**2","a")*m + Variable("b",6290,"W/kg","a"))), #magicALL motor fits
+                           P_m_sp_max <= P_margin*((Variable("c",86.2,"W/kg**2","c")*m + Variable("d",7860,"W/kg","d"))),  #magicALL motor fits
+                           eta/Variable("f",1,"1/kg**0.0134","wing motor eta fit constant") <= 0.906*m**(0.0134),
+                           (RPMmax/RPM_margin)*m**(0.201) == Variable("g",7939,"rpm*kg**0.201","g"),
                            Pmax <= m*P_m_sp_max]
         return constraints
 
@@ -319,7 +319,7 @@ class genandicP(Model):
     P_out                           [kW]        output from generator controller after efficiency
     eta_wiring      0.98            [-]         efficiency of electrical connections (wiring loss)
     eta_shaft       0.98            [-]         shaft losses (two 99% efficient bearings)
-    eta_g           0.9             [-]         genertor efficiency
+    eta_g           0.9             [-]         generator efficiency
     eta_ic          0.256           [-]         internal combustion engine efficiency
     """
     def setup(self,gen,state):
@@ -546,10 +546,6 @@ class FlightState(Model):
         exec parse_variables(FlightState.__doc__)
         return [qne == 0.5*rho*Vne**2]
 
-class VectorTakeOff(Model):
-    """
-    Vector take off model
-    """
 class TakeOff(Model):
     """
     take off model
@@ -572,7 +568,12 @@ class TakeOff(Model):
     W                       [N]         aircraft weight
     mu_friction 0.6         [-]         traction limit for powered wheels
     t                       [s]         time of takeoff maneuver
-    Vto                     [m/s]       required velocity
+    Vi                      [m/s]       velocity at start of segment
+    Vf                      [m/s]       velocity at end of segment
+    dV                      [m/s]       difference in velocity over run
+    mstall      1.3         [-]         stall margin
+    rho                     [kg/m^3]    air density
+    S                       [m^2]       wing area
     """
     def setup(self, aircraft,poweredwheels,n_wheels,hybrid=False,N=5):
         exec parse_variables(TakeOff.__doc__)
@@ -583,33 +584,31 @@ class TakeOff(Model):
         df = pd.read_csv(path + os.sep + "logfit.csv")
         fd = df.to_dict(orient="records")[0] #fit data
 
-        S = aircraft.bw.wing["S"]
         Pmax = aircraft.bw.powertrain.Pmax
         AR = aircraft.bw.wing.planform.AR
-        rho = fs.rho
         perf = aircraft.dynamic(fs,hybrid,powermode="batt-dischrg")
         self.perf = perf
         e = perf.bw_perf.e
-        mstall = 1.3
-        V = fs.V
         constraints = [
+                rho == fs.rho,
+                S == aircraft.bw.wing["S"],
+                Vf == fs.V,
                 perf.bw_perf.C_LC == 2.18,
                 W == aircraft.mass*fs.g,
                 T/W >= A/g + mu,
                 CDg >= perf.bw_perf.C_D,
-                V >= mstall*(2*W/rho/S/perf.bw_perf.C_L)**0.5,
-                FitCS(fd, zsto, [A/g, B*V**2/g]), #fit constraint set, pass in fit data, zsto is the 
+                FitCS(fd, zsto, [A/g, B*dV**2/g]), #fit constraint set, pass in fit data, zsto is the 
                 # y variable, then arr of independent (input) vars, watch the units
                 Sto >= 1.0/2.0/B*zsto,
-                t >= Sto/(0.3*V)]
+                t >= Sto/(0.3*Vf)]
         with gpkit.SignomialsEnabled():
-            constraints += [B >= g/W*0.5*rho*S*(CDg)]
+            constraints += [B >= g/W*0.5*rho*S*(CDg),
+                            dV >= Vf - Vi]
         if poweredwheels:
             wheel_models = [wheel.dynamic(fs) for wheel in aircraft.wheels]
             with gpkit.SignomialsEnabled():
                 constraints += [T <= perf.bw_perf.T + sum(model.T for model in wheel_models),
                                 perf.P >= perf.bw_perf.P + sum(model.P for model in wheel_models)
-                                    
                             ]
                 for model in wheel_models:
                     constraints += [model.T <= (aircraft.mass*g*mu_friction)/Variable("a",len(wheel_models),"-")]
@@ -759,20 +758,20 @@ class Mission(Model):
     Variables
     ---------
     Srunway         300         [ft]        runway length
-    Sto             300         [ft]        takeoff field length
-    Sland           300         [ft]        landing field length
-    Sobstacle       400         [ft]        obstacle length
+    Sobstacle                   [ft]        obstacle length
     mrunway         1.4         [-]         runway margin
     mobstacle       1.4         [-]         obstacle margin
     R               100         [nmi]       mission range
     Vstall          61          [kts]       power off stall requirement
     Vs                          [kts]       power off stall speed
     CLstall         2.5         [-]         power off stall CL
+    dV                          [m/s]       dV
     """
     def setup(self,poweredwheels=False,n_wheels=3,hybrid=False):
         exec parse_variables(Mission.__doc__)
         self.aircraft = Aircraft(poweredwheels,n_wheels,hybrid)
-        self.takeoff = TakeOff(self.aircraft,poweredwheels,n_wheels,hybrid)
+        with Vectorize(4):
+            self.takeoff = TakeOff(self.aircraft,poweredwheels,n_wheels,hybrid)
         self.obstacle_climb = Climb(self.aircraft,hybrid)
         self.climb = Climb(self.aircraft,hybrid,powermode="batt-chrg")
         self.cruise = Cruise(self.aircraft,hybrid)
@@ -784,23 +783,32 @@ class Mission(Model):
 
         self.fs = [self.takeoff,self.obstacle_climb,self.climb,self.cruise,self.reserve, self.landing]
         state = FlightState()
+        with gpkit.SignomialsEnabled():
+            constraints = [
+                           self.obstacle_climb.h_gain == Variable("h_obstacle",50,"ft"),
+                           self.climb.h_gain == Variable("h_cruise",1950,"ft"),
+                           self.climb.Sclimb == Variable("Scruiseclimb",10,"miles"),
+                           0.5*state.rho*CLstall*self.aircraft.bw.wing.planform.S*Vs**2 == self.aircraft.mass*g,
+                           Vs <= Vstall,
+                           self.takeoff.dV == dV,
+                           self.takeoff.Vi[0] == Variable("a",1e-3,"m/s","initial Vi lower lim"),
+                           self.takeoff.Vf[-1] == self.takeoff.mstall*(2*self.takeoff.W/self.takeoff.rho/self.takeoff.S/self.takeoff.perf.bw_perf.C_L[-1])**0.5,
+                           self.takeoff.Vf[-1] <= sum(self.takeoff.dV),
+                           self.takeoff.Vi[1:] == self.takeoff.Vf[:-1],
+                           
+                           Srunway <= mrunway*sum(self.takeoff.Sto),
 
-        constraints = [self.obstacle_climb.h_gain == Variable("h_obstacle",50,"ft"),
-                       self.climb.h_gain == Variable("h_cruise",1950,"ft"),
-                       self.climb.Sclimb == Variable("Scruiseclimb",10,"miles"),
-                       0.5*state.rho*CLstall*self.aircraft.bw.wing.planform.S*Vs**2 == self.aircraft.mass*g,
-                       Vs <= Vstall,
-                       Sto >= self.takeoff.Sto*mrunway,
-                       Sland >= self.landing.Sgr*mrunway,
-                       # Sobstacle == Srunway*(4.0/3.0),
-                       Sobstacle >= mobstacle*(self.takeoff.Sto + self.obstacle_climb.Sclimb),
-                       loading.wingl["W"] == Wcent,
-                       Wcent >= self.aircraft.mass*g,
-                       self.obstacle_climb.perf.bw_perf.C_LC == 1.05,
-                       self.climb.perf.bw_perf.C_LC == 0.95,
-                       self.climb.perf.bw_perf.P <=  self.aircraft.bw.n_prop*self.aircraft.bw.powertrain.P_m_sp_cont*self.aircraft.bw.powertrain.m,
-                       self.cruise.perf.bw_perf.P <= self.aircraft.bw.n_prop*self.aircraft.bw.powertrain.P_m_sp_cont*self.aircraft.bw.powertrain.m
-                    ]
+                           Srunway >= self.landing.Sgr*mrunway,
+                           Sobstacle == Srunway*(4.0/3.0),
+                           Sobstacle >= mobstacle*(sum(self.takeoff.Sto)+ self.obstacle_climb.Sclimb),
+                           loading.wingl["W"] == Wcent,
+                           Wcent >= self.aircraft.mass*g,
+                           self.obstacle_climb.perf.bw_perf.C_LC == 1.05,
+                           self.climb.perf.bw_perf.C_LC == 0.95,
+                           self.climb.perf.bw_perf.P <=  self.aircraft.bw.n_prop*self.aircraft.bw.powertrain.P_m_sp_cont*self.aircraft.bw.powertrain.m,
+                           self.cruise.perf.bw_perf.P <= self.aircraft.bw.n_prop*self.aircraft.bw.powertrain.P_m_sp_cont*self.aircraft.bw.powertrain.m
+                        ]
+
         if hybrid:
             constraints += [ self.takeoff.perf.gen_perf.P_fuel == self.obstacle_climb.perf.gen_perf.P_fuel,
                             self.obstacle_climb.perf.gen_perf.P_fuel == self.climb.perf.gen_perf.P_fuel,
@@ -825,11 +833,12 @@ if __name__ == "__main__":
     M.cost = M.aircraft.mass
     # M.debug()
     sol = M.localsolve("mosek")
+    # print M.program.gps[-1].result.summary()
     print sol.summary()
-    # sd = get_highestsens(M, sol, N=10)
-    # f, a = plot_chart(sd)
-    # f.savefig("sensbar.pdf", bbox_inches="tight")
-    # print sol(M.aircraft.bw.wing.planform.cave)
+    sd = get_highestsens(M, sol, N=10)
+    f, a = plot_chart(sd)
+    f.savefig("sensbar.pdf", bbox_inches="tight")
+    print sol(M.aircraft.bw.wing.planform.cave)
     writeSol(sol)
 
 def CLCurves():
@@ -981,7 +990,7 @@ def ICVsTurboshaft():
 
 def Runway():
     M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
-    runway_sweep = np.linspace(70,300,10)
+    runway_sweep = np.linspace(200,300,5)
     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")

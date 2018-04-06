@@ -1,324 +1,326 @@
 
 Cost
 ----
- 1276 [kg] 
+ 1316 [kg] 
 
 Free Variables
 --------------
              | Mission
-          Vs : 51.68                                            [kt]        power off stall speed
-    W_{cent} : 2815                                             [lbf]       center aircraft weight
+   Sobstacle : 400                                              [ft]        obstacle length
+          Vs : 51.24                                            [kt]        power off stall speed
+    W_{cent} : 2901                                             [lbf]       center aircraft weight
+          dV : 15.71                                            [m/s]       dV
 
              | Mission/Aircraft
-           d : 31.61                                            [in]        spar diam
-           m : 1276                                             [kg]        aircraft mass
+           d : 31.95                                            [in]        spar diam
+           m : 1316                                             [kg]        aircraft mass
 
              | Mission/Aircraft/Battery
-  E_capacity : 819.9                                            [Wh]        energy capacity
-           m : 62.75                                            [kg]        total mass
+  E_capacity : 1039                                             [Wh]        energy capacity
+           m : 70.41                                            [kg]        total mass
 
              | Mission/Aircraft/BlownWing
-           m : 127.2                                            [kg]        mass
+           m : 168.7                                            [kg]        mass
 
              | Mission/Aircraft/BlownWing/Powertrain
- P_m_sp_cont : 5269                                             [W/kg]      continuous motor specific power
-  P_m_sp_max : 6619                                             [W/kg]      maximum motor specific power
-        Pmax : 31.79                                            [kW]        maximum power
-      RPMmax : 5212                                             [rpm]       max rpm
-         eta : 0.9253                                                       efficiency
-           m : 4.803                                            [kg]        powertrain mass
-           r : 0.3142                                           [m]         propeller radius
+ P_m_sp_cont : 5468                                             [W/kg]      continuous motor specific power
+  P_m_sp_max : 6896                                             [W/kg]      maximum motor specific power
+        Pmax : 60.84                                            [kW]        maximum power
+      RPMmax : 4613                                             [rpm]       max rpm
+         eta : 0.9328                                                       efficiency
+           m : 8.822                                            [kg]        powertrain mass
+           r : 0.3427                                           [m]         propeller radius
 
              | Mission/Aircraft/BlownWing/Wing
-           W : 174.6                                            [lbf]       wing weight
+           W : 177.4                                            [lbf]       wing weight
 
              | Mission/Aircraft/BlownWing/Wing/CapSpar
-           W : 21.12                                            [lbf]       spar weight
-           I : [ 3.2e-06   3.2e-06   3.2e-06   3.2e-06  ... ]   [m**4]      spar x moment of inertia
-          Sy : [ 3.97e-05  3.38e-05  2.84e-05  2.35e-05 ... ]   [m**3]      section modulus
-          dm : [ 0.428     0.428     0.428     0.428    ... ]   [kg]        segment spar mass
-         hin : [ 5.92      5.92      5.92      5.92     ... ]   [in]        height between caps
-           t : [ 0.207     0.207     0.207     0.207    ... ]   [in]        spar cap thickness
+           W : 17.4                                             [lbf]       spar weight
+           I : [ 3.45e-06  3.45e-06  3.45e-06  2.92e-06 ... ]   [m**4]      spar x moment of inertia
+          Sy : [ 3.85e-05  3.28e-05  2.76e-05  2.28e-05 ... ]   [m**3]      section modulus
+          dm : [ 0.364     0.364     0.364     0.355    ... ]   [kg]        segment spar mass
+         hin : [ 6.62      6.62      6.62      6.08     ... ]   [in]        height between caps
+           t : [ 0.218     0.218     0.218     0.218    ... ]   [in]        spar cap thickness
       tshear : [ 0.012     0.012     0.012     0.012    ... ]   [in]        shear web thickness
-           w : [ 2.18      2.18      2.18      2.18     ... ]   [in]        spar width
+           w : [ 1.79      1.79      1.79      1.79     ... ]   [in]        spar width
 
              | Mission/Aircraft/BlownWing/Wing/Planform
-          AR : 6.433                                                        aspect ratio
-           S : 124.5                                            [ft**2]     surface area
-           b : 28.3                                             [ft]        span
-        cmac : 4.399                                            [ft]        mean aerodynamic chord
-       croot : 4.399                                            [ft]        root chord
-        cave : [ 4.4       4.4       4.4       4.4      ... ]   [ft]        mid section chord
+          AR : 5.442                                                        aspect ratio
+           S : 130.5                                            [ft**2]     surface area
+           b : 26.65                                            [ft]        span
+        cmac : 4.898                                            [ft]        mean aerodynamic chord
+       croot : 4.898                                            [ft]        root chord
+        cave : [ 4.9       4.9       4.9       4.9      ... ]   [ft]        mid section chord
 
              | Mission/Aircraft/BlownWing/Wing/WingSkin
-           W : 124.4                                            [lbf]       wing skin weight
+           W : 130.4                                            [lbf]       wing skin weight
            t : 0.06                                             [in]        wing skin thickness
 
              | Mission/Aircraft/Fuselage
            f : 2.333                                                        fineness ratio
-           m : 342.2                                            [kg]        mass of fuselage
+           m : 358                                              [kg]        mass of fuselage
 
              | Mission/Aircraft/GenAndIC
-    P_g_cont : 1.413e+05                                        [W]         genandic cont. power
- P_g_sp_cont : 6106                                             [W/kg]      genandic spec power (cont)
-   P_ic_cont : 1.442e+05                                        [W]         piston continous power
-           m : 74.64                                            [kg]        total mass
-         m_g : 23.14                                            [kg]        genandic mass
-        m_ic : 51.5                                             [kg]        piston mass
+    P_g_cont : 1.471e+05                                        [W]         genandic cont. power
+ P_g_sp_cont : 6143                                             [W/kg]      genandic spec power (cont)
+   P_ic_cont : 1.501e+05                                        [W]         piston continous power
+           m : 77.56                                            [kg]        total mass
+         m_g : 23.95                                            [kg]        genandic mass
+        m_ic : 53.61                                            [kg]        piston mass
 
              | Mission/Aircraft/HorizontalTail
-           W : 30.24                                            [lbf]       wing weight
-          lh : 18.25                                            [ft]        horizontal tail moment arm
+           W : 37.97                                            [lbf]       wing weight
+          lh : 17.89                                            [ft]        horizontal tail moment arm
 
              | Mission/Aircraft/HorizontalTail/Planform.1
-           S : 51.01                                            [ft**2]     surface area
-           b : 14.28                                            [ft]        span
-        cmac : 3.586                                            [ft]        mean aerodynamic chord
-       croot : 3.968                                            [ft]        root chord
-        cave : [ 3.77      3.37     ]                           [ft]        mid section chord
+           S : 60.74                                            [ft**2]     surface area
+           b : 15.59                                            [ft]        span
+        cmac : 3.913                                            [ft]        mean aerodynamic chord
+       croot : 4.33                                             [ft]        root chord
+        cave : [ 4.11      3.68     ]                           [ft]        mid section chord
 
              | Mission/Aircraft/HorizontalTail/WingCore
-           W : 15.01                                            [lbf]       wing core weight
+           W : 19.5                                             [lbf]       wing core weight
 
              | Mission/Aircraft/HorizontalTail/WingSkin.1
-           W : 10.19                                            [lbf]       wing skin weight
+           W : 12.14                                            [lbf]       wing skin weight
            t : 0.012                                            [in]        wing skin thickness
 
              | Mission/Aircraft/PoweredWheel
-      RPMmax : 4242                                             [rpm]       maximum RPM of motor
-  gear_ratio : 2.786                                                        gear ratio of powered wheel
-           m : 13.37                                            [kg]        mass of powered wheel motor
-     tau_max : 164.4                                            [N*m]       torque of the
+      RPMmax : 6347                                             [rpm]       maximum RPM of motor
+  gear_ratio : 4.67                                                         gear ratio of powered wheel
+           m : 1.803                                            [kg]        mass of powered wheel motor
+     tau_max : 13.53                                            [N*m]       torque of the
 
              | Mission/Aircraft/TailBoom
-           S : 183.9                                            [ft**2]     tail boom surface area
-           W : 28.59                                            [lbf]       spar weight
+           S : 185.9                                            [ft**2]     tail boom surface area
+           W : 27.86                                            [lbf]       spar weight
            b : 44.44                                            [ft]        twice tail boom length
            l : 22.22                                            [ft]        tail boom length
-           I : [ 0.000257  0.000193  0.000129  6.43e-05 ]       [m**4]      moment of inertia
-          Sy : [ 0.00064   0.00048   0.00032   0.00016  ]       [m**3]      section modulus
-           d : [ 31.6      31.6      31.6      31.6     ]       [in]        diameter
-          dm : [ 5.18      3.89      2.59      1.3      ]       [kg]        segment mass
-           t : [ 0.0498    0.0373    0.0249    0.0124   ]       [in]        thickness
+           I : [ 0.000256  0.000192  0.000128  6.4e-05  ]       [m**4]      moment of inertia
+          Sy : [ 0.000631  0.000473  0.000315  0.000158 ]       [m**3]      section modulus
+           d : [ 32        32        32        32       ]       [in]        diameter
+          dm : [ 5.05      3.79      2.53      1.26     ]       [kg]        segment mass
+           t : [ 0.048     0.036     0.024     0.012    ]       [in]        thickness
 
              | Mission/Aircraft/Tank
-           E : 6.984e+05                                        [Wh]        fuel energy
-      V_fuel : 19.31                                            [gal]       fuel volume
-           m : 140                                              [lb]        total mass
-      m_fuel : 129.4                                            [lb]        mass of fuel
-      m_tank : 4.818                                            [kg]        fuel tank mass
+           E : 7.354e+05                                        [Wh]        fuel energy
+      V_fuel : 20.34                                            [gal]       fuel volume
+           m : 147.4                                            [lb]        total mass
+      m_fuel : 136.2                                            [lb]        mass of fuel
+      m_tank : 5.073                                            [kg]        fuel tank mass
 
              | Mission/Aircraft/VerticalTail
-           W : 56.36                                            [lbf]       wing weight
-          lv : 17.19                                            [ft]        vertical tail moment arm
+           W : 55.25                                            [lbf]       wing weight
+          lv : 17.23                                            [ft]        vertical tail moment arm
 
              | Mission/Aircraft/VerticalTail/Planform.2
-           S : 81.98                                            [ft**2]     surface area
-           b : 18.11                                            [ft]        span
-        cmac : 4.546                                            [ft]        mean aerodynamic chord
-       croot : 5.03                                             [ft]        root chord
-        cave : [ 4.78      4.28     ]                           [ft]        mid section chord
+           S : 80.77                                            [ft**2]     surface area
+           b : 17.97                                            [ft]        span
+        cmac : 4.512                                            [ft]        mean aerodynamic chord
+       croot : 4.993                                            [ft]        root chord
+        cave : [ 4.74      4.24     ]                           [ft]        mid section chord
 
              | Mission/Aircraft/VerticalTail/WingCore.1
-           W : 30.58                                            [lbf]       wing core weight
+           W : 29.9                                             [lbf]       wing core weight
 
              | Mission/Aircraft/VerticalTail/WingSkin.2
-           W : 16.38                                            [lbf]       wing skin weight
+           W : 16.14                                            [lbf]       wing skin weight
            t : 0.012                                            [in]        wing skin thickness
 
              | Mission/AircraftLoading/SparLoading
-           W : 2815                                             [lbf]       loading weight
-          Mr : [ 6.75e+04  5.75e+04  4.83e+04  3.99e+04 ... ]   [N*m]       wing section root moment
+           W : 2901                                             [lbf]       loading weight
+          Mr : [ 6.55e+04  5.58e+04  4.69e+04  3.88e+04 ... ]   [N*m]       wing section root moment
 
              | Mission/AircraftLoading/SparLoading/Beam.2
-    \bar{EI} : [ 0.752     0.752     0.752     0.752    ... ]               normalized YM and moment of inertia
+    \bar{EI} : [ 0.889     0.889     0.889     0.751    ... ]               normalized YM and moment of inertia
      \bar{M} : [ 0.5       0.426     0.358     0.296    ... ]               normalized moment
      \bar{S} : [ 1         0.923     0.846     0.769    ... ]               normalized shear
-\bar{\delta} : [ 1e-10     0.00182   0.00701   0.015    ... ]               normalized displacement
-      \theta : [ 1e-10     0.0474    0.0875    0.121    ... ]               deflection slope
+\bar{\delta} : [ 1e-10     0.00154   0.00593   0.0127   ... ]               normalized displacement
+      \theta : [ 1e-10     0.0401    0.074     0.102    ... ]               deflection slope
           dx : [ 0.0769    0.0769    0.0769    0.0769   ... ]               normalized length of element
 
              | Mission/AircraftLoading/TailBoomBending
-           F : 2.353e+04                                        [N]         tail force
-          th : 0.1105                                                       tail boom deflection angle
-          Mr : [ 2.56e+05  1.92e+05  1.28e+05  6.4e+04  ]       [N*m]       section root moment
+           F : 2.801e+04                                        [N]         tail force
+          th : 0.1129                                                       tail boom deflection angle
+          Mr : [ 2.52e+05  1.89e+05  1.26e+05  6.31e+04 ]       [N*m]       section root moment
 
              | Mission/AircraftLoading/TailBoomBending.1
-           F : 3.781e+04                                        [N]         tail force
-          th : 0.118                                                        tail boom deflection angle
-          Mr : [ 2.56e+05  1.92e+05  1.28e+05  6.4e+04  ]       [N*m]       section root moment
+           F : 3.725e+04                                        [N]         tail force
+          th : 0.1175                                                       tail boom deflection angle
+          Mr : [ 2.52e+05  1.89e+05  1.26e+05  6.31e+04 ]       [N*m]       section root moment
 
              | Mission/AircraftLoading/TailBoomBending.1/Beam.1
-    \bar{EI} : [ 11.1      8.34      5.56      2.78     ]                   normalized YM and moment of inertia
+    \bar{EI} : [ 11.2      8.43      5.62      2.81     ]                   normalized YM and moment of inertia
      \bar{M} : [ 1         0.75      0.5       0.25     ... ]               normalized moment
-\bar{\delta} : [ 1e-10     0.00422   0.0183    0.0405   ... ]               normalized displacement
-      \theta : [ 1e-10     0.0227    0.0488    0.0786   ... ]               deflection slope
+\bar{\delta} : [ 1e-10     0.00406   0.018     0.0403   ... ]               normalized displacement
+      \theta : [ 1e-10     0.0225    0.0485    0.0783   ... ]               deflection slope
           dx : [ 0.25      0.25      0.25      0.25     ]                   normalized length of element
 
              | Mission/AircraftLoading/TailBoomBending/Beam
-    \bar{EI} : [ 17.9      13.4      8.93      4.47     ]                   normalized YM and moment of inertia
-     \bar{M} : [ 1.36      0.904     0.569     0.268    ... ]               normalized moment
-\bar{\delta} : [ 1e-10     0.00398   0.018     0.0401   ... ]               normalized displacement
-      \theta : [ 1e-10     0.0192    0.0415    0.0685   ... ]               deflection slope
+    \bar{EI} : [ 14.9      11.2      7.47      3.73     ]                   normalized YM and moment of inertia
+     \bar{M} : [ 1.22      0.854     0.548     0.263    ... ]               normalized moment
+\bar{\delta} : [ 1e-10     0.00392   0.0179    0.0401   ... ]               normalized displacement
+      \theta : [ 1e-10     0.0206    0.0444    0.0725   ... ]               deflection slope
           dx : [ 0.25      0.25      0.25      0.25     ]                   normalized length of element
 
              | Mission/Climb
-      Sclimb : 71.43                                            [ft]        distance covered in climb
-           W : 1.252e+04                                        [N]         aircraft weight
-       h_dot : 25.41                                            [m/s]       climb rate
+      Sclimb : 53.4                                             [ft]        distance covered in climb
+           W : 1.291e+04                                        [N]         aircraft weight
+       h_dot : 32.49                                            [m/s]       climb rate
       h_gain : 50                                               [ft]        height gained in climb
-           t : 0.5999                                           [s]         time of climb
+           t : 0.4691                                           [s]         time of climb
 
              | Mission/Climb.1
       Sclimb : 5.28e+04                                         [ft]        distance covered in climb
-           W : 1.252e+04                                        [N]         aircraft weight
-       h_dot : 2.18                                             [m/s]       climb rate
+           W : 1.291e+04                                        [N]         aircraft weight
+       h_dot : 2.149                                            [m/s]       climb rate
       h_gain : 1950                                             [ft]        height gained in climb
-           t : 272.7                                            [s]         time of climb
+           t : 276.6                                            [s]         time of climb
 
              | Mission/Climb.1/AircraftP.2
-          CD : 0.0609                                                       total CD, referenced to wing area
-           P : 116.4                                            [kW]        total power draw
-    P_charge : 10.82                                            [kW]        battery charging power
+          CD : 0.06274                                                      total CD, referenced to wing area
+           P : 118.9                                            [kW]        total power draw
+    P_charge : 13.52                                            [kW]        battery charging power
 
              | Mission/Climb.1/AircraftP.2/BatteryP.2
            P : 1e-07                                            [kW]        battery power draw
 
              | Mission/Climb.1/AircraftP.2/BlownWingP.2
-      A_disk : 3.102                                            [m**2]      area of prop disk
-         C_D : 0.025                                                        total drag coefficient
-        C_Di : 0.01593                                                      induced drag coefficient
-        C_Dp : 0.009077                                                     profile drag
-         C_E : 0.5003                                                       energy momentum coefficient
-         C_J : 0.9033                                                       jet momentum coefficient
-         C_L : 0.5075                                                       total lift coefficient
+      A_disk : 3.689                                            [m**2]      area of prop disk
+         C_D : 0.02817                                                      total drag coefficient
+        C_Di : 0.01926                                                      induced drag coefficient
+        C_Dp : 0.00891                                                      profile drag
+         C_E : 0.4777                                                       energy momentum coefficient
+         C_J : 0.8699                                                       jet momentum coefficient
+         C_L : 0.5133                                                       total lift coefficient
         C_LC : 0.95                                                         lift coefficient due to circulation
-         C_Q : 0.4077                                                       mass momentum coefficient
-         C_T : 0.0609                                                       thrust coefficient
-         C_f : 0.003663                                                     friction coefficient
-     E_prime : 8.447e+04                                        [J/m/s]     energy flow per unit span
-     J_prime : 2584                                             [kg/s**2]   momentum flow per unit span
-           P : 116.1                                            [kW]        power draw
-          Re : 5.419e+06                                                    Reynolds number
-           T : 1503                                             [N]         propeller thrust
-           h : 0.4936                                           [m]         Wake height
-  m_dotprime : 39.53                                            [kg/m/s]    jet mass flow per unit span
-         u_j : 127.1                                            [kt]        velocity in jet flow
+         C_Q : 0.396                                                        mass momentum coefficient
+         C_T : 0.06274                                                      thrust coefficient
+         C_f : 0.003596                                                     friction coefficient
+     E_prime : 8.602e+04                                        [J/m/s]     energy flow per unit span
+     J_prime : 2692                                             [kg/s**2]   momentum flow per unit span
+           P : 118.6                                            [kW]        power draw
+          Re : 5.947e+06                                                    Reynolds number
+           T : 1577                                             [N]         propeller thrust
+           h : 0.5383                                           [m]         Wake height
+  m_dotprime : 42.13                                            [kg/m/s]    jet mass flow per unit span
+         u_j : 124.2                                            [kt]        velocity in jet flow
 
              | Mission/Climb.1/AircraftP.2/FuselageP.2
-         C_f : 0.003014                                                     friction coefficient
-          Cd : 0.01727                                                      drag coefficient
+         C_f : 0.003023                                                     friction coefficient
+          Cd : 0.01732                                                      drag coefficient
           FF : 5.729                                                        form factor
-          Re : 1.437e+07                                                    Reynolds number
+          Re : 1.417e+07                                                    Reynolds number
 
              | Mission/Climb.1/AircraftP.2/TailAero.4
-          Cd : 0.003091                                                     drag coefficient
-          Re : 4.399e+06                                                    Reynolds number
+          Cd : 0.00305                                                      drag coefficient
+          Re : 4.732e+06                                                    Reynolds number
 
              | Mission/Climb.1/AircraftP.2/TailAero.5
-          Cd : 0.00296                                                      drag coefficient
-          Re : 5.576e+06                                                    Reynolds number
+          Cd : 0.002972                                                     drag coefficient
+          Re : 5.456e+06                                                    Reynolds number
 
              | Mission/Climb.1/AircraftP.2/TailBoomAero.2
-          Cf : 0.002672                                                     tail boom skin friction coefficient
-          Re : 2.737e+07                                                    tail boom reynolds number
+          Cf : 0.002683                                                     tail boom skin friction coefficient
+          Re : 2.698e+07                                                    tail boom reynolds number
 
              | Mission/Climb.1/AircraftP.2/genandicP.2
-      P_fuel : 563.3                                            [kW]        power coming in from fuel flow
-         P_g : 141.3                                            [kW]        generator power
-        P_ic : 144.2                                            [kW]        internal combustion power
-       P_out : 127.2                                            [kW]        output from generator controller after efficiency
+      P_fuel : 586.4                                            [kW]        power coming in from fuel flow
+         P_g : 147.1                                            [kW]        generator power
+        P_ic : 150.1                                            [kW]        internal combustion power
+       P_out : 132.4                                            [kW]        output from generator controller after efficiency
 
              | Mission/Climb.1/FlightState.2
-           V : 114.7                                            [kt]        speed
+           V : 113.1                                            [kt]        speed
 
              | Mission/Climb/AircraftP.1
-          CD : 0.1611                                                       total CD, referenced to wing area
-           P : 390.7                                            [kW]        total power draw
+          CD : 0.2007                                                       total CD, referenced to wing area
+           P : 428.1                                            [kW]        total power draw
 
              | Mission/Climb/AircraftP.1/BatteryP.1
-           P : 263.6                                            [kW]        battery power draw
+           P : 295.7                                            [kW]        battery power draw
 
              | Mission/Climb/AircraftP.1/BlownWingP.1
-      A_disk : 3.102                                            [m**2]      area of prop disk
-         C_D : 0.1214                                                       total drag coefficient
-        C_Di : 0.1114                                                       induced drag coefficient
-        C_Dp : 0.01                                                         profile drag
-         C_E : 1.962                                                        energy momentum coefficient
-         C_J : 2.247                                                        jet momentum coefficient
-         C_L : 1.342                                                        total lift coefficient
+      A_disk : 3.689                                            [m**2]      area of prop disk
+         C_D : 0.1622                                                       total drag coefficient
+        C_Di : 0.1523                                                       induced drag coefficient
+        C_Dp : 0.00988                                                      profile drag
+         C_E : 2.413                                                        energy momentum coefficient
+         C_J : 2.561                                                        jet momentum coefficient
+         C_L : 1.443                                                        total lift coefficient
         C_LC : 1.05                                                         lift coefficient due to circulation
-         C_Q : 0.643                                                        mass momentum coefficient
-         C_T : 0.5502                                                       thrust coefficient
-         C_f : 0.004037                                                     friction coefficient
-     E_prime : 7.705e+04                                        [J/m/s]     energy flow per unit span
-     J_prime : 2430                                             [kg/s**2]   momentum flow per unit span
-           P : 317.9                                            [kW]        power draw
-          Re : 3.332e+06                                                    Reynolds number
-           T : 5134                                             [N]         propeller thrust
-           h : 0.4936                                           [m]         Wake height
-  m_dotprime : 38.33                                            [kg/m/s]    jet mass flow per unit span
-         u_j : 123.2                                            [kt]        velocity in jet flow
+         C_Q : 0.6795                                                       mass momentum coefficient
+         C_T : 0.776                                                        thrust coefficient
+         C_f : 0.003987                                                     friction coefficient
+     E_prime : 9.215e+04                                        [J/m/s]     energy flow per unit span
+     J_prime : 2819                                             [kg/s**2]   momentum flow per unit span
+           P : 427.9                                            [kW]        power draw
+          Re : 3.547e+06                                                    Reynolds number
+           T : 6939                                             [N]         propeller thrust
+           h : 0.5383                                           [m]         Wake height
+  m_dotprime : 43.11                                            [kg/m/s]    jet mass flow per unit span
+         u_j : 127.1                                            [kt]        velocity in jet flow
 
              | Mission/Climb/AircraftP.1/FuselageP.1
-         C_f : 0.003322                                                     friction coefficient
-          Cd : 0.01903                                                      drag coefficient
+         C_f : 0.003352                                                     friction coefficient
+          Cd : 0.0192                                                       drag coefficient
           FF : 5.729                                                        form factor
-          Re : 8.837e+06                                                    Reynolds number
+          Re : 8.449e+06                                                    Reynolds number
 
              | Mission/Climb/AircraftP.1/TailAero.2
-          Cd : 0.003376                                                     drag coefficient
-          Re : 2.705e+06                                                    Reynolds number
+          Cd : 0.003351                                                     drag coefficient
+          Re : 2.822e+06                                                    Reynolds number
 
              | Mission/Climb/AircraftP.1/TailAero.3
-          Cd : 0.003234                                                     drag coefficient
-          Re : 3.429e+06                                                    Reynolds number
+          Cd : 0.003265                                                     drag coefficient
+          Re : 3.254e+06                                                    Reynolds number
 
              | Mission/Climb/AircraftP.1/TailBoomAero.1
-          Cf : 0.003091                                                     tail boom skin friction coefficient
-          Re : 1.683e+07                                                    tail boom reynolds number
+          Cf : 0.003133                                                     tail boom skin friction coefficient
+          Re : 1.609e+07                                                    tail boom reynolds number
 
              | Mission/Climb/AircraftP.1/genandicP.1
-      P_fuel : 563.3                                            [kW]        power coming in from fuel flow
-         P_g : 141.3                                            [kW]        generator power
-        P_ic : 144.2                                            [kW]        internal combustion power
-       P_out : 127.2                                            [kW]        output from generator controller after efficiency
+      P_fuel : 586.4                                            [kW]        power coming in from fuel flow
+         P_g : 147.1                                            [kW]        generator power
+        P_ic : 150.1                                            [kW]        internal combustion power
+       P_out : 132.4                                            [kW]        output from generator controller after efficiency
 
              | Mission/Climb/FlightState.1
-           V : 70.55                                            [kt]        speed
+           V : 67.45                                            [kt]        speed
 
              | Mission/Cruise
            R : 100                                              [nmi]       Range flown in flight segment
            t : 50                                               [min]       Time to fly flight segment
 
              | Mission/Cruise/AircraftP.3
-          CD : 0.05786                                                      total CD, referenced to wing area
-           P : 126.2                                            [kW]        total power draw
-    P_charge : 0.9839                                           [kW]        battery charging power
+          CD : 0.05814                                                      total CD, referenced to wing area
+           P : 131.2                                            [kW]        total power draw
+    P_charge : 1.247                                            [kW]        battery charging power
 
              | Mission/Cruise/AircraftP.3/BatteryP.3
            P : 1e-07                                            [kW]        battery power draw
 
              | Mission/Cruise/AircraftP.3/BlownWingP.3
-      A_disk : 3.102                                            [m**2]      area of prop disk
-         C_D : 0.0223                                                       total drag coefficient
-        C_Di : 0.0133                                                       induced drag coefficient
-        C_Dp : 0.008996                                                     profile drag
-         C_E : 0.4934                                                       energy momentum coefficient
-         C_J : 0.895                                                        jet momentum coefficient
-         C_L : 0.4638                                                       total lift coefficient
+      A_disk : 3.689                                            [m**2]      area of prop disk
+         C_D : 0.024                                                        total drag coefficient
+        C_Di : 0.0152                                                       induced drag coefficient
+        C_Dp : 0.008805                                                     profile drag
+         C_E : 0.4688                                                       energy momentum coefficient
+         C_J : 0.859                                                        jet momentum coefficient
+         C_L : 0.4559                                                       total lift coefficient
         C_LC : 0.8                                                          lift coefficient due to circulation
-         C_Q : 0.4058                                                       mass momentum coefficient
-         C_T : 0.05786                                                      thrust coefficient
-         C_f : 0.00363                                                      friction coefficient
-     E_prime : 9.534e+04                                        [J/m/s]     energy flow per unit span
-     J_prime : 2801                                             [kg/s**2]   momentum flow per unit span
-           P : 125.9                                            [kW]        power draw
-          Re : 5.668e+06                                                    Reynolds number
-           T : 1562                                             [N]         propeller thrust
-           h : 0.4936                                           [m]         Wake height
-  m_dotprime : 41.15                                            [kg/m/s]    jet mass flow per unit span
-         u_j : 132.3                                            [kt]        velocity in jet flow
+         C_Q : 0.3936                                                       mass momentum coefficient
+         C_T : 0.05814                                                      thrust coefficient
+         C_f : 0.003553                                                     friction coefficient
+     E_prime : 1.008e+05                                        [J/m/s]     energy flow per unit span
+     J_prime : 2993                                             [kg/s**2]   momentum flow per unit span
+           P : 130.9                                            [kW]        power draw
+          Re : 6.31e+06                                                     Reynolds number
+           T : 1646                                             [N]         propeller thrust
+           h : 0.5383                                           [m]         Wake height
+  m_dotprime : 44.43                                            [kg/m/s]    jet mass flow per unit span
+         u_j : 131                                              [kt]        velocity in jet flow
 
              | Mission/Cruise/AircraftP.3/FuselageP.3
          C_f : 0.002987                                                     friction coefficient
@@ -327,230 +329,235 @@ Free Variables
           Re : 1.503e+07                                                    Reynolds number
 
              | Mission/Cruise/AircraftP.3/TailAero.6
-          Cd : 0.003065                                                     drag coefficient
-          Re : 4.601e+06                                                    Reynolds number
+          Cd : 0.003017                                                     drag coefficient
+          Re : 5.021e+06                                                    Reynolds number
 
              | Mission/Cruise/AircraftP.3/TailAero.7
-          Cd : 0.002936                                                     drag coefficient
-          Re : 5.833e+06                                                    Reynolds number
+          Cd : 0.00294                                                      drag coefficient
+          Re : 5.79e+06                                                     Reynolds number
 
              | Mission/Cruise/AircraftP.3/TailBoomAero.3
           Cf : 0.002636                                                     tail boom skin friction coefficient
           Re : 2.863e+07                                                    tail boom reynolds number
 
              | Mission/Cruise/AircraftP.3/genandicP.3
-      P_fuel : 563.3                                            [kW]        power coming in from fuel flow
-         P_g : 141.3                                            [kW]        generator power
-        P_ic : 144.2                                            [kW]        internal combustion power
-       P_out : 127.2                                            [kW]        output from generator controller after efficiency
+      P_fuel : 586.4                                            [kW]        power coming in from fuel flow
+         P_g : 147.1                                            [kW]        generator power
+        P_ic : 150.1                                            [kW]        internal combustion power
+       P_out : 132.4                                            [kW]        output from generator controller after efficiency
 
              | Mission/Cruise/FlightState.3
            V : 120                                              [kt]        speed
          qne : 4964                                             [kg/m/s**2] never exceed dynamic pressure
 
              | Mission/Landing
-         Sgr : 96.58                                            [ft]        landing distance
-          Vs : 27.83                                            [kt]        stall velocity
-           W : 1.252e+04                                        [N]         aircraft weight
-         Xgr : 96.58                                            [ft]        landing ground roll
-         Xla : 96.58                                            [ft]        total landing distance
-           t : 6.852                                            [s]         time of landing maneuver
+         Sgr : 66.59                                            [ft]        landing distance
+          Vs : 23.11                                            [kt]        stall velocity
+           W : 1.291e+04                                        [N]         aircraft weight
+         Xgr : 66.59                                            [ft]        landing ground roll
+         Xla : 66.59                                            [ft]        total landing distance
+           t : 5.69                                             [s]         time of landing maneuver
 
              | Mission/Landing/AircraftP.5
-          CD : 4.656                                                        total CD, referenced to wing area
-           P : 566.4                                            [kW]        total power draw
+          CD : 11.1                                                         total CD, referenced to wing area
+           P : 625.3                                            [kW]        total power draw
 
              | Mission/Landing/AircraftP.5/BatteryP.5
-           P : 439.3                                            [kW]        battery power draw
+           P : 492.9                                            [kW]        battery power draw
 
              | Mission/Landing/AircraftP.5/BlownWingP.5
-      A_disk : 3.102                                            [m**2]      area of prop disk
-         C_D : 4.608                                                        total drag coefficient
-        C_Di : 4.596                                                        induced drag coefficient
-        C_Dp : 0.01205                                                      profile drag
-         C_E : 28.96                                                        energy momentum coefficient
-         C_J : 13.52                                                        jet momentum coefficient
-         C_L : 8.62                                                         total lift coefficient
+      A_disk : 3.689                                            [m**2]      area of prop disk
+         C_D : 11.05                                                        total drag coefficient
+        C_Di : 11.04                                                        induced drag coefficient
+        C_Dp : 0.01224                                                      profile drag
+         C_E : 82.78                                                        energy momentum coefficient
+         C_J : 27.04                                                        jet momentum coefficient
+         C_L : 12.29                                                        total lift coefficient
         C_LC : 6.78                                                         lift coefficient due to circulation
-         C_Q : 1.577                                                        mass momentum coefficient
-         C_T : 4.656                                                        thrust coefficient
-         C_f : 0.004862                                                     friction coefficient
-     E_prime : 6.985e+04                                        [J/m/s]     energy flow per unit span
-     J_prime : 2277                                             [kg/s**2]   momentum flow per unit span
-           P : 317.9                                            [kW]        power draw
-          Re : 1.315e+06                                                    Reynolds number
-           T : 6764                                             [N]         propeller thrust
-           h : 0.4936                                           [m]         Wake height
-  m_dotprime : 37.1                                             [kg/m/s]    jet mass flow per unit span
-         u_j : 119.3                                            [kt]        velocity in jet flow
+         C_Q : 2.208                                                        mass momentum coefficient
+         C_T : 11.1                                                         thrust coefficient
+         C_f : 0.004939                                                     friction coefficient
+     E_prime : 1.272e+05                                        [J/m/s]     energy flow per unit span
+     J_prime : 3495                                             [kg/s**2]   momentum flow per unit span
+           P : 608.4                                            [kW]        power draw
+          Re : 1.215e+06                                                    Reynolds number
+           T : 1.166e+04                                        [N]         propeller thrust
+           h : 0.5383                                           [m]         Wake height
+  m_dotprime : 48.01                                            [kg/m/s]    jet mass flow per unit span
+         u_j : 141.5                                            [kt]        velocity in jet flow
 
              | Mission/Landing/AircraftP.5/FuselageP.5
-         C_f : 0.004001                                                     friction coefficient
-          Cd : 0.02292                                                      drag coefficient
+         C_f : 0.004152                                                     friction coefficient
+          Cd : 0.02379                                                      drag coefficient
           FF : 5.729                                                        form factor
-          Re : 3.487e+06                                                    Reynolds number
+          Re : 2.895e+06                                                    Reynolds number
 
              | Mission/Landing/AircraftP.5/TailAero.10
-          Cd : 0.004                                                        drag coefficient
-          Re : 1.067e+06                                                    Reynolds number
+          Cd : 0.004073                                                     drag coefficient
+          Re : 9.671e+05                                                    Reynolds number
 
              | Mission/Landing/AircraftP.5/TailAero.11
-          Cd : 0.003831                                                     drag coefficient
-          Re : 1.353e+06                                                    Reynolds number
+          Cd : 0.003968                                                     drag coefficient
+          Re : 1.115e+06                                                    Reynolds number
 
              | Mission/Landing/AircraftP.5/TailBoomAero.5
-          Cf : 0.004086                                                     tail boom skin friction coefficient
-          Re : 6.641e+06                                                    tail boom reynolds number
+          Cf : 0.004321                                                     tail boom skin friction coefficient
+          Re : 5.515e+06                                                    tail boom reynolds number
 
              | Mission/Landing/AircraftP.5/genandicP.5
-      P_fuel : 563.3                                            [kW]        power coming in from fuel flow
-         P_g : 141.3                                            [kW]        generator power
-        P_ic : 144.2                                            [kW]        internal combustion power
-       P_out : 127.2                                            [kW]        output from generator controller after efficiency
+      P_fuel : 586.4                                            [kW]        power coming in from fuel flow
+         P_g : 147.1                                            [kW]        generator power
+        P_ic : 150.1                                            [kW]        internal combustion power
+       P_out : 132.4                                            [kW]        output from generator controller after efficiency
 
              | Mission/Landing/FlightState.5
-           V : 27.83                                            [kt]        speed
+           V : 23.11                                            [kt]        speed
          qne : 4964                                             [kg/m/s**2] never exceed dynamic pressure
 
              | Mission/Reserve/AircraftP.4
-          CD : 0.09776                                                      total CD, referenced to wing area
-           P : 81.5                                             [kW]        total power draw
-    P_charge : 1.64                                             [kW]        battery charging power
+          CD : 0.1072                                                       total CD, referenced to wing area
+           P : 88.22                                            [kW]        total power draw
+    P_charge : 2.078                                            [kW]        battery charging power
 
              | Mission/Reserve/AircraftP.4/BatteryP.4
            P : 1e-07                                            [kW]        battery power draw
 
              | Mission/Reserve/AircraftP.4/BlownWingP.4
-      A_disk : 3.102                                            [m**2]      area of prop disk
-         C_D : 0.05964                                                      total drag coefficient
-        C_Di : 0.05003                                                      induced drag coefficient
-        C_Dp : 0.009612                                                     profile drag
-         C_E : 0.5867                                                       energy momentum coefficient
-         C_J : 1.005                                                        jet momentum coefficient
-         C_L : 0.8994                                                       total lift coefficient
+      A_disk : 3.689                                            [m**2]      area of prop disk
+         C_D : 0.07053                                                      total drag coefficient
+        C_Di : 0.06109                                                      induced drag coefficient
+        C_Dp : 0.009439                                                     profile drag
+         C_E : 0.5672                                                       energy momentum coefficient
+         C_J : 0.9754                                                       jet momentum coefficient
+         C_L : 0.9141                                                       total lift coefficient
         C_LC : 0.8                                                          lift coefficient due to circulation
-         C_Q : 0.43                                                         mass momentum coefficient
-         C_T : 0.09776                                                      thrust coefficient
-         C_f : 0.003879                                                     friction coefficient
-     E_prime : 4.198e+04                                        [J/m/s]     energy flow per unit span
-     J_prime : 1621                                             [kg/s**2]   momentum flow per unit span
-           P : 81.25                                            [kW]        power draw
-          Re : 4.07e+06                                                     Reynolds number
-           T : 1361                                             [N]         propeller thrust
-           h : 0.4936                                           [m]         Wake height
-  m_dotprime : 31.31                                            [kg/m/s]    jet mass flow per unit span
-         u_j : 100.7                                            [kt]        velocity in jet flow
+         C_Q : 0.4194                                                       mass momentum coefficient
+         C_T : 0.1072                                                       thrust coefficient
+         C_f : 0.003809                                                     friction coefficient
+     E_prime : 4.298e+04                                        [J/m/s]     energy flow per unit span
+     J_prime : 1695                                             [kg/s**2]   momentum flow per unit span
+           P : 87.97                                            [kW]        power draw
+          Re : 4.456e+06                                                    Reynolds number
+           T : 1514                                             [N]         propeller thrust
+           h : 0.5383                                           [m]         Wake height
+  m_dotprime : 33.43                                            [kg/m/s]    jet mass flow per unit span
+         u_j : 98.56                                            [kt]        velocity in jet flow
 
              | Mission/Reserve/AircraftP.4/FuselageP.4
-         C_f : 0.003191                                                     friction coefficient
-          Cd : 0.01828                                                      drag coefficient
+         C_f : 0.003202                                                     friction coefficient
+          Cd : 0.01834                                                      drag coefficient
           FF : 5.729                                                        form factor
-          Re : 1.079e+07                                                    Reynolds number
+          Re : 1.062e+07                                                    Reynolds number
 
              | Mission/Reserve/AircraftP.4/TailAero.8
-          Cd : 0.003256                                                     drag coefficient
-          Re : 3.304e+06                                                    Reynolds number
+          Cd : 0.003214                                                     drag coefficient
+          Re : 3.546e+06                                                    Reynolds number
 
              | Mission/Reserve/AircraftP.4/TailAero.9
-          Cd : 0.003118                                                     drag coefficient
-          Re : 4.189e+06                                                    Reynolds number
+          Cd : 0.003132                                                     drag coefficient
+          Re : 4.089e+06                                                    Reynolds number
 
              | Mission/Reserve/AircraftP.4/TailBoomAero.4
-          Cf : 0.002911                                                     tail boom skin friction coefficient
-          Re : 2.056e+07                                                    tail boom reynolds number
+          Cf : 0.002926                                                     tail boom skin friction coefficient
+          Re : 2.022e+07                                                    tail boom reynolds number
 
              | Mission/Reserve/AircraftP.4/genandicP.4
-      P_fuel : 368.2                                            [kW]        power coming in from fuel flow
-         P_g : 92.38                                            [kW]        generator power
-        P_ic : 94.26                                            [kW]        internal combustion power
-       P_out : 83.14                                            [kW]        output from generator controller after efficiency
+      P_fuel : 399.9                                            [kW]        power coming in from fuel flow
+         P_g : 100.3                                            [kW]        generator power
+        P_ic : 102.4                                            [kW]        internal combustion power
+       P_out : 90.3                                             [kW]        output from generator controller after efficiency
 
              | Mission/Reserve/FlightState.4
-           V : 86.17                                            [kt]        speed
+           V : 84.75                                            [kt]        speed
 
              | Mission/TakeOff
-           A : 9.398                                            [m/s**2]    log fit equation helper 1
-           B : 0.003018                                         [1/m]       log fit equation helper 2
-         CDg : 0.5438                                                       drag ground coefficient
-         Sto : 214.3                                            [ft]        take off distance
-           T : 1.231e+04                                        [N]         take off thrust
-           W : 1.252e+04                                        [N]         aircraft weight
-           t : 6.827                                            [s]         time of takeoff maneuver
-        zsto : 0.3943                                                       take off distance helper variable
+           A : [ 9.01      8.28      8.28      7.83     ]       [m/s**2]    log fit equation helper 1
+           B : [ 0.0205    0.00419   0.00419   0.00548  ]       [1/m]       log fit equation helper 2
+         CDg : [ 3.63      0.743     0.743     0.971    ]                   drag ground coefficient
+           S : [ 12.1      12.1      12.1      12.1     ]       [m**2]      wing area
+         Sto : [ 71        52.3      52.3      56.9     ]       [ft]        take off distance
+           T : [ 1.22e+04  1.12e+04  1.12e+04  1.06e+04 ]       [N]         take off thrust
+          Vf : [ 15.7      23.4      23.4      28.5     ]       [m/s]       velocity at end of segment
+          Vi : [ 0.001     15.7      23.4      23.4     ]       [m/s]       velocity at start of segment
+           W : [ 1.29e+04  1.29e+04  1.29e+04  1.29e+04 ]       [N]         aircraft weight
+          dV : [ 15.7      15.7      15.7      15.7     ]       [m/s]       difference in velocity over run
+         rho : [ 1.23      1.23      1.23      1.23     ]       [kg/m**3]   air density
+           t : [ 4.59      2.27      2.27      2.03     ]       [s]         time of takeoff maneuver
+        zsto : [ 0.887     0.134     0.134     0.19     ]                   take off distance helper variable
 
              | Mission/TakeOff/AircraftP
-          CD : 0.7544                                                       total CD, referenced to wing area
-           P : 566.4                                            [kW]        total power draw
+          CD : [ 6.12      2.52      2.52      1.61     ]                   total CD, referenced to wing area
+           P : [ 625       625       625       625      ]       [kW]        total power draw
 
              | Mission/TakeOff/AircraftP/BatteryP
-           P : 439.3                                            [kW]        battery power draw
+           P : [ 493       493       493       493      ]       [kW]        battery power draw
 
              | Mission/TakeOff/AircraftP/BlownWingP
-      A_disk : 3.102                                            [m**2]      area of prop disk
-         C_D : 0.5438                                                       total drag coefficient
-        C_Di : 0.5335                                                       induced drag coefficient
-        C_Dp : 0.01027                                                      profile drag
-         C_E : 2.741                                                        energy momentum coefficient
-         C_J : 2.807                                                        jet momentum coefficient
-         C_L : 2.937                                                        total lift coefficient
-        C_LC : 2.18                                                         lift coefficient due to circulation
-         C_Q : 0.7188                                                       mass momentum coefficient
-         C_T : 0.7544                                                       thrust coefficient
-         C_f : 0.004143                                                     friction coefficient
-     E_prime : 7.302e+04                                        [J/m/s]     energy flow per unit span
-     J_prime : 2345                                             [kg/s**2]   momentum flow per unit span
-           P : 317.9                                            [kW]        power draw
-          Re : 2.928e+06                                                    Reynolds number
-           T : 5436                                             [N]         propeller thrust
-           h : 0.4936                                           [m]         Wake height
-  m_dotprime : 37.65                                            [kg/m/s]    jet mass flow per unit span
-         u_j : 121.1                                            [kt]        velocity in jet flow
+      A_disk : [ 3.69      3.69      3.69      3.69     ]       [m**2]      area of prop disk
+         C_D : [ 3.63      0.743     0.743     0.971    ]                   total drag coefficient
+        C_Di : [ 3.62      0.732     0.732     0.96     ]                   induced drag coefficient
+        C_Dp : [ 0.0116    0.0107    0.0107    0.0103   ]                   profile drag
+         C_E : [ 35        10.2      10.2      5.68     ]                   energy momentum coefficient
+         C_J : [ 15.2      6.69      6.69      4.53     ]                   jet momentum coefficient
+         C_L : [ 7.04      3.16      3.16      3.62     ]                   total lift coefficient
+        C_LC : [ 2.18      2.18      2.18      2.18     ]                   lift coefficient due to circulation
+         C_Q : [ 1.66      1.1       1.1       0.904    ]                   mass momentum coefficient
+         C_T : [ 6.12      2.52      2.52      1.61     ]                   thrust coefficient
+         C_f : [ 0.00467   0.00431   0.00431   0.00415  ]                   friction coefficient
+     E_prime : [ 1.24e+05  1.2e+05   1.2e+05   1.2e+05  ]       [J/m/s]     energy flow per unit span
+     J_prime : [ 3.44e+03  3.36e+03  3.36e+03  3.36e+03 ]       [kg/s**2]   momentum flow per unit span
+           P : [ 608       600       600       595      ]       [kW]        power draw
+          Re : [ 1.61e+06  2.4e+06   2.4e+06   2.91e+06 ]                   Reynolds number
+           T : [ 1.12e+04  1.03e+04  1.03e+04  9.67e+03 ]       [N]         propeller thrust
+           h : [ 0.538     0.538     0.538     0.538    ]       [m]         Wake height
+  m_dotprime : [ 47.6      47.1      47.1      47       ]       [kg/m/s]    jet mass flow per unit span
+         u_j : [ 140       139       139       139      ]       [kt]        velocity in jet flow
 
              | Mission/TakeOff/AircraftP/FuselageP
-         C_f : 0.003409                                                     friction coefficient
-          Cd : 0.03782                                                      drag coefficient
-          FF : 11.09                                                        form factor
-          Re : 7.765e+06                                                    Reynolds number
+         C_f : [ 0.00393   0.00363   0.00363   0.00349  ]                   friction coefficient
+          Cd : [ 0.142     0.118     0.118     0.0682   ]                   drag coefficient
+          FF : [ 36.1      32.6      32.6      19.6     ]                   form factor
+          Re : [ 3.83e+06  5.71e+06  5.71e+06  6.93e+06 ]                   Reynolds number
 
              | Mission/TakeOff/AircraftP/TailAero
-          Cd : 0.04781                                                      drag coefficient
-          Re : 2.377e+06                                                    Reynolds number
+          Cd : [ 0.152     0.12      0.12      0.0659   ]                   drag coefficient
+          Re : [ 1.28e+06  1.91e+06  1.91e+06  2.31e+06 ]                   Reynolds number
 
              | Mission/TakeOff/AircraftP/TailAero.1
-          Cd : 0.03437                                                      drag coefficient
-          Re : 3.013e+06                                                    Reynolds number
+          Cd : [ 0.131     0.103     0.103     0.0562   ]                   drag coefficient
+          Re : [ 1.47e+06  2.2e+06   2.2e+06   2.67e+06 ]                   Reynolds number
 
              | Mission/TakeOff/AircraftP/TailBoomAero
-          Cf : 0.003214                                                     tail boom skin friction coefficient
-          Re : 1.479e+07                                                    tail boom reynolds number
+          Cf : [ 0.00397   0.00353   0.00353   0.00333  ]                   tail boom skin friction coefficient
+          Re : [ 7.29e+06  1.09e+07  1.09e+07  1.32e+07 ]                   tail boom reynolds number
 
              | Mission/TakeOff/AircraftP/genandicP
-      P_fuel : 563.3                                            [kW]        power coming in from fuel flow
-         P_g : 141.3                                            [kW]        generator power
-        P_ic : 144.2                                            [kW]        internal combustion power
-       P_out : 127.2                                            [kW]        output from generator controller after efficiency
+      P_fuel : [ 586       586       586       586      ]       [kW]        power coming in from fuel flow
+         P_g : [ 147       147       147       147      ]       [kW]        generator power
+        P_ic : [ 150       150       150       150      ]       [kW]        internal combustion power
+       P_out : [ 132       132       132       132      ]       [kW]        output from generator controller after efficiency
 
              | Mission/TakeOff/FlightState
-           V : 61.99                                            [kt]        speed
-         qne : 4964                                             [kg/m/s**2] never exceed dynamic pressure
+           V : [ 30.5      45.5      45.5      55.3     ]       [kt]        speed
+         qne : [ 4.96e+03  4.96e+03  4.96e+03  4.96e+03 ]       [kg/m/s**2] never exceed dynamic pressure
 
              | Mission/TakeOff/PoweredWheelP
-           P : 82.83                                            [kW]        power draw of powered wheel
-         RPM : 4242                                             [rpm]       rpm of powered wheel
-           T : 2291                                             [N]         thrust from powered wheel
-         tau : 164.4                                            [N*m]       torque of powered wheel
+           P : [ 5.63      8.4       8.4       10.2     ]       [kW]        power draw of powered wheel
+         RPM : [ 3.5e+03   5.22e+03  5.22e+03  6.35e+03 ]       [rpm]       rpm of powered wheel
+           T : [ 316       316       316       316      ]       [N]         thrust from powered wheel
+         tau : [ 13.5      13.5      13.5      13.5     ]       [N*m]       torque of powered wheel
 
              | Mission/TakeOff/PoweredWheelP.1
-           P : 82.83                                            [kW]        power draw of powered wheel
-         RPM : 4242                                             [rpm]       rpm of powered wheel
-           T : 2291                                             [N]         thrust from powered wheel
-         tau : 164.4                                            [N*m]       torque of powered wheel
+           P : [ 5.63      8.4       8.4       10.2     ]       [kW]        power draw of powered wheel
+         RPM : [ 3.5e+03   5.22e+03  5.22e+03  6.35e+03 ]       [rpm]       rpm of powered wheel
+           T : [ 316       316       316       316      ]       [N]         thrust from powered wheel
+         tau : [ 13.5      13.5      13.5      13.5     ]       [N*m]       torque of powered wheel
 
              | Mission/TakeOff/PoweredWheelP.2
-           P : 82.83                                            [kW]        power draw of powered wheel
-         RPM : 4242                                             [rpm]       rpm of powered wheel
-           T : 2291                                             [N]         thrust from powered wheel
-         tau : 164.4                                            [N*m]       torque of powered wheel
+           P : [ 5.63      8.4       8.4       10.2     ]       [kW]        power draw of powered wheel
+         RPM : [ 3.5e+03   5.22e+03  5.22e+03  6.35e+03 ]       [rpm]       rpm of powered wheel
+           T : [ 316       316       316       316      ]       [N]         thrust from powered wheel
+         tau : [ 13.5      13.5      13.5      13.5     ]       [N*m]       torque of powered wheel
 
 Constants
 ---------
@@ -575,11 +582,9 @@ Constants
             CLstall : 2.5                                                              power off stall CL
                   R : 100                                              [nmi]           mission range
        Scruiseclimb : 10                                               [mi]
-              Sland : 300                                              [ft]            landing field length
-          Sobstacle : 400                                              [ft]            obstacle length
             Srunway : 300                                              [ft]            runway length
-                Sto : 300                                              [ft]            takeoff field length
              Vstall : 61                                               [kt]            power off stall requirement
+                  a : 0.001                                            [m/s]           initial Vi lower lim
            h_cruise : 1950                                             [ft]
          h_obstacle : 50                                               [ft]
           mobstacle : 1.4                                                              obstacle margin
@@ -605,13 +610,13 @@ Constants
            P_margin : 0.8                                                              margin for power (helpful for tail sizing)
           Pstar_ref : 1                                                [W]             specific motor power reference
          RPM_margin : 0.9                                                              margin for rpm
-                  a : 61.8                                             [W/kg**2]
+                  a : 61.8                                             [W/kg**2]       a
                   a : 1                                                [W/kg]          dummy
-                  b : 6290                                             [W/kg]
-                  c : 86.2                                             [W/kg**2]
-                  d : 7860                                             [W/kg]
-                  f : 1                                                [1/kg**0.0134]
-                  g : 7939                                             [kg**0.201*rpm]
+                  b : 6290                                             [W/kg]          a
+                  c : 86.2                                             [W/kg**2]       c
+                  d : 7860                                             [W/kg]          d
+                  f : 1                                                [1/kg**0.0134]  wing motor eta fit constant
+                  g : 7939                                             [kg**0.201*rpm] g
               m_ref : 1                                                [kg]            reference motor power
          tau_margin : 0.95                                                             margin for torque
 
@@ -646,7 +651,7 @@ Constants
 
                     | Mission/Aircraft/Fuselage
                Swet : 2.983e+04                                        [in**2]         wetted area of fuselage
-                  h : 60                                               [in]            height
+                  h : 60                                               [in]            fuselage height
                   l : 140                                              [in]            fuselage length
                   w : 50                                               [in]            width
 
@@ -794,7 +799,7 @@ Constants
        m_{fac--fit} : 1.041                                                            RMS error of fit
 
                     | Mission/Climb.1/AircraftP.2/genandicP.2
-              eta_g : 0.9                                                              genertor efficiency
+              eta_g : 0.9                                                              generator efficiency
              eta_ic : 0.256                                                            internal combustion engine efficiency
           eta_shaft : 0.98                                                             shaft losses (two 99% efficient bearings)
          eta_wiring : 0.98                                                             efficiency of electrical connections (wiring loss)
@@ -827,7 +832,7 @@ Constants
        m_{fac--fit} : 1.041                                                            RMS error of fit
 
                     | Mission/Climb/AircraftP.1/genandicP.1
-              eta_g : 0.9                                                              genertor efficiency
+              eta_g : 0.9                                                              generator efficiency
              eta_ic : 0.256                                                            internal combustion engine efficiency
           eta_shaft : 0.98                                                             shaft losses (two 99% efficient bearings)
          eta_wiring : 0.98                                                             efficiency of electrical connections (wiring loss)
@@ -864,7 +869,7 @@ Constants
        m_{fac--fit} : 1.041                                                            RMS error of fit
 
                     | Mission/Cruise/AircraftP.3/genandicP.3
-              eta_g : 0.9                                                              genertor efficiency
+              eta_g : 0.9                                                              generator efficiency
              eta_ic : 0.256                                                            internal combustion engine efficiency
           eta_shaft : 0.98                                                             shaft losses (two 99% efficient bearings)
          eta_wiring : 0.98                                                             efficiency of electrical connections (wiring loss)
@@ -912,7 +917,7 @@ Constants
        m_{fac--fit} : 1.041                                                            RMS error of fit
 
                     | Mission/Landing/AircraftP.5/genandicP.5
-              eta_g : 0.9                                                              genertor efficiency
+              eta_g : 0.9                                                              generator efficiency
              eta_ic : 0.256                                                            internal combustion engine efficiency
           eta_shaft : 0.98                                                             shaft losses (two 99% efficient bearings)
          eta_wiring : 0.98                                                             efficiency of electrical connections (wiring loss)
@@ -950,7 +955,7 @@ Constants
        m_{fac--fit} : 1.041                                                            RMS error of fit
 
                     | Mission/Reserve/AircraftP.4/genandicP.4
-              eta_g : 0.9                                                              genertor efficiency
+              eta_g : 0.9                                                              generator efficiency
              eta_ic : 0.256                                                            internal combustion engine efficiency
           eta_shaft : 0.98                                                             shaft losses (two 99% efficient bearings)
          eta_wiring : 0.98                                                             efficiency of electrical connections (wiring loss)
@@ -961,93 +966,93 @@ Constants
                 rho : 1.225                                            [kg/m**3]       air density
 
                     | Mission/TakeOff
-                CLg : 2.5                                                              lift coefficient during ground run
-                 Kg : 0.04                                                             ground-effect induced drag parameter
-                  a : 3
-                cda : 0.015                                                            parasite drag coefficient
-                cdp : 0.025                                                            profile drag at Vstallx1.2
-                  g : 9.81                                             [m/s**2]        gravitational constant
-       m_{fac--fit} : 1                                                                fit factor
-                 mu : 0.025                                                            coefficient of rolling resistance
-        mu_friction : 0.6                                                              traction limit for powered wheels
+                CLg : [ 2.5       2.5       2.5       2.5      ]                       lift coefficient during ground run
+                 Kg : [ 0.04      0.04      0.04      0.04     ]                       ground-effect induced drag parameter
+                  a : [ 3         3         3         3        ]
+                cda : [ 0.015     0.015     0.015     0.015    ]                       parasite drag coefficient
+                cdp : [ 0.025     0.025     0.025     0.025    ]                       profile drag at Vstallx1.2
+                  g : [ 9.81      9.81      9.81      9.81     ]       [m/s**2]        gravitational constant
+       m_{fac--fit} : [ 1         1         1         1        ]                       fit factor
+             mstall : [ 1.3       1.3       1.3       1.3      ]                       stall margin
+                 mu : [ 0.025     0.025     0.025     0.025    ]                       coefficient of rolling resistance
+        mu_friction : [ 0.6       0.6       0.6       0.6      ]                       traction limit for powered wheels
 
                     | Mission/TakeOff/AircraftP
-         P_avionics : 0.25                                             [kW]            avionics continuous power draw
+         P_avionics : [ 0.25      0.25      0.25      0.25     ]       [kW]            avionics continuous power draw
 
                     | Mission/TakeOff/AircraftP/BlownWingP
-                 Kf : 1.18                                                             form factor
-               Mlim : 0.5                                                              tip limit
-                  a : 343                                              [m/s]           speed of sound at sea level
-                  e : 0.8                                                              span efficiency
-           eta_prop : 0.87                                                             prop efficiency loss after blade disk actuator
-                k_t : 0.2                                                              propeller torque coefficient
-               mfac : 1.1                                                              profile drag margin factor
-              rho_j : 1.225                                            [kg/m**3]       density in jet flow
+                 Kf : [ 1.18      1.18      1.18      1.18     ]                       form factor
+               Mlim : [ 0.5       0.5       0.5       0.5      ]                       tip limit
+                  a : [ 343       343       343       343      ]       [m/s]           speed of sound at sea level
+                  e : [ 0.8       0.8       0.8       0.8      ]                       span efficiency
+           eta_prop : [ 0.87      0.87      0.87      0.87     ]                       prop efficiency loss after blade disk actuator
+                k_t : [ 0.2       0.2       0.2       0.2      ]                       propeller torque coefficient
+               mfac : [ 1.1       1.1       1.1       1.1      ]                       profile drag margin factor
+              rho_j : [ 1.23      1.23      1.23      1.23     ]       [kg/m**3]       density in jet flow
 
                     | Mission/TakeOff/AircraftP/FuselageP
-               mfac : 1.1                                                              friction margin
+               mfac : [ 1.1       1.1       1.1       1.1      ]                       friction margin
 
                     | Mission/TakeOff/AircraftP/TailAero
-       m_{fac--fit} : 1.041                                                            RMS error of fit
+       m_{fac--fit} : [ 1.04      1.04      1.04      1.04     ]                       RMS error of fit
 
                     | Mission/TakeOff/AircraftP/TailAero.1
-       m_{fac--fit} : 1.041                                                            RMS error of fit
+       m_{fac--fit} : [ 1.04      1.04      1.04      1.04     ]                       RMS error of fit
 
                     | Mission/TakeOff/AircraftP/genandicP
-              eta_g : 0.9                                                              genertor efficiency
-             eta_ic : 0.256                                                            internal combustion engine efficiency
-          eta_shaft : 0.98                                                             shaft losses (two 99% efficient bearings)
-         eta_wiring : 0.98                                                             efficiency of electrical connections (wiring loss)
+              eta_g : [ 0.9       0.9       0.9       0.9      ]                       generator efficiency
+             eta_ic : [ 0.256     0.256     0.256     0.256    ]                       internal combustion engine efficiency
+          eta_shaft : [ 0.98      0.98      0.98      0.98     ]                       shaft losses (two 99% efficient bearings)
+         eta_wiring : [ 0.98      0.98      0.98      0.98     ]                       efficiency of electrical connections (wiring loss)
 
                     | Mission/TakeOff/FlightState
-                Vne : 175                                              [kt]            never exceed speed
-                  g : 9.81                                             [m/s**2]        acceleration due to gravity
-                 mu : 1.789e-05                                        [N*s/m**2]      air viscosity
-                rho : 1.225                                            [kg/m**3]       air density
+                Vne : [ 175       175       175       175      ]       [kt]            never exceed speed
+                  g : [ 9.81      9.81      9.81      9.81     ]       [m/s**2]        acceleration due to gravity
+                 mu : [ 1.79e-05  1.79e-05  1.79e-05  1.79e-05 ]       [N*s/m**2]      air viscosity
+                rho : [ 1.23      1.23      1.23      1.23     ]       [kg/m**3]       air density
 
                     | Mission/TakeOff/PoweredWheelP
-              eta_m : 0.9                                                              motor efficiency
-             eta_mc : 0.98                                                             motor controller efficiency
+              eta_m : [ 0.9       0.9       0.9       0.9      ]                       motor efficiency
+             eta_mc : [ 0.98      0.98      0.98      0.98     ]                       motor controller efficiency
 
                     | Mission/TakeOff/PoweredWheelP.1
-              eta_m : 0.9                                                              motor efficiency
-             eta_mc : 0.98                                                             motor controller efficiency
+              eta_m : [ 0.9       0.9       0.9       0.9      ]                       motor efficiency
+             eta_mc : [ 0.98      0.98      0.98      0.98     ]                       motor controller efficiency
 
                     | Mission/TakeOff/PoweredWheelP.2
-              eta_m : 0.9                                                              motor efficiency
-             eta_mc : 0.98                                                             motor controller efficiency
+              eta_m : [ 0.9       0.9       0.9       0.9      ]                       motor efficiency
+             eta_mc : [ 0.98      0.98      0.98      0.98     ]                       motor controller efficiency
 
 Sensitivities
 -------------
-                  g : +0.029                                          earth surface gravitational acceleration
+                  g : +0.023                                          earth surface gravitational acceleration
 
                     | CFRPFabric
-                rho : +0.25                                           density of CFRP
-               tmin : +0.23                                           minimum gauge thickness
-              sigma : -0.022                                          max stress
-                  E : -6.3e-10                                        Youngs modulus
-                tau : -1.5e-12                                        torsional stress limit
+                rho : +0.26                                           density of CFRP
+               tmin : +0.24                                           minimum gauge thickness
+              sigma : -0.021                                          max stress
+                  E : -2.4e-10                                        Youngs modulus
+                tau : -5.2e-13                                        torsional stress limit
 
                     | CFRPUD
-                rho : +0.025                                          density of CFRP
-              sigma : -0.024                                          maximum stress limit of CFRP
-                  E : -0.0052                                         Youngs Modulus of CFRP
+                rho : +0.02                                           density of CFRP
+              sigma : -0.02                                           maximum stress limit of CFRP
+                  E : -0.0033                                         Youngs Modulus of CFRP
 
                     | FoamHD
-                rho : +0.073                                          foam density
+                rho : +0.077                                          foam density
 
                     | Mission
-          mobstacle : +0.18                                           obstacle margin
-          Sobstacle : -0.18                                           obstacle length
-            mrunway : +0.14                                           runway margin
-                Sto : -0.14                                           takeoff field length
+          mobstacle : +0.25                                           obstacle margin
+            Srunway : -0.25                                           runway length
                   R : +0.12                                           mission range
-         h_obstacle : +0.044
-       Scruiseclimb : +0.01
-           h_cruise : +1.8e-11
-             Vstall : -7.5e-11                                        power off stall requirement
-            CLstall : -3.7e-11                                        power off stall CL
-              Sland : -1.6e-11                                        landing field length
+         h_obstacle : +0.046
+       Scruiseclimb : +0.011
+                  a : -3.8e-05                                        initial Vi lower lim
+           h_cruise : +6.3e-12
+            mrunway : -5.2e-11                                        runway margin
+             Vstall : -2.6e-11                                        power off stall requirement
+            CLstall : -1.3e-11                                        power off stall CL
 
                     | Mission/Aircraft
                Npax : +0.06                                           number of passengers
@@ -1055,77 +1060,77 @@ Sensitivities
                mpax : +0                                              mass of a passenger
 
                     | Mission/Aircraft/Battery
-        P_max_burst : -0.18                                           burst power output
-         P_max_cont : -5.3e-11                                        continuous power output
-              Estar : -5.8e-12                                        specific energy
-           eta_pack : -5.8e-12                                        add packing efficiency for battery
+        P_max_burst : -0.16                                           burst power output
+         P_max_cont : -0.031                                          continuous power output
+              Estar : -2.2e-12                                        specific energy
+           eta_pack : -2.2e-12                                        add packing efficiency for battery
 
                     | Mission/Aircraft/BlownWing
-             n_prop : +0.046                                          number of props
+             n_prop : +0.17                                           number of props
 
                     | Mission/Aircraft/BlownWing/Powertrain
-                  f : -0.56
-           P_margin : -0.1                                            margin for power (helpful for tail sizing)
-                  d : -0.098
-         RPM_margin : +0.089                                          margin for rpm
-                  g : +0.089
-                  c : -0.0052
-                  b : -3.2e-11
-                  a : -1.5e-12
+                  f : -0.79                                           wing motor eta fit constant
+           P_margin : -0.21                                           margin for power (helpful for tail sizing)
+                  d : -0.2                                            d
+                  c : -0.019                                          c
+         RPM_margin : +1.3e-10                                        margin for rpm
+                  g : +1.3e-10                                        g
+                  b : -6.2e-12                                        a
+                  a : -5.3e-13                                        a
 
                     | Mission/Aircraft/BlownWing/Wing
                mfac : +0.22                                           wing weight margin factor
-            n_plies : +0.19                                           number of plies on skin
+            n_plies : +0.2                                            number of plies on skin
 
                     | Mission/Aircraft/BlownWing/Wing/CapSpar
-               mfac : -0.029                                          curvature knockdown factor
-               wlim : -1.3e-11                                        spar width to chord ratio
+               mfac : -0.023                                          curvature knockdown factor
+               wlim : -3.9e-12                                        spar width to chord ratio
 
                     | Mission/Aircraft/BlownWing/Wing/Planform
-            cbarmac : +0.12                                           non-dim MAC
-                tau : -0.031                                          airfoil thickness ratio
-               deta : [ +0.0078   +0.0078   +0.0078   +0.0078  ... ]  \Delta (2y/b)
-               cbar : [ +0.12     + -       + -       + -      ... ]  non-dim chord at nodes
-              cbave : [ -0.029    -0.0012   -0.00068  -0.00029 ... ]  non-dim mid section chord
+            cbarmac : +0.34                                           non-dim MAC
+               deta : [ +0.0062   +0.0062   +0.0062   +0.0062  ... ]  \Delta (2y/b)
+               cbar : [ +0.34     + -       + -       + -      ... ]  non-dim chord at nodes
+                tau : -0.023                                          airfoil thickness ratio
+              cbave : [ -0.023    -0.00029  -3.7e-05  -1.1e-10 ... ]  non-dim mid section chord
 
                     | Mission/Aircraft/BlownWing/Wing/WingSkin
-                Vne : +2.9e-12                                        never exceed vehicle speed
-                Cmw : +1.5e-12                                        negative wing moment coeff
-              rhosl : +1.5e-12                                        sea level air density
-              Jtbar : -1.5e-12                                        torsional moment of inertia
+                Vne : +1e-12                                          never exceed vehicle speed
+                Cmw : +5.2e-13                                        negative wing moment coeff
+              rhosl : +5.2e-13                                        sea level air density
+              Jtbar : -5.2e-13                                        torsional moment of inertia
 
                     | Mission/Aircraft/Cabin
                   m : +0.22                                           total mass
 
                     | Mission/Aircraft/Fuselage
-                  l : -0.42                                           fuselage length
-                  h : +0.39                                           height
-               Swet : +0.16                                           wetted area of fuselage
+                  l : -0.4                                            fuselage length
+                  h : +0.37                                           fuselage height
+               Swet : +0.15                                           wetted area of fuselage
                   w : +0                                              width
 
                     | Mission/Aircraft/Gear
                   m : +0.076                                          mass
 
                     | Mission/Aircraft/GenAndIC
-       P_ic_sp_cont : -0.14                                           specific cont power of IC (2.8 if turboshaft)
-                  b : -0.045
-                  a : -0.0097
+       P_ic_sp_cont : -0.15                                           specific cont power of IC (2.8 if turboshaft)
+                  b : -0.046
+                  a : -0.01
 
                     | Mission/Aircraft/HorizontalTail
-                 Vh : +0.063                                          horizontal tail volume coefficient
-               mfac : +0.038                                          wing weight margin factor
+                 Vh : +0.079                                          horizontal tail volume coefficient
+               mfac : +0.048                                          wing weight margin factor
 
                     | Mission/Aircraft/HorizontalTail/Planform.1
-                tau : +0.0054                                         airfoil thickness ratio
-               cbar : [ +0.014    + -       + -      ]                non-dim chord at nodes
-              cbave : [ +0.025    +0.02    ]                          non-dim mid section chord
-                 AR : -0.018                                          aspect ratio
-               deta : [ +0.013    +0.01    ]                          \Delta (2y/b)
-              CLmax : +2.6e-10                                        maximum lift coefficient
+                tau : +0.006                                          airfoil thickness ratio
+               cbar : [ +0.019    + -       + -      ]                non-dim chord at nodes
+              cbave : [ +0.033    +0.026   ]                          non-dim mid section chord
+                 AR : -0.023                                          aspect ratio
+               deta : [ +0.016    +0.013   ]                          \Delta (2y/b)
+              CLmax : +1e-10                                          maximum lift coefficient
             cbarmac : +0                                              non-dim MAC
 
                     | Mission/Aircraft/HorizontalTail/WingCore
-               Abar : +0.023                                          normalized cross section area
+               Abar : +0.029                                          normalized cross section area
 
                     | Mission/Aircraft/HorizontalTail/WingSkin.1
                 Cmw : +0                                              negative wing moment coeff
@@ -1134,38 +1139,38 @@ Sensitivities
               rhosl : +0                                              sea level air density
 
                     | Mission/Aircraft/PoweredWheel
-                  d : +0.092
-                  g : -0.092
-                  f : -0.05
-                  e : -0.045
-                  r : +4.2e-12                                        tire radius
-     gear_ratio_max : -6.3e-12                                        max gear ratio of powered wheel
+                  g : -0.016
+                  f : -0.015
+                  e : -0.0018
+                  d : +1.6e-05
+     gear_ratio_max : -3.1e-12                                        max gear ratio of powered wheel
+                  r : -6.3e-13                                        tire radius
 
                     | Mission/Aircraft/TailBoom
-               deta : +0.043                                          normalized segment length
-               mfac : +0.022                                          weight margin factor
-               kfac : +0.022                                          (1-k/2)
+               deta : +0.042                                          normalized segment length
+               kfac : +0.021                                          (1-k/2)
+               mfac : +0.021                                          weight margin factor
 
                     | Mission/Aircraft/Tank
          Estar_fuel : -0.18                                           fuel specific energy
-           rho_tank : +0.013                                          empty tank mass (structure mass) per volume
-           rho_fuel : -0.013                                          fuel density
+           rho_tank : +0.014                                          empty tank mass (structure mass) per volume
+           rho_fuel : -0.014                                          fuel density
 
                     | Mission/Aircraft/VerticalTail
-                 Vv : +0.15                                           vertical tail volume coefficient
-               mfac : +0.071                                          wing weight margin factor
+                 Vv : +0.14                                           vertical tail volume coefficient
+               mfac : +0.069                                          wing weight margin factor
 
                     | Mission/Aircraft/VerticalTail/Planform.2
-               cbar : [ +0.043    + -       + -      ]                non-dim chord at nodes
-              cbave : [ +0.052    +0.041   ]                          non-dim mid section chord
-                 AR : -0.044                                          aspect ratio
-               deta : [ +0.026    +0.021   ]                          \Delta (2y/b)
-                tau : +0.0083                                         airfoil thickness ratio
-              CLmax : +3.7e-10                                        maximum lift coefficient
+               cbar : [ +0.041    + -       + -      ]                non-dim chord at nodes
+              cbave : [ +0.05     +0.04    ]                          non-dim mid section chord
+                 AR : -0.042                                          aspect ratio
+               deta : [ +0.025    +0.02    ]                          \Delta (2y/b)
+                tau : +0.0078                                         airfoil thickness ratio
+              CLmax : +1.3e-10                                        maximum lift coefficient
             cbarmac : +0                                              non-dim MAC
 
                     | Mission/Aircraft/VerticalTail/WingCore.1
-               Abar : +0.046                                          normalized cross section area
+               Abar : +0.045                                          normalized cross section area
 
                     | Mission/Aircraft/VerticalTail/WingSkin.2
                 Cmw : +0                                              negative wing moment coeff
@@ -1174,252 +1179,253 @@ Sensitivities
               rhosl : +0                                              sea level air density
 
                     | Mission/AircraftLoading/SparLoading
-               Nmax : +0.029                                          max loading
-            Nsafety : +0.029                                          safety load factor
-              kappa : -0.0052                                         max tip deflection ratio
+               Nmax : +0.023                                          max loading
+            Nsafety : +0.023                                          safety load factor
+              kappa : -0.0033                                         max tip deflection ratio
 
                     | Mission/AircraftLoading/SparLoading/Beam.2
-            \bar{q} : [ +7.2e-05  +0.00029  +0.00059  +0.00091 ... ]  normalized loading
-      \bar{M}_{tip} : +2.4e-11                                        Tip moment
-      \bar{S}_{tip} : +1.7e-11                                        Tip loading
-      \theta_{root} : +1.1e-11                                        Base angle
-\bar{\delta}_{root} : +8.5e-12                                        Base deflection
+            \bar{q} : [ +5.9e-05  +0.00024  +0.00049  +0.00074 ... ]  normalized loading
+      \bar{M}_{tip} : +1.4e-11                                        Tip moment
+      \bar{S}_{tip} : +1e-11                                          Tip loading
+      \theta_{root} : +5.4e-12                                        Base angle
+\bar{\delta}_{root} : +4.2e-12                                        Base deflection
 
                     | Mission/AircraftLoading/TailBoomBending
-            Nsafety : +2.6e-10                                        safety load factor
-              kappa : -2.6e-10                                        max tail boom deflection
+            Nsafety : +1e-10                                          safety load factor
+              kappa : -1e-10                                          max tail boom deflection
 
                     | Mission/AircraftLoading/TailBoomBending.1
-            Nsafety : +3.7e-10                                        safety load factor
-              kappa : -3.7e-10                                        max tail boom deflection
+            Nsafety : +1.3e-10                                        safety load factor
+              kappa : -1.3e-10                                        max tail boom deflection
 
                     | Mission/AircraftLoading/TailBoomBending.1/Beam.1
-            \bar{S} : [ +0.0011   +0.0033   +0.0054   +0.0076  ... ]  normalized shear
-      \bar{M}_{tip} : +1e-11                                          Tip moment
-      \theta_{root} : +1.7e-12                                        Base angle
-\bar{\delta}_{root} : +9e-13                                          Base deflection
+            \bar{S} : [ +0.001    +0.0031   +0.0052   +0.0073  ... ]  normalized shear
+      \bar{M}_{tip} : +6.4e-12                                        Tip moment
+      \theta_{root} : +6.2e-13                                        Base angle
+\bar{\delta}_{root} : +3.3e-13                                        Base deflection
 
                     | Mission/AircraftLoading/TailBoomBending/Beam
-            \bar{S} : [ +1.9e-11  +6e-11    +1e-10    +1.6e-10 ... ]  normalized shear
-      \theta_{root} : +1.7e-12                                        Base angle
-      \bar{M}_{tip} : +1.4e-12                                        Tip moment
-\bar{\delta}_{root} : +8.9e-13                                        Base deflection
+            \bar{S} : [ +1.1e-11  +3.3e-11  +5.5e-11  +8.3e-11 ... ]  normalized shear
+      \theta_{root} : +6.1e-13                                        Base angle
+      \bar{M}_{tip} : +5.2e-13                                        Tip moment
+\bar{\delta}_{root} : +3.3e-13                                        Base deflection
 
                     | Mission/Climb.1/AircraftP.2
-         P_avionics : +1.3e-05                                        avionics continuous power draw
-        P_draw_batt : +5.7e-13
+         P_avionics : +1.4e-05                                        avionics continuous power draw
+        P_draw_batt : +2.1e-13
 
                     | Mission/Climb.1/AircraftP.2/BlownWingP.2
-                  e : -0.0016                                         span efficiency
-                 Kf : +0.00092                                        form factor
-               mfac : +0.00092                                        profile drag margin factor
+                  e : -0.0022                                         span efficiency
+                 Kf : +0.001                                          form factor
+               mfac : +0.001                                          profile drag margin factor
                Mlim : +0                                              tip limit
                   a : +0                                              speed of sound at sea level
-              rho_j : -1.7e-12                                        density in jet flow
+              rho_j : -7e-13                                          density in jet flow
 
                     | Mission/Climb.1/AircraftP.2/FuselageP.2
-               mfac : +0.0029                                         friction margin
+               mfac : +0.0031                                         friction margin
 
                     | Mission/Climb.1/AircraftP.2/TailAero.4
-       m_{fac--fit} : +0.00013                                        RMS error of fit
+       m_{fac--fit} : +0.00016                                        RMS error of fit
 
                     | Mission/Climb.1/AircraftP.2/TailAero.5
-       m_{fac--fit} : +0.0002                                         RMS error of fit
+       m_{fac--fit} : +0.00021                                        RMS error of fit
 
                     | Mission/Climb.1/AircraftP.2/genandicP.2
-              eta_g : -0.0065                                         genertor efficiency
-             eta_ic : -0.0065                                         internal combustion engine efficiency
-          eta_shaft : -0.0065                                         shaft losses (two 99% efficient bearings)
+              eta_g : -0.0075                                         generator efficiency
+             eta_ic : -0.0075                                         internal combustion engine efficiency
+          eta_shaft : -0.0075                                         shaft losses (two 99% efficient bearings)
 
                     | Mission/Climb.1/FlightState.2
-                  g : +0.0032                                         acceleration due to gravity
-                rho : +0.002                                          air density
-                 mu : +0.00095                                        air viscosity
+                  g : +0.0043                                         acceleration due to gravity
+                rho : +0.0017                                         air density
+                 mu : +0.001                                          air viscosity
 
                     | Mission/Climb/AircraftP.1
-         P_avionics : +3e-12                                          avionics continuous power draw
+         P_avionics : +2.6e-05                                        avionics continuous power draw
 
                     | Mission/Climb/AircraftP.1/BlownWingP.1
-                  e : -0.0029                                         span efficiency
-              rho_j : -0.0024                                         density in jet flow
-                 Kf : +0.00047                                        form factor
-               mfac : +0.00047                                        profile drag margin factor
+              rho_j : -0.0027                                         density in jet flow
+                  e : -0.0025                                         span efficiency
+                 Kf : +0.00034                                        form factor
+               mfac : +0.00034                                        profile drag margin factor
                Mlim : +0                                              tip limit
                   a : +0                                              speed of sound at sea level
 
                     | Mission/Climb/AircraftP.1/FuselageP.1
-               mfac : +0.0015                                         friction margin
+               mfac : +0.001                                          friction margin
 
                     | Mission/Climb/AircraftP.1/TailAero.2
-       m_{fac--fit} : +6.5e-05                                        RMS error of fit
+       m_{fac--fit} : +5.4e-05                                        RMS error of fit
 
                     | Mission/Climb/AircraftP.1/TailAero.3
-       m_{fac--fit} : +0.0001                                         RMS error of fit
+       m_{fac--fit} : +6.9e-05                                        RMS error of fit
 
                     | Mission/Climb/AircraftP.1/genandicP.1
-             eta_ic : +0.055                                          internal combustion engine efficiency
-          eta_shaft : +0.055                                          shaft losses (two 99% efficient bearings)
-              eta_g : -2.5e-11                                        genertor efficiency
+              eta_g : -0.014                                          generator efficiency
+             eta_ic : -0.014                                          internal combustion engine efficiency
+          eta_shaft : -0.014                                          shaft losses (two 99% efficient bearings)
 
                     | Mission/Climb/FlightState.1
-                  g : +0.065                                          acceleration due to gravity
-                rho : -0.01                                           air density
-                 mu : +0.00049                                        air viscosity
+                  g : +0.067                                          acceleration due to gravity
+                rho : -0.0092                                         air density
+                 mu : +0.00035                                        air viscosity
 
                     | Mission/Cruise
-               Vmin : +0.39                                           minimum flight speed
+               Vmin : +0.35                                           minimum flight speed
 
                     | Mission/Cruise/AircraftP.3
-         P_avionics : +0.00053                                        avionics continuous power draw
+         P_avionics : +0.00052                                        avionics continuous power draw
         P_draw_batt : +0
 
                     | Mission/Cruise/AircraftP.3/BlownWingP.3
-                  e : -0.065                                          span efficiency
-               mfac : +0.044                                          profile drag margin factor
-                 Kf : +0.044                                          form factor
+                  e : -0.074                                          span efficiency
+                 Kf : +0.043                                          form factor
+               mfac : +0.043                                          profile drag margin factor
                Mlim : +0                                              tip limit
                   a : +0                                              speed of sound at sea level
-              rho_j : -1.9e-12                                        density in jet flow
+              rho_j : -7.4e-13                                        density in jet flow
 
                     | Mission/Cruise/AircraftP.3/FuselageP.3
-               mfac : +0.14                                           friction margin
+               mfac : +0.13                                           friction margin
 
                     | Mission/Cruise/AircraftP.3/TailAero.6
-       m_{fac--fit} : +0.0061                                         RMS error of fit
+       m_{fac--fit} : +0.0068                                         RMS error of fit
 
                     | Mission/Cruise/AircraftP.3/TailAero.7
-       m_{fac--fit} : +0.0094                                         RMS error of fit
+       m_{fac--fit} : +0.0088                                         RMS error of fit
 
                     | Mission/Cruise/AircraftP.3/genandicP.3
-              eta_g : -0.27                                           genertor efficiency
+              eta_g : -0.27                                           generator efficiency
+             eta_ic : -0.27                                           internal combustion engine efficiency
           eta_shaft : -0.27                                           shaft losses (two 99% efficient bearings)
-             eta_ic : -0.13                                           internal combustion engine efficiency
 
                     | Mission/Cruise/FlightState.3
-                  g : +0.13                                           acceleration due to gravity
-                rho : +0.13                                           air density
-                 mu : +0.045                                          air viscosity
-                Vne : +0.043                                          never exceed speed
+                  g : +0.15                                           acceleration due to gravity
+                rho : +0.11                                           air density
+                 mu : +0.043                                          air viscosity
+                Vne : +0.042                                          never exceed speed
 
                     | Mission/FlightState.6
-                rho : -3.7e-11                                        air density
+                rho : -1.3e-11                                        air density
 
                     | Mission/Landing
-             mstall : +0.00054                                        stall
-                  g : -0.00027                                        gravitational constant
-               mu_b : -0.00027                                        braking friction coefficient
+             mstall : +0.00047                                        stall
+                  g : -0.00023                                        gravitational constant
+               mu_b : -0.00023                                        braking friction coefficient
 
                     | Mission/Landing/AircraftP.5
-         P_avionics : +2.4e-12                                        avionics continuous power draw
+         P_avionics : +1.6e-12                                        avionics continuous power draw
 
                     | Mission/Landing/AircraftP.5/BlownWingP.5
-                  e : -0.00015                                        span efficiency
-                 Kf : +4e-07                                          form factor
-               mfac : +4e-07                                          profile drag margin factor
+                  e : -0.00012                                        span efficiency
+                 Kf : +1.4e-07                                        form factor
+               mfac : +1.4e-07                                        profile drag margin factor
                Mlim : +0                                              tip limit
                   a : +0                                              speed of sound at sea level
-              rho_j : -1e-11                                          density in jet flow
+              rho_j : -3.6e-12                                        density in jet flow
 
                     | Mission/Landing/AircraftP.5/FuselageP.5
-               mfac : +1.3e-06                                        friction margin
+               mfac : +4.2e-07                                        friction margin
 
                     | Mission/Landing/AircraftP.5/TailAero.10
-       m_{fac--fit} : +5.4e-08                                        RMS error of fit
+       m_{fac--fit} : +2.1e-08                                        RMS error of fit
 
                     | Mission/Landing/AircraftP.5/TailAero.11
-       m_{fac--fit} : +8.3e-08                                        RMS error of fit
+       m_{fac--fit} : +2.8e-08                                        RMS error of fit
 
                     | Mission/Landing/AircraftP.5/genandicP.5
-              eta_g : -6.2e-12                                        genertor efficiency
-             eta_ic : -6.2e-12                                        internal combustion engine efficiency
-          eta_shaft : -6.2e-12                                        shaft losses (two 99% efficient bearings)
+              eta_g : -4.8e-11                                        generator efficiency
+             eta_ic : -4.8e-11                                        internal combustion engine efficiency
+          eta_shaft : -4.8e-11                                        shaft losses (two 99% efficient bearings)
 
                     | Mission/Landing/FlightState.5
-                  g : +0.0003                                         acceleration due to gravity
-                rho : -0.00015                                        air density
-                 mu : +4.1e-07                                        air viscosity
+                  g : +0.00025                                        acceleration due to gravity
+                rho : -0.00012                                        air density
+                 mu : +1.4e-07                                        air viscosity
                 Vne : +0                                              never exceed speed
 
                     | Mission/Reserve
-                  t : +0.046                                          Time to fly flight segment
+                  t : +0.049                                          Time to fly flight segment
 
                     | Mission/Reserve/AircraftP.4
          P_avionics : +0.00014                                        avionics continuous power draw
         P_draw_batt : +0
 
                     | Mission/Reserve/AircraftP.4/BlownWingP.4
-               Mlim : -0.089                                          tip limit
-                  a : -0.089                                          speed of sound at sea level
-                  e : -0.023                                          span efficiency
-                 Kf : +0.0048                                         form factor
-               mfac : +0.0048                                         profile drag margin factor
-              rho_j : -0.0018                                         density in jet flow
+                  e : -0.028                                          span efficiency
+                 Kf : +0.0046                                         form factor
+               mfac : +0.0046                                         profile drag margin factor
+              rho_j : -0.0015                                         density in jet flow
+               Mlim : -1.3e-10                                        tip limit
+                  a : -1.3e-10                                        speed of sound at sea level
 
                     | Mission/Reserve/AircraftP.4/FuselageP.4
-               mfac : +0.015                                          friction margin
+               mfac : +0.014                                          friction margin
 
                     | Mission/Reserve/AircraftP.4/TailAero.8
-       m_{fac--fit} : +0.00066                                        RMS error of fit
+       m_{fac--fit} : +0.00072                                        RMS error of fit
 
                     | Mission/Reserve/AircraftP.4/TailAero.9
-       m_{fac--fit} : +0.001                                          RMS error of fit
+       m_{fac--fit} : +0.00094                                        RMS error of fit
 
                     | Mission/Reserve/AircraftP.4/genandicP.4
-              eta_g : -0.047                                          genertor efficiency
-          eta_shaft : -0.047                                          shaft losses (two 99% efficient bearings)
-             eta_ic : -0.047                                          internal combustion engine efficiency
+              eta_g : -0.05                                           generator efficiency
+          eta_shaft : -0.05                                           shaft losses (two 99% efficient bearings)
+             eta_ic : -0.05                                           internal combustion engine efficiency
 
                     | Mission/Reserve/FlightState.4
-                  g : +0.066                                          acceleration due to gravity
-                rho : -0.02                                           air density
-                 mu : +0.0049                                         air viscosity
+                  g : +0.071                                          acceleration due to gravity
+                rho : -0.022                                          air density
+                 mu : +0.0046                                         air viscosity
 
                     | Mission/TakeOff
-       m_{fac--fit} : +0.28                                           fit factor
-                  g : -0.28                                           gravitational constant
-                 mu : +0.0087                                         coefficient of rolling resistance
-                  a : +4.2e-10
-        mu_friction : -4.2e-10                                        traction limit for powered wheels
+       m_{fac--fit} : [ +0.066    +0.045    +0.045    +0.049   ]      fit factor
+                  g : [ -0.066    -0.045    -0.045    -0.049   ]      gravitational constant
+             mstall : [ +0        +0        +0.043    +0       ]      stall margin
+                 mu : [ +0.0033   +0.0014   +0.0014   +0.0017  ]      coefficient of rolling resistance
+                  a : [ +6.5e-12  +6.5e-12  +6.5e-12  +6.5e-12 ]
+        mu_friction : [ -6.5e-12  -6.5e-12  -6.5e-12  -6.5e-12 ]      traction limit for powered wheels
 
                     | Mission/TakeOff/AircraftP
-         P_avionics : +2.4e-12                                        avionics continuous power draw
+         P_avionics : [ +1.6e-12  +1.4e-12  +1.4e-12  +1.4e-12 ]      avionics continuous power draw
 
                     | Mission/TakeOff/AircraftP/BlownWingP
-              rho_j : -0.12                                           density in jet flow
-                  e : +0.056                                          span efficiency
-                 Kf : +0.0011                                         form factor
-               mfac : +0.0011                                         profile drag margin factor
-               Mlim : +0                                              tip limit
-                  a : +0                                              speed of sound at sea level
+              rho_j : [ -0.33     -7.2e-12  -7.2e-12  -0.0047  ]      density in jet flow
+                  e : [ +0.24     -0.0031   -0.0031   -0.00018 ]      span efficiency
+                 Kf : [ +0.00027  +4.6e-05  +4.6e-05  +5.2e-05 ]      form factor
+               mfac : [ +0.00027  +4.6e-05  +4.6e-05  +5.2e-05 ]      profile drag margin factor
+               Mlim : [ +0        +0        +0        +0       ]      tip limit
+                  a : [ +0        +0        +0        +0       ]      speed of sound at sea level
 
                     | Mission/TakeOff/AircraftP/FuselageP
-               mfac : +4.1e-11                                        friction margin
+               mfac : [ +4.1e-12  +4.4e-12  +4.4e-12  +6.7e-12 ]      friction margin
 
                     | Mission/TakeOff/AircraftP/TailAero
-       m_{fac--fit} : +2e-11                                          RMS error of fit
+       m_{fac--fit} : [ +5.8e-12  +5.9e-12  +5.9e-12  +6.7e-12 ]      RMS error of fit
 
                     | Mission/TakeOff/AircraftP/TailAero.1
-       m_{fac--fit} : +2.2e-11                                        RMS error of fit
+       m_{fac--fit} : [ +5.9e-12  +6e-12    +6e-12    +7e-12   ]      RMS error of fit
 
                     | Mission/TakeOff/AircraftP/genandicP
-              eta_g : -0.051                                          genertor efficiency
-             eta_ic : -0.051                                          internal combustion engine efficiency
-          eta_shaft : -0.051                                          shaft losses (two 99% efficient bearings)
+             eta_ic : [ -0.02     +0.2      -0.0075   -0.0094  ]      internal combustion engine efficiency
+          eta_shaft : [ -0.02     +0.048    -0.0075   -0.0094  ]      shaft losses (two 99% efficient bearings)
+              eta_g : [ -0.02     -0.0075   -0.0075   -0.0094  ]      generator efficiency
 
                     | Mission/TakeOff/FlightState
-                  g : +0.85                                           acceleration due to gravity
-                rho : -0.3                                            air density
-                 mu : +0.00023                                        air viscosity
-                Vne : +0                                              never exceed speed
+                  g : [ +0.69     +0.053    +0.075    +0.051   ]      acceleration due to gravity
+                rho : [ +0.08     -0.0031   -0.025    +0.014   ]      air density
+                 mu : [ +5.4e-05  +9.2e-06  +9.2e-06  +1e-05   ]      air viscosity
+                Vne : [ +0        +0        +0        +0       ]      never exceed speed
 
                     | Mission/TakeOff/PoweredWheelP
-              eta_m : -0.033                                          motor efficiency
-             eta_mc : -0.033                                          motor controller efficiency
+              eta_m : [ -0.00083  -0.00048  -0.00048  -0.00072 ]      motor efficiency
+             eta_mc : [ -0.00083  -0.00048  -0.00048  -0.00072 ]      motor controller efficiency
 
                     | Mission/TakeOff/PoweredWheelP.1
-              eta_m : -0.033                                          motor efficiency
-             eta_mc : -0.033                                          motor controller efficiency
+              eta_m : [ -0.00083  -0.00048  -0.00048  -0.00072 ]      motor efficiency
+             eta_mc : [ -0.00083  -0.00048  -0.00048  -0.00072 ]      motor controller efficiency
 
                     | Mission/TakeOff/PoweredWheelP.2
-              eta_m : -0.033                                          motor efficiency
-             eta_mc : -0.033                                          motor controller efficiency
+              eta_m : [ -0.00083  -0.00048  -0.00048  -0.00072 ]      motor efficiency
+             eta_mc : [ -0.00083  -0.00048  -0.00048  -0.00072 ]      motor controller efficiency
