@@ -287,7 +287,7 @@ class GenAndIC(Model):
     eta_IC          0.15           [-]        thermal efficiency of IC (0.15 if turboshaft)
     m_g                            [kg]       genandic mass
     m_gc                           [kg]       genandic controller mass
-    m_ic            56.7           [kg]       piston mass
+    m_ic            61.3           [kg]       piston mass
     P_g_sp_cont                    [W/kg]     genandic spec power (cont)
     P_g_cont                       [W]        genandic cont. power
     P_ic_cont       160            [kW]       piston continous power  
