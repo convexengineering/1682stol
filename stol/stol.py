@@ -287,10 +287,10 @@ class GenAndIC(Model):
     eta_IC          0.15           [-]        thermal efficiency of IC (0.15 if turboshaft)
     m_g                            [kg]       genandic mass
     m_gc                           [kg]       genandic controller mass
-    m_ic                           [kg]       piston mass
+    m_ic            56.7           [kg]       piston mass
     P_g_sp_cont                    [W/kg]     genandic spec power (cont)
     P_g_cont                       [W]        genandic cont. power
-    P_ic_cont                      [W]        piston continous power  
+    P_ic_cont       160            [kW]       piston continous power  
     m                              [kg]       total mass
     m_ref           1              [kg]       reference mass, for meeting units constraints
     Pstar_ref       1              [W/kg]     reference specific power, for meeting units constraints
@@ -300,7 +300,7 @@ class GenAndIC(Model):
         with gpkit.SignomialsEnabled():
             constraints = [P_g_sp_cont <= (Variable("a",46.4,"W/kg**2")*m_g + Variable("b",5032,"W/kg")), #magicALL motor fits
                            P_g_cont    <=   P_g_sp_cont*m_g,
-                           P_ic_cont   <=   P_ic_sp_cont*m_ic,
+                           #P_ic_cont   <=   P_ic_sp_cont*m_ic,
                            m >= m_g + m_ic
             ]
 
@@ -825,7 +825,6 @@ def writeSol(sol):
     with open('solve.txt', 'wb') as output:
         output.write(sol.table())
 
-
 if __name__ == "__main__":
     poweredwheels = False
     M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True)
@@ -962,7 +961,7 @@ def ElectricVsHybrid():
 
 def ICVsTurboshaft():
     M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
-    runway_sweep = np.linspace(200,300,5)
+    runway_sweep = np.linspace(150,300,5)
     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
@@ -971,7 +970,7 @@ def ICVsTurboshaft():
     plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label='Powered wheels')
 
     M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
-    runway_sweep = np.linspace(200,300,5)
+    runway_sweep = np.linspace(150,300,5)
     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
     # M.substitutions.update({M.aircraft.genandic.P_ic_sp_cont:1})
     # M.substitutions.update({M.aircraft.genandic.eta_IC:0.2656})
