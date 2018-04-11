@@ -46,7 +46,6 @@ class Aircraft(Model):
         self.vtail.substitutions[self.vtail.planform.tau] = 0.08
         self.htail.substitutions[self.htail.planform.tau] = 0.08
         self.htail.substitutions[self.htail.mh] = 0.8
-        self.htail.substitutions[self.htail.Vh] = 1.7
         self.htail.substitutions[self.vtail.Vv] = 0.4
         self.htail.substitutions[self.htail.planform.CLmax] = 3
         self.vtail.substitutions[self.vtail.planform.CLmax] = 3
@@ -112,7 +111,7 @@ class AircraftP(Model):
         self.fuse_perf = aircraft.fuselage.dynamic(state)
         self.perf_models = [self.bw_perf,self.batt_perf,self.htail_perf,self.vtail_perf,self.boom_perf,self.fuse_perf]
         self.fs = state
-        constraints = [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*state["g"],
+        constraints = [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*g,
                        P >= self.bw_perf["P"] + P_avionics,
                        CD >= self.bw_perf.C_D + (aircraft.fuselage.Swet/aircraft.bw.wing.planform.S)*self.fuse_perf.Cd + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd) + (aircraft.boom.S/aircraft.bw.wing.planform.S)*self.boom_perf.Cf,
                        self.bw_perf.C_T >= CD
@@ -483,9 +482,9 @@ class BlownWingP(Model):
     e       0.8     [-]             span efficiency
     mfac    1.1     [-]             profile drag margin factor
     m_dotprime      [kg/(m*s)]      jet mass flow per unit span
-    J_prime         [kg/(s**2)]      momentum flow per unit span
+    J_prime         [kg/(s**2)]     momentum flow per unit span
     E_prime         [J/(m*s)]       energy flow per unit span
-    rho_j   1.225   [kg/m**3]        density in jet flow
+    rho_j   1.225   [kg/m**3]       density in jet flow
     u_j             [kts]           velocity in jet flow
     h               [m]             Wake height
     T               [N]             propeller thrust
@@ -511,9 +510,7 @@ class BlownWingP(Model):
             u_j >= state.V,
             P <= bw.n_prop*bw.powertrain["Pmax"],
             C_L <= C_LC*(1+2*C_J/(pi*bw.wing["AR"]*e)),
-
             bw.powertrain.RPMmax*bw.powertrain.r <= a*Mlim,
-
             C_T == T/((0.5*state.rho*bw.wing["S"]*state.V**2)),
             m_dotprime == rho_j*u_j*h,
             J_prime ==  m_dotprime*u_j,
@@ -522,7 +519,8 @@ class BlownWingP(Model):
             C_J == J_prime/(0.5*state.rho*state.V**2 * bw.wing["cmac"]),
             C_E == E_prime/(0.5*state.rho*state.V**3 * bw.wing["cmac"]),
             h == pi*bw.powertrain.r/2,
-            C_Di == (C_L**2)/(pi*bw.wing["AR"]*e),
+            C_Di >= (C_L**2)/(pi*bw.wing["AR"]*e),
+            # C_Di <= (C_LC**2)/(pi*bw.wing["AR"]*e),
             C_D >= C_Di  + C_Dp,
             C_f**5 == (mfac*0.074)**5 /(Re),
             C_Dp == C_f*2.1*Kf,
@@ -538,7 +536,6 @@ class FlightState(Model):
     rho         1.225       [kg/m**3]        air density
     mu          1.789e-5    [N*s/m^2]        air viscosity
     V                       [knots]         speed
-    g           9.81        [m/s/s]         acceleration due to gravity
     qne                     [kg/s^2/m]      never exceed dynamic pressure
     Vne         175         [kts]           never exceed speed
     """
@@ -594,7 +591,7 @@ class TakeOff(Model):
                 S == aircraft.bw.wing["S"],
                 Vf == fs.V,
                 perf.bw_perf.C_LC == 2.18,
-                W == aircraft.mass*fs.g,
+                W == aircraft.mass*g,
                 T/W >= A/g + mu,
                 CDg >= perf.bw_perf.C_D,
                 FitCS(fd, zsto, [A/g, B*dV**2/g]), #fit constraint set, pass in fit data, zsto is the 
@@ -650,7 +647,7 @@ class Climb(Model):
 
         constraints = [
             perf.batt_perf.P <= aircraft.battery.m*aircraft.battery.P_max_cont,
-            W ==  aircraft.mass*perf.fs.g,
+            W ==  aircraft.mass*g,
             perf.bw_perf.C_T*rho*S*V**2 >= 0.5*CD*rho*S*V**2 + W*h_dot/V,
             h_gain <= h_dot*t,
             Sclimb == V*t, #sketchy constraint, is wrong with cos(climb angle)
@@ -740,7 +737,7 @@ class Landing(Model):
                 perf.bw_perf.C_LC == 6.78,
                 W == aircraft.mass*g,
                 C_T >= CD, #+ (W*sing)/(0.5*rho*S*V**2),
-                Vs**2  >= (2.*aircraft.mass*fs.g/rho/S/CL),
+                Vs**2  >= (2.*aircraft.mass*g/rho/S/CL),
                 Xgr*(2*g*(mu_b)) >= (mstall*Vs)**2,
                 Xla >= Xgr,
                 Sgr >= Xla,
@@ -765,6 +762,8 @@ class Mission(Model):
     Vs                          [kts]       power off stall speed
     CLstall         2.5         [-]         power off stall CL
     dV                          [m/s]       dV
+    CJmax                       [-]         maximum CJ of mission
+    CLmax                       [-]         maximum CL of mission
     """
     def setup(self,poweredwheels=False,n_wheels=3,hybrid=False):
         exec parse_variables(Mission.__doc__)
@@ -784,6 +783,11 @@ class Mission(Model):
         state = FlightState()
         with gpkit.SignomialsEnabled():
             constraints = [
+                           self.aircraft.htail.Vh >=  -0.238513*CJmax + 0.713362*CLmax - 0.8375,
+                           # CLmax >= self.takeoff.perf.bw_perf.C_L,
+                           CLmax == self.landing.perf.bw_perf.C_L,
+                           # CJmax <= self.takeoff.perf.bw_perf.C_J,
+                           CJmax == self.landing.perf.bw_perf.C_J,
                            self.obstacle_climb.h_gain == Variable("h_obstacle",50,"ft"),
                            self.climb.h_gain == Variable("h_cruise",1950,"ft"),
                            self.climb.Sclimb == Variable("Scruiseclimb",10,"miles"),
@@ -795,7 +799,7 @@ class Mission(Model):
                            self.takeoff.Vf[-1] <= sum(self.takeoff.dV),
                            self.takeoff.Vi[1:] == self.takeoff.Vf[:-1],
                            self.takeoff.dV[1:] <= self.takeoff.Vf[1:] - self.takeoff.Vf[:-1],
-                           Srunway <= mrunway*sum(self.takeoff.Sto),
+                           Srunway >= mrunway*sum(self.takeoff.Sto),
 
                            Srunway >= self.landing.Sgr*mrunway,
                            Sobstacle == Srunway*(4.0/3.0),
