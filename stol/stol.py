@@ -509,7 +509,10 @@ class BlownWingP(Model):
             (u_j/state.V)**2 <= (T/(A_disk*(state.V**2)*state.rho/2) + 1),
             u_j >= state.V,
             P <= bw.n_prop*bw.powertrain["Pmax"],
-            C_L <= C_LC*(1+2*C_J/(pi*bw.wing["AR"]*e)),
+
+            C_L >= C_LC*(1+2*C_J/(pi*bw.wing["AR"]*e)),
+            # C_L >= C_LC,
+
             bw.powertrain.RPMmax*bw.powertrain.r <= a*Mlim,
             C_T == T/((0.5*state.rho*bw.wing["S"]*state.V**2)),
             m_dotprime == rho_j*u_j*h,
