@@ -825,26 +825,27 @@ def writeSol(sol):
     with open('solve.txt', 'wb') as output:
         output.write(sol.table())
 
-def writeAlb(sol):
+def writeAlb(sol,M):
     with open('albie.txt', 'wb') as output:
         output.write('Weights Summary\n')
-        output.write(sol.table(["m_Mission/Aircraft/Fuselage",
-                                "m_Mission/Aircraft/Cabin",
-                                "W_Mission/Aircraft/HorizontalTail",
-                                "W_Mission/Aircraft/VerticalTail",
-                                "W_Mission/Aircraft/TailBoom",
-                                "W_Mission/Aircraft/BlownWing/Wing",
-                                "n_prop_Mission/Aircraft/BlownWing",
-                                "m_Mission/Aircraft/BlownWing/Powertrain",
-                                "m_Mission/Aircraft/Gear",
-                                "m_Mission/Aircraft/GenAndIC",
-                                "m_fuel_Mission/Aircraft/Tank",
-                                "m_tank_Mission/Aircraft/Tank",
-                                "n_pax_Mission/Aircraft",
-                                "mbaggage_Mission/Aircraft",
-                                "mpax_Mission/Aircraft",
-                                "m_Mission/Aircraft/Battery"
-                                ]))
+        # output.write(sol(M.aircraft.mass).split(" ")[0])
+        # output.write(sol.table(["m_Mission/Aircraft/Fuselage",
+                                # "m_Mission/Aircraft/Cabin",
+                                # "W_Mission/Aircraft/HorizontalTail",
+                                # "W_Mission/Aircraft/VerticalTail",
+                                # "W_Mission/Aircraft/TailBoom",
+                                # "W_Mission/Aircraft/BlownWing/Wing",
+                                # "n_prop_Mission/Aircraft/BlownWing",
+                                # "m_Mission/Aircraft/BlownWing/Powertrain",
+                                # "m_Mission/Aircraft/Gear",
+                                # "m_Mission/Aircraft/GenAndIC",
+                                # "m_fuel_Mission/Aircraft/Tank",
+                                # "m_tank_Mission/Aircraft/Tank",
+                                # "n_pax_Mission/Aircraft",
+                                # "mbaggage_Mission/Aircraft",
+                                # "mpax_Mission/Aircraft",
+                                # "m_Mission/Aircraft/Battery"
+                                # ]))
         output.write('\n\n\nPropulsion Summary')
 
 if __name__ == "__main__":
@@ -860,7 +861,7 @@ if __name__ == "__main__":
     f.savefig("sensbar.pdf", bbox_inches="tight")
     print sol(M.aircraft.mass)
     writeSol(sol)
-    writeAlb(sol)
+    writeAlb(sol,M)
 
 def CLCurves():
     M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
