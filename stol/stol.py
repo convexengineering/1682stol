@@ -86,8 +86,8 @@ class Aircraft(Model):
                             self.bw.wing.b - Variable("w_fuse",50,"in") >= self.bw.n_prop*2*self.bw.powertrain.r]
         return constraints, self.components, self.htail, self.vtail, self.boom
 
-    def dynamic(self,state,hybrid=False,powermode="batt-chrg",t_charge=None):
-        return AircraftP(self,state,hybrid,powermode=powermode,t_charge=t_charge)
+    def dynamic(self,state,hybrid=False,powermode="batt-chrg",t_charge=None,groundroll=False):
+        return AircraftP(self,state,hybrid,powermode=powermode,t_charge=t_charge,groundroll=groundroll)
     def loading(self,state,Wcent):
         return AircraftLoading(self,state)
 
@@ -101,7 +101,7 @@ class AircraftP(Model):
     P_charge            [kW]    battery charging power
     P_avionics  0.25    [kW]    avionics continuous power draw
     """
-    def setup(self,aircraft,state,hybrid=False,powermode="batt-chrg",t_charge=None):
+    def setup(self,aircraft,state,hybrid=False,powermode="batt-chrg",t_charge=None,groundroll=False):
         exec parse_variables(AircraftP.__doc__)
         self.bw_perf = aircraft.bw.dynamic(state)
         self.batt_perf = aircraft.battery.dynamic(state)
@@ -111,11 +111,13 @@ class AircraftP(Model):
         self.fuse_perf = aircraft.fuselage.dynamic(state)
         self.perf_models = [self.bw_perf,self.batt_perf,self.htail_perf,self.vtail_perf,self.boom_perf,self.fuse_perf]
         self.fs = state
-        constraints = [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*g,
-                       P >= self.bw_perf["P"] + P_avionics,
+
+        constraints = [P >= self.bw_perf["P"] + P_avionics,
                        CD >= self.bw_perf.C_D + (aircraft.fuselage.Swet/aircraft.bw.wing.planform.S)*self.fuse_perf.Cd + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd) + (aircraft.boom.S/aircraft.bw.wing.planform.S)*self.boom_perf.Cf,
                        self.bw_perf.C_T >= CD
                     ]
+        if groundroll == False:
+            constraints += [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*g]
         if hybrid:
             self.gen_perf = aircraft.genandic.dynamic(state)
             if powermode == "batt-chrg":
@@ -510,8 +512,7 @@ class BlownWingP(Model):
             u_j >= state.V,
             P <= bw.n_prop*bw.powertrain["Pmax"],
 
-            C_L >= C_LC*(1+2*C_J/(pi*bw.wing["AR"]*e)),
-            # C_L >= C_LC,
+            C_L <= C_LC*(1+2*C_J/(pi*bw.wing["AR"]*e)),
 
             bw.powertrain.RPMmax*bw.powertrain.r <= a*Mlim,
             C_T == T/((0.5*state.rho*bw.wing["S"]*state.V**2)),
@@ -522,7 +523,7 @@ class BlownWingP(Model):
             C_J == J_prime/(0.5*state.rho*state.V**2 * bw.wing["cmac"]),
             C_E == E_prime/(0.5*state.rho*state.V**3 * bw.wing["cmac"]),
             h == pi*bw.powertrain.r/2,
-            C_Di >= (C_L**2)/(pi*bw.wing["AR"]*e),
+            C_Di >= (C_LC**2)/(pi*bw.wing["AR"]*e),
             # C_Di <= (C_LC**2)/(pi*bw.wing["AR"]*e),
             C_D >= C_Di  + C_Dp,
             C_f**5 == (mfac*0.074)**5 /(Re),
@@ -568,9 +569,9 @@ class TakeOff(Model):
     W                       [N]         aircraft weight
     mu_friction 0.6         [-]         traction limit for powered wheels
     t                       [s]         time of takeoff maneuver
-    Vi                      [m/s]       velocity at start of segment
-    Vf                      [m/s]       velocity at end of segment
-    dV                      [m/s]       difference in velocity over run
+    Vi                      [kt]        velocity at start of segment
+    Vf                      [kt]        velocity at end of segment
+    dV                      [kt]        difference in velocity over run
     mstall      1.3         [-]         stall margin
     rho                     [kg/m^3]    air density
     S                       [m^2]       wing area
@@ -586,14 +587,13 @@ class TakeOff(Model):
 
         Pmax = aircraft.bw.powertrain.Pmax
         AR = aircraft.bw.wing.planform.AR
-        perf = aircraft.dynamic(fs,hybrid,powermode="batt-dischrg")
+        perf = aircraft.dynamic(fs,hybrid,powermode="batt-dischrg",groundroll=True)
         self.perf = perf
         e = perf.bw_perf.e
         constraints = [
                 rho == fs.rho,
                 S == aircraft.bw.wing["S"],
                 Vf == fs.V,
-                perf.bw_perf.C_LC == 2.18,
                 W == aircraft.mass*g,
                 T/W >= A/g + mu,
                 CDg >= perf.bw_perf.C_D,
@@ -737,10 +737,10 @@ class Landing(Model):
         self.perf = perf
         with gpkit.SignomialsEnabled():
             constraints = [
-                perf.bw_perf.C_LC == 6.78,
+                perf.bw_perf.C_LC == 3.54,
                 W == aircraft.mass*g,
                 C_T >= CD, #+ (W*sing)/(0.5*rho*S*V**2),
-                Vs**2  >= (2.*aircraft.mass*g/rho/S/CL),
+                (Vs*mstall)**2  >= (2.*aircraft.mass*g/rho/S/CL),
                 Xgr*(2*g*(mu_b)) >= (mstall*Vs)**2,
                 Xla >= Xgr,
                 Sgr >= Xla,
@@ -798,10 +798,12 @@ class Mission(Model):
                            Vs <= Vstall,
                            self.takeoff.dV == dV,
                            self.takeoff.Vi[0] == Variable("a",1e-3,"m/s","initial Vi lower lim"),
-                           self.takeoff.Vf[-1] == self.takeoff.mstall*(2*self.takeoff.W/self.takeoff.rho/self.takeoff.S/self.takeoff.perf.bw_perf.C_L[-1])**0.5,
+                           (self.takeoff.Vf[-1]/self.takeoff.mstall)**2 == (2*self.takeoff.W/self.takeoff.rho/self.takeoff.S/self.takeoff.perf.bw_perf.C_L[-1]),
                            self.takeoff.Vf[-1] <= sum(self.takeoff.dV),
                            self.takeoff.Vi[1:] == self.takeoff.Vf[:-1],
                            self.takeoff.dV[1:] <= self.takeoff.Vf[1:] - self.takeoff.Vf[:-1],
+                           0.5*self.takeoff.perf.bw_perf.C_L[-1]*self.takeoff.perf.fs.rho*self.aircraft.bw.wing["S"]*self.takeoff.Vf[-1]**2 >= self.aircraft.mass*g,
+                           self.takeoff.perf.bw_perf.C_L[0:-1] >= Variable("a",1e-4,"-","dum"),
                            Srunway >= mrunway*sum(self.takeoff.Sto),
 
                            Srunway >= self.landing.Sgr*mrunway,
@@ -809,6 +811,7 @@ class Mission(Model):
                            Sobstacle >= mobstacle*(sum(self.takeoff.Sto)+ self.obstacle_climb.Sclimb),
                            loading.wingl["W"] == Wcent,
                            Wcent >= self.aircraft.mass*g,
+                           self.takeoff.perf.bw_perf.C_LC == 2.18,
                            self.obstacle_climb.perf.bw_perf.C_LC == 1.05,
                            self.climb.perf.bw_perf.C_LC == 0.95,
                            self.climb.perf.bw_perf.P <=  self.aircraft.bw.n_prop*self.aircraft.bw.powertrain.P_m_sp_cont*self.aircraft.bw.powertrain.m,
