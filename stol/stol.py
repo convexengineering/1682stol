@@ -575,6 +575,7 @@ class TakeOff(Model):
     mstall      1.3         [-]         stall margin
     rho                     [kg/m^3]    air density
     S                       [m^2]       wing area
+    a                       [m/s/s]     acceleration of segment
     """
     def setup(self, aircraft,poweredwheels,n_wheels,hybrid=False,N=5):
         exec parse_variables(TakeOff.__doc__)
@@ -590,19 +591,26 @@ class TakeOff(Model):
         perf = aircraft.dynamic(fs,hybrid,powermode="batt-dischrg",groundroll=True)
         self.perf = perf
         e = perf.bw_perf.e
-        constraints = [
-                rho == fs.rho,
-                S == aircraft.bw.wing["S"],
-                Vf == fs.V,
-                W == aircraft.mass*g,
-                T/W >= A/g + mu,
-                CDg >= perf.bw_perf.C_D,
-                FitCS(fd, zsto, [A/g, B*dV**2/g]), #fit constraint set, pass in fit data, zsto is the 
-                # y variable, then arr of independent (input) vars, watch the units
-                Sto >= 1.0/2.0/B*zsto,
-                t >= Sto/(0.3*Vf)]
         with gpkit.SignomialsEnabled():
-            constraints += [B >= g/W*0.5*rho*S*(CDg)]
+            constraints = [
+                    
+                    rho == fs.rho,
+                    S == aircraft.bw.wing["S"],
+                    Vf == fs.V,
+                    W == aircraft.mass*g,
+
+                    # T/W >= A/g + mu,
+                    CDg == perf.bw_perf.C_D,
+                    (T-0.5*CDg*rho*S*Vf**2)/aircraft.mass >= a,
+                    t*a == dV,
+                    t*(Vi + 0.5*dV) <= Sto
+                    # FitCS(fd, zsto, [A/g, B*dV**2/g]), #fit constraint set, pass in fit data, zsto is the 
+                    # # y variable, then arr of independent (input) vars, watch the units
+                    # Sto >= 1.0/2.0/B*zsto,
+                    # t*(Vf-0.5*dV) >= Sto]
+                    ]
+        # with gpkit.SignomialsEnabled():
+        #     constraints += [B >= g/W*0.5*rho*S*(CDg)]
         if poweredwheels:
             wheel_models = [wheel.dynamic(fs) for wheel in aircraft.wheels]
             with gpkit.SignomialsEnabled():
