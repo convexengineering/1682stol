@@ -78,7 +78,7 @@ class Aircraft(Model):
                        # self.boom["l"] <= Variable("a",20,"ft"),
                        # self.vtail.lv == Variable("lv",180,"in"),
                        # self.htail.lh == Variable("lh",180,"in"),
-                       self.fuselage.m >= 0.4*(sum(c.topvar("m") for c in self.components)),
+                       self.fuselage.m >= 0.4*(sum(c.topvar("m") for c in self.components) + (self.vtail.W + self.htail.W)/g),
                        self.mass>=sum(c.topvar("m") for c in self.components) + (self.boom.W + self.vtail.W + self.htail.W)/g+ (mpax+mbaggage)*n_pax]
         for s in self.boom.d:
             constraints+=[s == d]
