@@ -137,7 +137,7 @@ Free Variables
 
              | Mission/AircraftLoading/TailBoomBending
            F : 0.0003862                                        [N]         tail force
-          th : 0.0008991                                                    tail boom deflection angle
+          th : 0.0008989                                                    tail boom deflection angle
           Mr : [ 1.65e+05  1.24e+05  8.24e+04  4.12e+04 ]       [N*m]       section root moment
 
              | Mission/AircraftLoading/TailBoomBending.1
@@ -154,7 +154,7 @@ Free Variables
 
              | Mission/AircraftLoading/TailBoomBending/Beam
     \bar{EI} : [ 5.72e+08  4.29e+08  2.86e+08  1.43e+08 ]                   normalized YM and moment of inertia
-     \bar{M} : [ 1e+03     164       35.6      3.85     ... ]               normalized moment
+     \bar{M} : [ 1e+03     164       35.6      3.86     ... ]               normalized moment
 \bar{\delta} : [ 1e-10     1.8e-06   0.000122  0.00335  ... ]               normalized displacement
       \theta : [ 1e-10     1.22e-06  1.08e-05  8.6e-05  ... ]               deflection slope
           dx : [ 0.25      0.25      0.25      0.25     ]                   normalized length of element
@@ -210,7 +210,7 @@ Free Variables
 
              | Mission/Climb.1/AircraftP.2/TailAero.4
           Cd : 0.2068                                                       drag coefficient
-          Re : 553.3                                                        Reynolds number
+          Re : 553.2                                                        Reynolds number
 
              | Mission/Climb.1/AircraftP.2/TailAero.5
           Cd : 0.003091                                                     drag coefficient
@@ -264,7 +264,7 @@ Free Variables
           Re : 1.119e+07                                                    Reynolds number
 
              | Mission/Climb/AircraftP.1/TailAero.2
-          Cd : 10.84                                                        drag coefficient
+          Cd : 10.83                                                        drag coefficient
           Re : 438.7                                                        Reynolds number
 
              | Mission/Climb/AircraftP.1/TailAero.3
@@ -392,7 +392,7 @@ Free Variables
           Re : 244.3                                                        Reynolds number
 
              | Mission/Landing/AircraftP.5/TailAero.11
-          Cd : 0.09979                                                      drag coefficient
+          Cd : 0.09978                                                      drag coefficient
           Re : 1.939e+06                                                    Reynolds number
 
              | Mission/Landing/AircraftP.5/TailBoomAero.5
@@ -470,8 +470,8 @@ Free Variables
            S : [ 8.51      8.51      8.51      8.51     ]       [m**2]      wing area
          Sto : [ 13.9      15.3      52.3      133      ]       [ft]        take off distance
            T : [ 1.05e+04  9.61e+03  8.75e+03  7.14e+03 ]       [N]         take off thrust
-          Vf : [ 9.55e-09  17        34        67.9     ]       [kt]        velocity at end of segment
-          Vi : [ 0.00194   9.55e-09  17        34       ]       [kt]        velocity at start of segment
+          Vf : [ 9.54e-09  17        34        67.9     ]       [kt]        velocity at end of segment
+          Vi : [ 0.00194   9.54e-09  17        34       ]       [kt]        velocity at start of segment
            W : [ 1.14e+04  1.14e+04  1.14e+04  1.14e+04 ]       [N]         aircraft weight
            a : [ 9.03      8.19      7.17      4.71     ]       [m/s**2]    acceleration of segment
           dV : [ 17        17        17        17       ]       [kt]        difference in velocity over run
@@ -479,7 +479,7 @@ Free Variables
            t : [ 0.967     1.07      1.22      1.85     ]       [s]         time of takeoff maneuver
 
              | Mission/TakeOff/AircraftP
-          CD : [ 8.34e+19  24.2      5.5       1.12     ]                   total CD, referenced to wing area
+          CD : [ 8.35e+19  24.2      5.5       1.12     ]                   total CD, referenced to wing area
            P : [ 451       451       451       451      ]       [kW]        total power draw
 
              | Mission/TakeOff/AircraftP/BatteryP
@@ -490,12 +490,12 @@ Free Variables
          C_D : [ 2.52e+05  0.266     0.264     0.263    ]                   total drag coefficient
         C_Di : [ 0.252     0.252     0.252     0.252    ]                   induced drag coefficient
         C_Dp : [ 0.986     0.0139    0.0121    0.0106   ]                   profile drag
-         C_E : [ 1.4e+30   225       26.5      3.52     ]                   energy momentum coefficient
-         C_J : [ 1.98e+20  58.5      14.1      3.66     ]                   jet momentum coefficient
+         C_E : [ 1.41e+30  225       26.5      3.52     ]                   energy momentum coefficient
+         C_J : [ 1.99e+20  58.5      14.1      3.66     ]                   jet momentum coefficient
          C_L : [ 0.0001    0.0001    0.0001    3.03     ]                   total lift coefficient
         C_LC : [ 2.18      2.18      2.18      2.18     ]                   lift coefficient due to circulation
          C_Q : [ 7.01e+09  3.81      1.87      0.952    ]                   mass momentum coefficient
-         C_T : [ 8.34e+19  24.2      5.5       1.12     ]                   thrust coefficient
+         C_T : [ 8.35e+19  24.2      5.5       1.12     ]                   thrust coefficient
          C_f : [ 0.398     0.00562   0.00489   0.00426  ]                   friction coefficient
      E_prime : [ 1.09e+05  9.78e+04  9.23e+04  9.79e+04 ]       [J/m/s]     energy flow per unit span
      J_prime : [ 3.12e+03  2.91e+03  2.8e+03   2.92e+03 ]       [kg/s**2]   momentum flow per unit span
@@ -509,7 +509,7 @@ Free Variables
              | Mission/TakeOff/AircraftP/FuselageP
          C_f : [ 0.313     0.00442   0.00384   0.00335  ]                   friction coefficient
           Cd : [ 1.25e+03  0.442     0.201     0.0741   ]                   drag coefficient
-          FF : [ 4.01e+03  100       52.2      22.1     ]                   form factor
+          FF : [ 4.01e+03  100       52.1      22.1     ]                   form factor
           Re : [ 0.0012    2.13e+06  4.25e+06  8.51e+06 ]                   Reynolds number
 
              | Mission/TakeOff/AircraftP/TailAero
@@ -517,7 +517,7 @@ Free Variables
           Re : [ 4.69e-08  83.4      167       334      ]                   Reynolds number
 
              | Mission/TakeOff/AircraftP/TailAero.1
-          Cd : [ 3.36e+04  0.467     0.215     0.0745   ]                   drag coefficient
+          Cd : [ 3.35e+04  0.467     0.215     0.0745   ]                   drag coefficient
           Re : [ 0.000372  6.62e+05  1.32e+06  2.65e+06 ]                   Reynolds number
 
              | Mission/TakeOff/AircraftP/TailBoomAero
@@ -531,7 +531,7 @@ Free Variables
        P_out : [ 141       141       141       141      ]       [kW]        output from generator controller after efficiency
 
              | Mission/TakeOff/FlightState
-           V : [ 9.55e-09  17        34        67.9     ]       [kt]        speed
+           V : [ 9.54e-09  17        34        67.9     ]       [kt]        speed
          qne : [ 4.96e+03  4.96e+03  4.96e+03  4.96e+03 ]       [kg/m/s**2] never exceed dynamic pressure
 
 Constants
@@ -1141,7 +1141,7 @@ Sensitivities
                     | Mission/AircraftLoading/TailBoomBending.1/Beam.1
             \bar{S} : [ +0.00077  +0.0023   +0.0038   +0.0049  ... ]  normalized shear
       \bar{M}_{tip} : +4.6e-12                                        Tip moment
-      \theta_{root} : +5.1e-13                                        Base angle
+      \theta_{root} : +5.2e-13                                        Base angle
 \bar{\delta}_{root} : +2.8e-13                                        Base deflection
 
                     | Mission/AircraftLoading/TailBoomBending/Beam
@@ -1185,8 +1185,8 @@ Sensitivities
 
                     | Mission/Climb/AircraftP.1/BlownWingP.1
                   e : -1.5e-05                                        span efficiency
-                 Kf : +2.5e-06                                        form factor
                mfac : +2.5e-06                                        profile drag margin factor
+                 Kf : +2.5e-06                                        form factor
                Mlim : +0                                              tip limit
                   a : +0                                              speed of sound at sea level
               rho_j : -3.2e-12                                        density in jet flow
@@ -1195,7 +1195,7 @@ Sensitivities
                mfac : +1e-05                                          friction margin
 
                     | Mission/Climb/AircraftP.1/TailAero.2
-       m_{fac--fit} : +4.2e-12                                        RMS error of fit
+       m_{fac--fit} : +4.3e-12                                        RMS error of fit
 
                     | Mission/Climb/AircraftP.1/TailAero.3
        m_{fac--fit} : +4.7e-07                                        RMS error of fit

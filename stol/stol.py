@@ -794,7 +794,7 @@ class Mission(Model):
         state = FlightState()
         with gpkit.SignomialsEnabled():
             constraints = [
-                           self.aircraft.htail.Vh*10 >= (-2.35813*CJmax + 7.13362*CLmax - 8.375),
+                           self.aircraft.htail.Vh >= -0.235813*CJmax + 0.713362*CLmax - 0.8375,
                            # self.aircraft.htail.Vh >= 0.3,
                            # CLmax >= self.takeoff.perf.bw_perf.C_L,
                            CLmax == self.landing.perf.bw_perf.C_L,
