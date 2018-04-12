@@ -487,7 +487,7 @@ class BlownWingP(Model):
     J_prime         [kg/(s**2)]     momentum flow per unit span
     E_prime         [J/(m*s)]       energy flow per unit span
     rho_j   1.225   [kg/m**3]       density in jet flow
-    u_j             [kts]           velocity in jet flow
+    u_j             [m/s]           velocity in jet flow
     h               [m]             Wake height
     T               [N]             propeller thrust
     P               [kW]            power draw
@@ -795,11 +795,9 @@ class Mission(Model):
         with gpkit.SignomialsEnabled():
             constraints = [
                            self.aircraft.htail.Vh >= -0.235813*CJmax + 0.713362*CLmax - 0.8375,
-                           # self.aircraft.htail.Vh >= 0.3,
-                           # CLmax >= self.takeoff.perf.bw_perf.C_L,
                            CLmax == self.landing.perf.bw_perf.C_L,
-                           # CJmax <= self.takeoff.perf.bw_perf.C_J,
                            CJmax == self.landing.perf.bw_perf.C_J,
+
                            self.obstacle_climb.h_gain == Variable("h_obstacle",50,"ft"),
                            self.climb.h_gain == Variable("h_cruise",1950,"ft"),
                            self.climb.Sclimb == Variable("Scruiseclimb",10,"miles"),
