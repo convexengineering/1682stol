@@ -100,6 +100,7 @@ class AircraftP(Model):
     CD                  [-]     total CD, referenced to wing area
     P_charge            [kW]    battery charging power
     P_avionics  0.25    [kW]    avionics continuous power draw
+    C_chrg              [1/hr]     battery charge rate
     """
     def setup(self,aircraft,state,hybrid=False,powermode="batt-chrg",t_charge=None,groundroll=False):
         exec parse_variables(AircraftP.__doc__)
@@ -121,7 +122,8 @@ class AircraftP(Model):
         if hybrid:
             self.gen_perf = aircraft.genandic.dynamic(state)
             if powermode == "batt-chrg":
-                constraints += [P_charge >= aircraft.battery.E_capacity/t_charge,
+                constraints += [#C_chrg == P_charge/E_capacity,
+                                P_charge >= aircraft.battery.E_capacity/t_charge,
                                 self.gen_perf.P_out >= P + P_charge,
                                 self.batt_perf.P >= Variable("P_draw_batt",1e-4,"W")]
             if powermode == "batt-dischrg":
@@ -207,10 +209,10 @@ class Powertrain(Model):
     ---------
     m                       [kg]            powertrain mass
     Pmax                    [kW]            maximum power
-    P_m_sp_cont             [W/kg]         continuous motor specific power
-    P_m_sp_max              [W/kg]         maximum motor specific power
+    P_m_sp_cont             [W/kg]          continuous motor specific power
+    P_m_sp_max              [W/kg]          maximum motor specific power
     tau_sp_max              [N*m/kg]        max specific torque
-    RPMmax                 [rpm]           max rpm
+    RPMmax                  [rpm]           max rpm
     r                       [m]             propeller radius
     Pstar_ref     1         [W]             specific motor power reference
     m_ref         1         [kg]            reference motor power
@@ -681,7 +683,7 @@ class Cruise(Model):
         self.perf = aircraft.dynamic(self.flightstate,hybrid,powermode="batt-chrg",t_charge=t)
         constraints = [R == t*self.flightstate.V,
                        self.flightstate["V"] >= Vmin,
-                       self.perf.bw_perf.C_LC == 0.8]
+                       self.perf.bw_perf.C_LC == 0.534]
 
         return constraints, self.flightstate, self.perf
 
@@ -698,7 +700,7 @@ class Reserve(Model):
         exec parse_variables(Reserve.__doc__)
         self.flightstate = FlightState()
         self.perf = aircraft.dynamic(self.flightstate,hybrid,powermode="batt-chrg",t_charge=t)
-        constraints = [self.perf.bw_perf.C_LC == 0.8]
+        constraints = [self.perf.bw_perf.C_LC == 0.534]
 
         return constraints, self.perf
      
@@ -745,7 +747,7 @@ class Landing(Model):
         self.perf = perf
         with gpkit.SignomialsEnabled():
             constraints = [
-                perf.bw_perf.C_LC == 3.54,
+                perf.bw_perf.C_LC == 2.19,
                 W == aircraft.mass*g,
                 C_T >= CD, #+ (W*sing)/(0.5*rho*S*V**2),
                 (Vs*mstall)**2  >= (2.*aircraft.mass*g/rho/S/CL),
@@ -794,9 +796,14 @@ class Mission(Model):
         state = FlightState()
         with gpkit.SignomialsEnabled():
             constraints = [
-                           self.aircraft.htail.Vh >= -0.235813*CJmax + 0.713362*CLmax - 0.8375,
-                           CLmax == self.landing.perf.bw_perf.C_L,
-                           CJmax == self.landing.perf.bw_perf.C_J,
+
+                           # self.aircraft.htail.Vh >= -0.235813*CJmax + 0.713362*CLmax - 0.8375,
+                           # self.aircraft.htail.Vh >= 0.0016*CJmax + 0.0301*CLmax + 0.5539,
+                           self.aircraft.htail.Vh >= 0.001563*CJmax*CLmax + 0.0323*CLmax + 0.03014*CJmax + 0.5216,
+                           CLmax >= self.takeoff.perf.bw_perf.C_L,
+                           CLmax >= self.landing.perf.bw_perf.C_L,
+                           CJmax >= self.takeoff.perf.bw_perf.C_J,
+                           CJmax >= self.landing.perf.bw_perf.C_J,
 
                            self.obstacle_climb.h_gain == Variable("h_obstacle",50,"ft"),
                            self.climb.h_gain == Variable("h_cruise",1950,"ft"),
@@ -818,9 +825,9 @@ class Mission(Model):
                            Sobstacle >= mobstacle*(sum(self.takeoff.Sto)+ self.obstacle_climb.Sclimb),
                            loading.wingl["W"] == Wcent,
                            Wcent >= self.aircraft.mass*g,
-                           self.takeoff.perf.bw_perf.C_LC == 2.18,
-                           self.obstacle_climb.perf.bw_perf.C_LC == 1.05,
-                           self.climb.perf.bw_perf.C_LC == 0.95,
+                           self.takeoff.perf.bw_perf.C_LC == 1.37,
+                           self.obstacle_climb.perf.bw_perf.C_LC == 0.611,
+                           self.climb.perf.bw_perf.C_LC == 0.611,
                            self.climb.perf.bw_perf.P <=  self.aircraft.bw.n_prop*self.aircraft.bw.powertrain.P_m_sp_cont*self.aircraft.bw.powertrain.m,
                            self.cruise.perf.bw_perf.P <= self.aircraft.bw.n_prop*self.aircraft.bw.powertrain.P_m_sp_cont*self.aircraft.bw.powertrain.m
                         ]
@@ -1004,8 +1011,8 @@ def ICVsTurboshaft():
     plt.show()
 
 def Runway():
-    M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
-    runway_sweep = np.linspace(200,300,5)
+    M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
+    runway_sweep = np.linspace(160,300,5)
     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
