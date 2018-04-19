@@ -46,7 +46,7 @@ class Aircraft(Model):
         self.vtail.substitutions[self.vtail.planform.tau] = 0.08
         self.htail.substitutions[self.htail.planform.tau] = 0.08
         self.htail.substitutions[self.htail.mh] = 0.8
-        self.htail.substitutions[self.vtail.Vv] = 0.4
+        self.htail.substitutions[self.vtail.Vv] = 0.1
         self.htail.substitutions[self.htail.planform.CLmax] = 3
         self.vtail.substitutions[self.vtail.planform.CLmax] = 3
 
@@ -811,7 +811,9 @@ class Mission(Model):
                            0.5*state.rho*CLstall*self.aircraft.bw.wing.planform.S*Vs**2 == self.aircraft.mass*g,
                            Vs <= Vstall,
                            self.takeoff.dV == dV,
+
                            self.takeoff.Vi[0] == Variable("a",1e-3,"m/s","initial Vi lower lim"),
+                           self.takeoff.Vf[0] <= dV + self.takeoff.Vi[0],
                            (self.takeoff.Vf[-1]/self.takeoff.mstall)**2 == (2*self.takeoff.W/self.takeoff.rho/self.takeoff.S/self.takeoff.perf.bw_perf.C_L[-1]),
                            self.takeoff.Vf[-1] <= sum(self.takeoff.dV),
                            self.takeoff.Vi[1:] == self.takeoff.Vf[:-1],
@@ -848,20 +850,6 @@ class Mission(Model):
 def writeSol(sol):
     with open('solve.txt', 'wb') as output:
         output.write(sol.table())
-
-if __name__ == "__main__":
-    poweredwheels = False
-    M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True)
-    M.cost = M.aircraft.mass
-    # M.debug()
-    sol = M.localsolve("mosek")
-    # print M.program.gps[-1].result.summary()
-    print sol.summary()
-    sd = get_highestsens(M, sol, N=10)
-    f, a = plot_chart(sd)
-    f.savefig("sensbar.pdf", bbox_inches="tight")
-    print sol(M.aircraft.mass)
-    writeSol(sol)
 
 def CLCurves():
     M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
@@ -1012,7 +1000,7 @@ def ICVsTurboshaft():
 
 def Runway():
     M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
-    runway_sweep = np.linspace(160,300,5)
+    runway_sweep = np.linspace(220,300,5)
     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
@@ -1022,6 +1010,7 @@ def Runway():
     plt.title("Runway trade")
     plt.xlabel("Runway length [ft]")
     plt.ylabel("Takeoff mass [kg]")
+    plt.ylim(ymin=0)
     plt.grid()
     plt.show()    
 # CLCurves()
@@ -1031,3 +1020,18 @@ def Runway():
 # ElectricVsHybrid()
 # ICVsTurboshaft()
 # Runway()
+
+if __name__ == "__main__":
+    # Runway()
+    poweredwheels = False
+    M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True)
+    M.cost = M.aircraft.mass
+    # M.debug()
+    sol = M.localsolve("mosek")
+    # print M.program.gps[-1].result.summary()
+    print sol.summary()
+    sd = get_highestsens(M, sol, N=10)
+    f, a = plot_chart(sd)
+    f.savefig("sensbar.pdf", bbox_inches="tight")
+    print sol(M.aircraft.mass)
+    writeSol(sol)
