@@ -813,12 +813,15 @@ class Mission(Model):
                             self.takeoff.perf.bw_perf.C_L[:-1] == self.takeoff.perf.bw_perf.C_L[-1],
                             Srunway >= mrunway*sum(self.takeoff.Sto),
                             #midpoint velocity displacement
+                            # self.takeoff.perf.bw_perf.C_D[:-1] == self.takeoff.perf.bw_perf.C_D[-1],
                             self.takeoff.dV[0]*0.5*self.takeoff.t[0] == self.takeoff.Sto[0],
                             sum(self.takeoff.dV[:2])*0.5*self.takeoff.t[1] <= self.takeoff.Sto[1],
                             sum(self.takeoff.dV[:3])*0.5*self.takeoff.t[2] <= self.takeoff.Sto[2],
                             sum(self.takeoff.dV[:4])*0.5*self.takeoff.t[3] <= self.takeoff.Sto[3],
-
-                            self.takeoff.fs.V <=  sum(self.takeoff.dV),
+                            self.takeoff.fs.V[0] >= sum(self.takeoff.dV[:1]),
+                            self.takeoff.fs.V[1] >= sum(self.takeoff.dV[:2]),
+                            self.takeoff.fs.V[2] >= sum(self.takeoff.dV[:3]),
+                            self.takeoff.fs.V[-1] <=  sum(self.takeoff.dV),
                             Srunway >= self.landing.Sgr*mrunway,
                             Sobstacle == Srunway*(4.0/3.0),
                             Sobstacle >= mobstacle*(sum(self.takeoff.Sto)+ self.obstacle_climb.Sclimb),
