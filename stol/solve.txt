@@ -62,12 +62,6 @@ Free Variables
            f : 2.333                                                        fineness ratio
            m : 343.9                                            [kg]        mass of fuselage
 
-             | Mission/Aircraft/GenAndIC
-    P_g_cont : 1.568e+05                                        [W]         genandic cont. power
- P_g_sp_cont : 6205                                             [W/kg]      genandic spec power (cont)
-           m : 86.57                                            [kg]        total mass
-         m_g : 25.27                                            [kg]        genandic mass
-
              | Mission/Aircraft/HorizontalTail
           Vh : 0.6704                                                       horizontal tail volume coefficient
            W : 13.6                                             [lbf]       wing weight
@@ -104,6 +98,12 @@ Free Variables
            m : 144.8                                            [lb]        total mass
       m_fuel : 133.8                                            [lb]        mass of fuel
       m_tank : 4.983                                            [kg]        fuel tank mass
+
+             | Mission/Aircraft/TurboGen
+    P_g_cont : 1.568e+05                                        [W]         turbogen cont. power
+ P_g_sp_cont : 6205                                             [W/kg]      turbogen spec power (cont)
+           m : 86.57                                            [kg]        total mass
+         m_g : 25.27                                            [kg]        turbogen mass
 
              | Mission/Aircraft/VerticalTail
            W : 14.36                                            [lbf]       wing weight
@@ -220,7 +220,7 @@ Free Variables
           Cf : 0.002673                                                     tail boom skin friction coefficient
           Re : 2.734e+07                                                    tail boom reynolds number
 
-             | Mission/Climb.1/AircraftP.2/genandicP.2
+             | Mission/Climb.1/AircraftP.2/turbogenP.2
       P_fuel : 625                                              [kW]        power coming in from fuel flow
          P_g : 156.8                                            [kW]        generator power
         P_ic : 160                                              [kW]        internal combustion power
@@ -275,7 +275,7 @@ Free Variables
           Cf : 0.002779                                                     tail boom skin friction coefficient
           Re : 2.401e+07                                                    tail boom reynolds number
 
-             | Mission/Climb/AircraftP.1/genandicP.1
+             | Mission/Climb/AircraftP.1/turbogenP.1
       P_fuel : 625                                              [kW]        power coming in from fuel flow
          P_g : 156.8                                            [kW]        generator power
         P_ic : 160                                              [kW]        internal combustion power
@@ -335,7 +335,7 @@ Free Variables
           Cf : 0.002636                                                     tail boom skin friction coefficient
           Re : 2.863e+07                                                    tail boom reynolds number
 
-             | Mission/Cruise/AircraftP.3/genandicP.3
+             | Mission/Cruise/AircraftP.3/turbogenP.3
       P_fuel : 625                                              [kW]        power coming in from fuel flow
          P_g : 156.8                                            [kW]        generator power
         P_ic : 160                                              [kW]        internal combustion power
@@ -399,7 +399,7 @@ Free Variables
           Cf : 0.00283                                                      tail boom skin friction coefficient
           Re : 2.261e+07                                                    tail boom reynolds number
 
-             | Mission/Landing/AircraftP.5/genandicP.5
+             | Mission/Landing/AircraftP.5/turbogenP.5
       P_fuel : 625                                              [kW]        power coming in from fuel flow
          P_g : 156.8                                            [kW]        generator power
         P_ic : 160                                              [kW]        internal combustion power
@@ -456,7 +456,7 @@ Free Variables
           Cf : 0.002844                                                     tail boom skin friction coefficient
           Re : 2.222e+07                                                    tail boom reynolds number
 
-             | Mission/Reserve/AircraftP.4/genandicP.4
+             | Mission/Reserve/AircraftP.4/turbogenP.4
       P_fuel : 306                                              [kW]        power coming in from fuel flow
          P_g : 76.76                                            [kW]        generator power
         P_ic : 78.32                                            [kW]        internal combustion power
@@ -521,7 +521,7 @@ Free Variables
           Cf : [ 0.00471   0.00383   0.00339   0.00311  ]                   tail boom skin friction coefficient
           Re : [ 4.13e+06  8.26e+06  1.24e+07  1.65e+07 ]                   tail boom reynolds number
 
-             | Mission/TakeOff/AircraftP/genandicP
+             | Mission/TakeOff/AircraftP/turbogenP
       P_fuel : [ 625       625       625       625      ]       [kW]        power coming in from fuel flow
          P_g : [ 157       157       157       157      ]       [kW]        generator power
         P_ic : [ 160       160       160       160      ]       [kW]        internal combustion power
@@ -630,16 +630,6 @@ Constants
                   l : 3                                                [ft]            landing gear length
                   m : 60.3                                             [lb]            mass
 
-                    | Mission/Aircraft/GenAndIC
-          P_ic_cont : 160                                              [kW]            piston continous power
-       P_ic_sp_cont : 2.8                                              [kW/kg]         specific cont power of IC (2.8 if turboshaft)
-          Pstar_ref : 1                                                [W/kg]          reference specific power, for meeting units constraints
-                  a : 46.4                                             [W/kg**2]
-                  b : 5032                                             [W/kg]
-             eta_IC : 0.15                                                             thermal efficiency of IC (0.15 if turboshaft)
-               m_ic : 61.3                                             [kg]            piston mass
-              m_ref : 1                                                [kg]            reference mass, for meeting units constraints
-
                     | Mission/Aircraft/HorizontalTail
              CLhmin : 0.75                                                             max downlift coefficient
                mfac : 1.2                                                              wing weight margin factor
@@ -678,6 +668,16 @@ Constants
          Estar_fuel : 11.9                                             [kWh/kg]        fuel specific energy
            rho_fuel : 6.7                                              [lb/gal]        fuel density
            rho_tank : 0.55                                             [lb/gal]        empty tank mass (structure mass) per volume
+
+                    | Mission/Aircraft/TurboGen
+          P_ic_cont : 160                                              [kW]            piston continous power
+       P_ic_sp_cont : 2.8                                              [kW/kg]         specific cont power of IC (2.8 if turboshaft)
+          Pstar_ref : 1                                                [W/kg]          reference specific power, for meeting units constraints
+                  a : 46.4                                             [W/kg**2]
+                  b : 5032                                             [W/kg]
+             eta_IC : 0.15                                                             thermal efficiency of IC (0.15 if turboshaft)
+               m_ic : 61.3                                             [kg]            piston mass
+              m_ref : 1                                                [kg]            reference mass, for meeting units constraints
 
                     | Mission/Aircraft/VerticalTail
                  Vv : 0.1                                                              vertical tail volume coefficient
@@ -760,7 +760,7 @@ Constants
                     | Mission/Climb.1/AircraftP.2/TailAero.5
        m_{fac--fit} : 1.041                                                            RMS error of fit
 
-                    | Mission/Climb.1/AircraftP.2/genandicP.2
+                    | Mission/Climb.1/AircraftP.2/turbogenP.2
               eta_g : 0.9                                                              generator efficiency
              eta_ic : 0.256                                                            internal combustion engine efficiency
           eta_shaft : 0.98                                                             shaft losses (two 99% efficient bearings)
@@ -792,7 +792,7 @@ Constants
                     | Mission/Climb/AircraftP.1/TailAero.3
        m_{fac--fit} : 1.041                                                            RMS error of fit
 
-                    | Mission/Climb/AircraftP.1/genandicP.1
+                    | Mission/Climb/AircraftP.1/turbogenP.1
               eta_g : 0.9                                                              generator efficiency
              eta_ic : 0.256                                                            internal combustion engine efficiency
           eta_shaft : 0.98                                                             shaft losses (two 99% efficient bearings)
@@ -828,7 +828,7 @@ Constants
                     | Mission/Cruise/AircraftP.3/TailAero.7
        m_{fac--fit} : 1.041                                                            RMS error of fit
 
-                    | Mission/Cruise/AircraftP.3/genandicP.3
+                    | Mission/Cruise/AircraftP.3/turbogenP.3
               eta_g : 0.9                                                              generator efficiency
              eta_ic : 0.256                                                            internal combustion engine efficiency
           eta_shaft : 0.98                                                             shaft losses (two 99% efficient bearings)
@@ -875,7 +875,7 @@ Constants
                     | Mission/Landing/AircraftP.5/TailAero.11
        m_{fac--fit} : 1.041                                                            RMS error of fit
 
-                    | Mission/Landing/AircraftP.5/genandicP.5
+                    | Mission/Landing/AircraftP.5/turbogenP.5
               eta_g : 0.9                                                              generator efficiency
              eta_ic : 0.256                                                            internal combustion engine efficiency
           eta_shaft : 0.98                                                             shaft losses (two 99% efficient bearings)
@@ -912,7 +912,7 @@ Constants
                     | Mission/Reserve/AircraftP.4/TailAero.9
        m_{fac--fit} : 1.041                                                            RMS error of fit
 
-                    | Mission/Reserve/AircraftP.4/genandicP.4
+                    | Mission/Reserve/AircraftP.4/turbogenP.4
               eta_g : 0.9                                                              generator efficiency
              eta_ic : 0.256                                                            internal combustion engine efficiency
           eta_shaft : 0.98                                                             shaft losses (two 99% efficient bearings)
@@ -954,7 +954,7 @@ Constants
                     | Mission/TakeOff/AircraftP/TailAero.1
        m_{fac--fit} : [ 1.04      1.04      1.04      1.04     ]                       RMS error of fit
 
-                    | Mission/TakeOff/AircraftP/genandicP
+                    | Mission/TakeOff/AircraftP/turbogenP
               eta_g : [ 0.9       0.9       0.9       0.9      ]                       generator efficiency
              eta_ic : [ 0.256     0.256     0.256     0.256    ]                       internal combustion engine efficiency
           eta_shaft : [ 0.98      0.98      0.98      0.98     ]                       shaft losses (two 99% efficient bearings)
@@ -1029,10 +1029,10 @@ Sensitivities
 
                     | Mission/Aircraft/BlownWing/Wing/Planform
             cbarmac : +0.14                                           non-dim MAC
+                tau : -0.04                                           airfoil thickness ratio
                deta : [ +0.01     +0.01     +0.01     +0.01    ... ]  \Delta (2y/b)
               cbave : [ -0.033    -0.0029   -0.0019   -0.0012  ... ]  non-dim mid section chord
                cbar : [ +0.14     + -       + -       + -      ... ]  non-dim chord at nodes
-                tau : -0.04                                           airfoil thickness ratio
 
                     | Mission/Aircraft/BlownWing/Wing/WingSkin
                 Vne : +3.4e-13                                        never exceed vehicle speed
@@ -1052,21 +1052,15 @@ Sensitivities
                     | Mission/Aircraft/Gear
                   m : +0.071                                          mass
 
-                    | Mission/Aircraft/GenAndIC
-               m_ic : +0.16                                           piston mass
-          P_ic_cont : -0.15                                           piston continous power
-                  b : -0.045
-                  a : -0.01
-
                     | Mission/Aircraft/HorizontalTail
                mfac : +0.016                                          wing weight margin factor
 
                     | Mission/Aircraft/HorizontalTail/Planform.1
+                 AR : -0.0058                                         aspect ratio
+               deta : [ +0.0046   +0.0037  ]                          \Delta (2y/b)
                 tau : +0.0027                                         airfoil thickness ratio
                cbar : [ +0.0038   + -       + -      ]                non-dim chord at nodes
               cbave : [ +0.0093   +0.0074  ]                          non-dim mid section chord
-                 AR : -0.0058                                         aspect ratio
-               deta : [ +0.0046   +0.0037  ]                          \Delta (2y/b)
               CLmax : +1.6e-10                                        maximum lift coefficient
             cbarmac : +0                                              non-dim MAC
 
@@ -1088,6 +1082,12 @@ Sensitivities
          Estar_fuel : -0.17                                           fuel specific energy
            rho_tank : +0.013                                          empty tank mass (structure mass) per volume
            rho_fuel : -0.013                                          fuel density
+
+                    | Mission/Aircraft/TurboGen
+               m_ic : +0.16                                           piston mass
+          P_ic_cont : -0.15                                           piston continous power
+                  b : -0.045
+                  a : -0.01
 
                     | Mission/Aircraft/VerticalTail
                  Vv : +0.04                                           vertical tail volume coefficient
@@ -1164,7 +1164,7 @@ Sensitivities
                     | Mission/Climb.1/AircraftP.2/TailAero.5
        m_{fac--fit} : +4.2e-05                                        RMS error of fit
 
-                    | Mission/Climb.1/AircraftP.2/genandicP.2
+                    | Mission/Climb.1/AircraftP.2/turbogenP.2
               eta_g : -0.004                                          generator efficiency
              eta_ic : -0.004                                          internal combustion engine efficiency
           eta_shaft : -0.004                                          shaft losses (two 99% efficient bearings)
@@ -1193,7 +1193,7 @@ Sensitivities
                     | Mission/Climb/AircraftP.1/TailAero.3
        m_{fac--fit} : +3.4e-07                                        RMS error of fit
 
-                    | Mission/Climb/AircraftP.1/genandicP.1
+                    | Mission/Climb/AircraftP.1/turbogenP.1
               eta_g : -5.8e-06                                        generator efficiency
              eta_ic : -5.8e-06                                        internal combustion engine efficiency
           eta_shaft : -5.8e-06                                        shaft losses (two 99% efficient bearings)
@@ -1226,7 +1226,7 @@ Sensitivities
                     | Mission/Cruise/AircraftP.3/TailAero.7
        m_{fac--fit} : +0.0032                                         RMS error of fit
 
-                    | Mission/Cruise/AircraftP.3/genandicP.3
+                    | Mission/Cruise/AircraftP.3/turbogenP.3
               eta_g : -0.27                                           generator efficiency
              eta_ic : -0.27                                           internal combustion engine efficiency
           eta_shaft : -0.27                                           shaft losses (two 99% efficient bearings)
@@ -1251,7 +1251,7 @@ Sensitivities
                   e : -6.3e-05                                        span efficiency
                  Kf : +2.1e-06                                        form factor
                mfac : +2.1e-06                                        profile drag margin factor
-              rho_j : +7.3e-13                                        density in jet flow
+              rho_j : +7.4e-13                                        density in jet flow
                Mlim : +0                                              tip limit
                   a : +0                                              speed of sound at sea level
 
@@ -1264,7 +1264,7 @@ Sensitivities
                     | Mission/Landing/AircraftP.5/TailAero.11
        m_{fac--fit} : +1.4e-07                                        RMS error of fit
 
-                    | Mission/Landing/AircraftP.5/genandicP.5
+                    | Mission/Landing/AircraftP.5/turbogenP.5
               eta_g : -1.1e-05                                        generator efficiency
              eta_ic : -1.1e-05                                        internal combustion engine efficiency
           eta_shaft : -1.1e-05                                        shaft losses (two 99% efficient bearings)
@@ -1298,7 +1298,7 @@ Sensitivities
                     | Mission/Reserve/AircraftP.4/TailAero.9
        m_{fac--fit} : +0.00042                                        RMS error of fit
 
-                    | Mission/Reserve/AircraftP.4/genandicP.4
+                    | Mission/Reserve/AircraftP.4/turbogenP.4
               eta_g : -0.036                                          generator efficiency
           eta_shaft : -0.036                                          shaft losses (two 99% efficient bearings)
              eta_ic : -0.036                                          internal combustion engine efficiency
@@ -1331,9 +1331,9 @@ Sensitivities
                     | Mission/TakeOff/AircraftP/TailAero.1
        m_{fac--fit} : [ +1.4e-12  +1.5e-12  +1.7e-12  +1.8e-12 ]      RMS error of fit
 
-                    | Mission/TakeOff/AircraftP/genandicP
-             eta_ic : [ -0.0032   +0.048    +0.13     -0.04    ]      internal combustion engine efficiency
-          eta_shaft : [ -0.0032   +0.048    -0.015    -0.04    ]      shaft losses (two 99% efficient bearings)
+                    | Mission/TakeOff/AircraftP/turbogenP
+             eta_ic : [ -0.0032   -0.0077   +0.19     -0.04    ]      internal combustion engine efficiency
+          eta_shaft : [ -0.0032   -0.0077   +0.041    -0.04    ]      shaft losses (two 99% efficient bearings)
               eta_g : [ -0.0032   -0.0077   -0.015    -0.04    ]      generator efficiency
 
                     | Mission/TakeOff/FlightState

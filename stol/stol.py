@@ -54,8 +54,8 @@ class Aircraft(Model):
     
         if hybrid:
             self.tank = Tank()
-            self.genandic = GenAndIC()
-            self.components += [self.tank,self.genandic]
+            self.turbogen = TurboGen()
+            self.components += [self.tank,self.turbogen]
 
         if poweredwheels:
                 self.pw = PoweredWheel()
@@ -120,7 +120,7 @@ class AircraftP(Model):
         if groundroll == False:
             constraints += [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*g]
         if hybrid:
-            self.gen_perf = aircraft.genandic.dynamic(state)
+            self.gen_perf = aircraft.turbogen.dynamic(state)
             if powermode == "batt-chrg":
                 constraints += [#C_chrg == P_charge/E_capacity,
                                 P_charge >= aircraft.battery.E_capacity/t_charge,
@@ -282,24 +282,24 @@ class PoweredWheelP(Model):
                       tau <= pw.tau_max]
         return constraints
 
-class GenAndIC(Model):
-    """ GenAndIC Model
+class TurboGen(Model):
+    """ TurboGen Model
     Variables
     ---------
     P_ic_sp_cont    2.8            [kW/kg]    specific cont power of IC (2.8 if turboshaft)
     eta_IC          0.15           [-]        thermal efficiency of IC (0.15 if turboshaft)
-    m_g                            [kg]       genandic mass
-    m_gc                           [kg]       genandic controller mass
+    m_g                            [kg]       turbogen mass
+    m_gc                           [kg]       turbogen controller mass
     m_ic            61.3           [kg]       piston mass
-    P_g_sp_cont                    [W/kg]     genandic spec power (cont)
-    P_g_cont                       [W]        genandic cont. power
+    P_g_sp_cont                    [W/kg]     turbogen spec power (cont)
+    P_g_cont                       [W]        turbogen cont. power
     P_ic_cont       160            [kW]       piston continous power  
     m                              [kg]       total mass
     m_ref           1              [kg]       reference mass, for meeting units constraints
     Pstar_ref       1              [W/kg]     reference specific power, for meeting units constraints
     """
     def setup(self):
-        exec parse_variables(GenAndIC.__doc__)
+        exec parse_variables(TurboGen.__doc__)
         with gpkit.SignomialsEnabled():
             constraints = [P_g_sp_cont <= (Variable("a",46.4,"W/kg**2")*m_g + Variable("b",5032,"W/kg")), #magicALL motor fits
                            P_g_cont    <=   P_g_sp_cont*m_g,
@@ -309,10 +309,10 @@ class GenAndIC(Model):
 
         return constraints
     def dynamic(self,state):
-        return genandicP(self,state)
+        return turbogenP(self,state)
 
-class genandicP(Model):
-    """genandicP Model
+class turbogenP(Model):
+    """turbogenP Model
     Variables
     ---------
     P_g                             [kW]        generator power
@@ -326,7 +326,7 @@ class genandicP(Model):
     eta_ic          0.256           [-]         internal combustion engine efficiency
     """
     def setup(self,gen,state):
-        exec parse_variables(genandicP.__doc__)
+        exec parse_variables(turbogenP.__doc__)
         constraints = [P_g <= gen.P_g_cont,
                        P_ic <= gen.P_ic_cont,
                        P_fuel*eta_ic == P_ic,
@@ -998,8 +998,8 @@ def ICVsTurboshaft():
     M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
     runway_sweep = np.linspace(150,300,5)
     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
-    # M.substitutions.update({M.aircraft.genandic.P_ic_sp_cont:1})
-    # M.substitutions.update({M.aircraft.genandic.eta_IC:0.2656})
+    # M.substitutions.update({M.aircraft.turbogen.P_ic_sp_cont:1})
+    # M.substitutions.update({M.aircraft.turbogen.eta_IC:0.2656})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
 
