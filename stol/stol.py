@@ -463,8 +463,8 @@ class BlownWing(Model):
             m >= n_prop*self.powertrain["m"] + self.wing.topvar("W")/g,
         ]
         return constraints,self.powertrain,self.wing
-    def dynamic(self,state):
-        return BlownWingP(self,state)
+    def dynamic(self,state,groundroll=False):
+        return BlownWingP(self,state,groundroll)
 
 class BlownWingP(Model):
     #Built from Mark Drela's Powered-Lift and Drag Calculation
@@ -502,19 +502,24 @@ class BlownWingP(Model):
     Kf        1.180 [-]             form factor  
     C_f             [-]             friction coefficient           
     """
-    def setup(self,bw,state):
+    def setup(self,bw,state,groundroll=False):
         #bw is a BlownWing object
         #state is a FlightState
         exec parse_variables(BlownWingP.__doc__)
         with gpkit.SignomialsEnabled():
-            constraints = [
+            constraints = []
+            if groundroll == True:
+                constraints += [C_D >= C_Di + C_Dp]
+            else:
+                constraints += [C_L <= C_LC*(1+2*C_J/(pi*bw.wing["AR"]*e)),
+                                C_D >= C_Di  + C_Dp]
+            constraints += [
             A_disk == bw.n_prop*pi*bw.powertrain.r**2,
             ((P*eta_prop*bw.powertrain.eta)/(0.5*T*state["V"]) - 1)**2 >= (T/(A_disk*(state.V**2)*state.rho/2)+1),
             (u_j/state.V)**2 <= (T/(A_disk*(state.V**2)*state.rho/2) + 1),
             u_j >= state.V,
             P <= bw.n_prop*bw.powertrain["Pmax"],
 
-            C_L <= C_LC*(1+2*C_J/(pi*bw.wing["AR"]*e)),
 
             bw.powertrain.RPMmax*bw.powertrain.r <= a*Mlim,
             C_T == T/((0.5*state.rho*bw.wing["S"]*state.V**2)),
@@ -527,7 +532,6 @@ class BlownWingP(Model):
             h == pi*bw.powertrain.r/2,
             C_Di >= (C_LC**2)/(pi*bw.wing["AR"]*e),
             # C_Di <= (C_LC**2)/(pi*bw.wing["AR"]*e),
-            C_D >= C_Di  + C_Dp,
             C_f**5 == (mfac*0.074)**5 /(Re),
             C_Dp == C_f*2.1*Kf,
             Re == state["V"]*state["rho"]*(bw.wing["S"]/bw.wing["AR"])**0.5/state["mu"],
@@ -599,9 +603,10 @@ class TakeOff(Model):
                     W == aircraft.mass*g,
 
                     # T/W >= A/g + mu,
-                    CDg == perf.bw_perf.C_D,
-                    (T-0.5*CDg*rho*S*self.fs.V**2)/aircraft.mass >= a,
+                    perf.bw_perf.C_T >= perf.bw_perf.C_D,
+                    (T-0.5*perf.bw_perf.C_D*rho*S*self.fs.V**2)/aircraft.mass >= a,
                     t*a == dV,
+
                     # FitCS(fd, zsto, [A/g, B*dV**2/g]), #fit constraint set, pass in fit data, zsto is the 
                     # # y variable, then arr of independent (input) vars, watch the units
                     # Sto >= 1.0/2.0/B*zsto,
@@ -805,10 +810,10 @@ class Mission(Model):
                             # self.takeoff.Vf[0] == self.takeoff.dV,
                             (self.takeoff.fs.V[-1]/self.takeoff.mstall)**2 == (2*self.takeoff.W/self.takeoff.rho/self.takeoff.S/self.takeoff.perf.bw_perf.C_L[-1]),
                             0.5*self.takeoff.perf.bw_perf.C_L[-1]*self.takeoff.perf.fs.rho*self.aircraft.bw.wing["S"]*self.takeoff.fs.V[-1]**2 >= self.aircraft.mass*g,
-                            self.takeoff.perf.bw_perf.C_L[0:-1] >= Variable("a",1e-4,"-","dum"),
+                            self.takeoff.perf.bw_perf.C_L[:-1] == self.takeoff.perf.bw_perf.C_L[-1],
                             Srunway >= mrunway*sum(self.takeoff.Sto),
                             #midpoint velocity displacement
-                            self.takeoff.dV[0]*0.5*self.takeoff.t[0] <= self.takeoff.Sto[0],
+                            self.takeoff.dV[0]*0.5*self.takeoff.t[0] == self.takeoff.Sto[0],
                             sum(self.takeoff.dV[:2])*0.5*self.takeoff.t[1] <= self.takeoff.Sto[1],
                             sum(self.takeoff.dV[:3])*0.5*self.takeoff.t[2] <= self.takeoff.Sto[2],
                             sum(self.takeoff.dV[:4])*0.5*self.takeoff.t[3] <= self.takeoff.Sto[3],
