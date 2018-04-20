@@ -365,7 +365,7 @@ class Battery(Model):
     Estar       140     [Wh/kg]         specific energy
     E_capacity          [Wh]            energy capacity
     P_max_cont  4.2e3   [W/kg]          continuous power output
-    P_max_burst 7e3     [W/kg]          burst power output
+    P_max_burst 5.6e3   [W/kg]          burst power output
     eta_pack    0.8     [-]             add packing efficiency for battery
     """
 
