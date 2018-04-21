@@ -288,7 +288,7 @@ class TurboGen(Model):
     ---------
     P_ic_sp_cont    2.8            [kW/kg]    specific cont power of IC (2.8 if turboshaft)
     eta_IC          0.15           [-]        thermal efficiency of IC (0.15 if turboshaft)
-    m_g                            [kg]       turbogen mass
+    m_g             49.5           [kg]       turbogen mass
     m_gc                           [kg]       turbogen controller mass
     m_ic            61.3           [kg]       piston mass
     P_g_sp_cont                    [W/kg]     turbogen spec power (cont)
@@ -322,7 +322,7 @@ class turbogenP(Model):
     P_out                           [kW]        output from generator controller after efficiency
     eta_wiring      0.98            [-]         efficiency of electrical connections (wiring loss)
     eta_shaft       0.98            [-]         shaft losses (two 99% efficient bearings)
-    eta_g           0.9             [-]         generator efficiency
+    eta_g           0.953           [-]         generator efficiency
     eta_ic          0.256           [-]         internal combustion engine efficiency
     """
     def setup(self,gen,state):
@@ -674,7 +674,7 @@ class Cruise(Model):
     ---------
     R           [nmi]       Range flown in flight segment
     t           [min]       Time to fly flight segment
-    Vmin  120   [kts]       minimum flight speed
+    Vmin  120   [kts]       minimum cruise speed
     """
 
     def setup(self,aircraft,hybrid=False):
@@ -851,20 +851,6 @@ def writeSol(sol):
     with open('solve.txt', 'wb') as output:
         output.write(sol.table())
 
-if __name__ == "__main__":
-    poweredwheels = False
-    M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True)
-    M.cost = M.aircraft.mass
-    # M.debug()
-    sol = M.localsolve("mosek")
-    # print M.program.gps[-1].result.summary()
-    print sol.summary()
-    sd = get_highestsens(M, sol, N=10)
-    f, a = plot_chart(sd)
-    f.savefig("sensbar.pdf", bbox_inches="tight")
-    print sol(M.aircraft.mass)
-    writeSol(sol)
-
 def CLCurves():
     M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
     range_sweep = np.linspace(115,600,4)
@@ -1014,7 +1000,7 @@ def ICVsTurboshaft():
 
 def Runway():
     M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
-    runway_sweep = np.linspace(160,300,5)
+    runway_sweep = np.linspace(188,300,10)
     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
@@ -1025,11 +1011,28 @@ def Runway():
     plt.xlabel("Runway length [ft]")
     plt.ylabel("Takeoff mass [kg]")
     plt.grid()
-    plt.show()    
+    plt.show()   
+
+def RegularSolve():
+    poweredwheels = False
+    M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True)
+    M.cost = M.aircraft.mass
+    # M.debug()
+    sol = M.localsolve("mosek")
+    # print M.program.gps[-1].result.summary()
+    print sol.summary()
+    sd = get_highestsens(M, sol, N=10)
+    f, a = plot_chart(sd)
+    f.savefig("sensbar.pdf", bbox_inches="tight")
+    print sol(M.aircraft.mass)
+    writeSol(sol)
 # CLCurves()
 # RangeRunway()
 # RangeSpeed()
 # SpeedSweep()
 # ElectricVsHybrid()
 # ICVsTurboshaft()
-# Runway()
+
+if __name__ == "__main__":
+    # Runway()
+    RegularSolve()
