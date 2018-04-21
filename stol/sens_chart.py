@@ -98,7 +98,7 @@ def test():
 if __name__ == "__main__":
 
     M = Mission()
-    M.cost = M[M.aircraft.W]
+    M.cost = M[M.aircraft.m]
     sol = M.solve("mosek")
 
     sd = get_highestsens(M, sol, N=15)
