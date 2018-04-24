@@ -571,18 +571,16 @@ class TakeOff(Model):
     W                       [N]         aircraft weight
     mu_friction 0.6         [-]         traction limit for powered wheels
     t                       [s]         time of takeoff maneuver
-    Vi                      [kt]        velocity at start of segment
-    Vf                      [kt]        velocity at end of segment
     dV                      [kt]        difference in velocity over run
     mstall      1.3         [-]         stall margin
     rho                     [kg/m^3]    air density
     S                       [m^2]       wing area
-    a                       [m/s/s]     acceleration of segment
+    a                       [kt/s]      acceleration of segment
     """
     def setup(self, aircraft,poweredwheels,n_wheels,hybrid=False,N=5):
         exec parse_variables(TakeOff.__doc__)
 
-        fs = FlightState()
+        self.fs = FlightState()
 
         path = os.path.dirname(os.path.abspath(__file__))
         df = pd.read_csv(path + os.sep + "logfit.csv")
@@ -590,26 +588,23 @@ class TakeOff(Model):
 
         Pmax = aircraft.bw.powertrain.Pmax
         AR = aircraft.bw.wing.planform.AR
-        perf = aircraft.dynamic(fs,hybrid,powermode="batt-dischrg",groundroll=True)
+        perf = aircraft.dynamic(self.fs,hybrid,powermode="batt-dischrg",groundroll=True)
         self.perf = perf
         e = perf.bw_perf.e
         with gpkit.SignomialsEnabled():
             constraints = [
                     
-                    rho == fs.rho,
+                    rho == self.fs.rho,
                     S == aircraft.bw.wing["S"],
-                    Vf == fs.V,
                     W == aircraft.mass*g,
 
                     # T/W >= A/g + mu,
                     CDg == perf.bw_perf.C_D,
-                    (T-0.5*CDg*rho*S*Vf**2)/aircraft.mass >= a,
+                    (T-0.5*CDg*rho*S*self.fs.V**2)/aircraft.mass >= a,
                     t*a == dV,
-                    t*(Vi + 0.5*dV) <= Sto
                     # FitCS(fd, zsto, [A/g, B*dV**2/g]), #fit constraint set, pass in fit data, zsto is the 
                     # # y variable, then arr of independent (input) vars, watch the units
                     # Sto >= 1.0/2.0/B*zsto,
-                    # t*(Vf-0.5*dV) >= Sto]
                     ]
         # with gpkit.SignomialsEnabled():
         #     constraints += [B >= g/W*0.5*rho*S*(CDg)]
@@ -626,7 +621,7 @@ class TakeOff(Model):
         else:
             constraints += [T <= perf.bw_perf.T]
 
-        return constraints, fs, perf
+        return constraints, self.fs, perf
 
 class Climb(Model):
 
@@ -796,42 +791,39 @@ class Mission(Model):
         state = FlightState()
         with gpkit.SignomialsEnabled():
             constraints = [
+                            self.aircraft.htail.Vh >= 0.001563*CJmax*CLmax + 0.0323*CLmax + 0.03014*CJmax + 0.5216,
+                            CLmax >= self.takeoff.perf.bw_perf.C_L,
+                            CLmax >= self.landing.perf.bw_perf.C_L,
+                            CJmax >= self.takeoff.perf.bw_perf.C_J,
+                            CJmax >= self.landing.perf.bw_perf.C_J,
+                            self.obstacle_climb.h_gain == Variable("h_obstacle",50,"ft"),
+                            self.climb.h_gain == Variable("h_cruise",1950,"ft"),
+                            self.climb.Sclimb == Variable("Scruiseclimb",10,"miles"),
+                            0.5*state.rho*CLstall*self.aircraft.bw.wing.planform.S*Vs**2 == self.aircraft.mass*g,
+                            Vs <= Vstall,
+                            self.takeoff.dV == dV,
+                            # self.takeoff.Vf[0] == self.takeoff.dV,
+                            (self.takeoff.fs.V[-1]/self.takeoff.mstall)**2 == (2*self.takeoff.W/self.takeoff.rho/self.takeoff.S/self.takeoff.perf.bw_perf.C_L[-1]),
+                            0.5*self.takeoff.perf.bw_perf.C_L[-1]*self.takeoff.perf.fs.rho*self.aircraft.bw.wing["S"]*self.takeoff.fs.V[-1]**2 >= self.aircraft.mass*g,
+                            self.takeoff.perf.bw_perf.C_L[0:-1] >= Variable("a",1e-4,"-","dum"),
+                            Srunway >= mrunway*sum(self.takeoff.Sto),
+                            #midpoint velocity displacement
+                            self.takeoff.dV[0]*0.5*self.takeoff.t[0] <= self.takeoff.Sto[0],
+                            sum(self.takeoff.dV[:2])*0.5*self.takeoff.t[1] <= self.takeoff.Sto[1],
+                            sum(self.takeoff.dV[:3])*0.5*self.takeoff.t[2] <= self.takeoff.Sto[2],
+                            sum(self.takeoff.dV[:4])*0.5*self.takeoff.t[3] <= self.takeoff.Sto[3],
 
-                           # self.aircraft.htail.Vh >= -0.235813*CJmax + 0.713362*CLmax - 0.8375,
-                           # self.aircraft.htail.Vh >= 0.0016*CJmax + 0.0301*CLmax + 0.5539,
-                           self.aircraft.htail.Vh >= 0.001563*CJmax*CLmax + 0.0323*CLmax + 0.03014*CJmax + 0.5216,
-                           CLmax >= self.takeoff.perf.bw_perf.C_L,
-                           CLmax >= self.landing.perf.bw_perf.C_L,
-                           CJmax >= self.takeoff.perf.bw_perf.C_J,
-                           CJmax >= self.landing.perf.bw_perf.C_J,
-
-                           self.obstacle_climb.h_gain == Variable("h_obstacle",50,"ft"),
-                           self.climb.h_gain == Variable("h_cruise",1950,"ft"),
-                           self.climb.Sclimb == Variable("Scruiseclimb",10,"miles"),
-                           0.5*state.rho*CLstall*self.aircraft.bw.wing.planform.S*Vs**2 == self.aircraft.mass*g,
-                           Vs <= Vstall,
-                           self.takeoff.dV == dV,
-
-                           self.takeoff.Vi[0] == Variable("a",1e-3,"m/s","initial Vi lower lim"),
-                           self.takeoff.Vf[0] <= dV + self.takeoff.Vi[0],
-                           (self.takeoff.Vf[-1]/self.takeoff.mstall)**2 == (2*self.takeoff.W/self.takeoff.rho/self.takeoff.S/self.takeoff.perf.bw_perf.C_L[-1]),
-                           self.takeoff.Vf[-1] <= sum(self.takeoff.dV),
-                           self.takeoff.Vi[1:] == self.takeoff.Vf[:-1],
-                           self.takeoff.dV[1:] <= self.takeoff.Vf[1:] - self.takeoff.Vf[:-1],
-                           0.5*self.takeoff.perf.bw_perf.C_L[-1]*self.takeoff.perf.fs.rho*self.aircraft.bw.wing["S"]*self.takeoff.Vf[-1]**2 >= self.aircraft.mass*g,
-                           self.takeoff.perf.bw_perf.C_L[0:-1] >= Variable("a",1e-4,"-","dum"),
-                           Srunway >= mrunway*sum(self.takeoff.Sto),
-
-                           Srunway >= self.landing.Sgr*mrunway,
-                           Sobstacle == Srunway*(4.0/3.0),
-                           Sobstacle >= mobstacle*(sum(self.takeoff.Sto)+ self.obstacle_climb.Sclimb),
-                           loading.wingl["W"] == Wcent,
-                           Wcent >= self.aircraft.mass*g,
-                           self.takeoff.perf.bw_perf.C_LC == 1.37,
-                           self.obstacle_climb.perf.bw_perf.C_LC == 0.611,
-                           self.climb.perf.bw_perf.C_LC == 0.611,
-                           self.climb.perf.bw_perf.P <=  self.aircraft.bw.n_prop*self.aircraft.bw.powertrain.P_m_sp_cont*self.aircraft.bw.powertrain.m,
-                           self.cruise.perf.bw_perf.P <= self.aircraft.bw.n_prop*self.aircraft.bw.powertrain.P_m_sp_cont*self.aircraft.bw.powertrain.m
+                            self.takeoff.fs.V <=  sum(self.takeoff.dV),
+                            Srunway >= self.landing.Sgr*mrunway,
+                            Sobstacle == Srunway*(4.0/3.0),
+                            Sobstacle >= mobstacle*(sum(self.takeoff.Sto)+ self.obstacle_climb.Sclimb),
+                            loading.wingl["W"] == Wcent,
+                            Wcent >= self.aircraft.mass*g,
+                            self.takeoff.perf.bw_perf.C_LC == 1.37,
+                            self.obstacle_climb.perf.bw_perf.C_LC == 0.611,
+                            self.climb.perf.bw_perf.C_LC == 0.611,
+                            self.climb.perf.bw_perf.P <=  self.aircraft.bw.n_prop*self.aircraft.bw.powertrain.P_m_sp_cont*self.aircraft.bw.powertrain.m,
+                            self.cruise.perf.bw_perf.P <= self.aircraft.bw.n_prop*self.aircraft.bw.powertrain.P_m_sp_cont*self.aircraft.bw.powertrain.m
                         ]
 
         if hybrid:
