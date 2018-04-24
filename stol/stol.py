@@ -170,9 +170,9 @@ class Fuselage(Model):
     Variables
     ---------
     m                   [kg]    mass of fuselage
-    l       136.958     [in]    fuselage length
-    w       46.165      [in]    width
-    h       67.722      [in]    fuselage height
+    l       12          [ft]    fuselage length
+    w       6           [ft]    width
+    h       6.4         [ft]    fuselage height
     f                   [-]     fineness ratio
     Swet    29833.67    [in^2]  wetted area of fuselage    
     """
