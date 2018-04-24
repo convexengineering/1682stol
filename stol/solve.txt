@@ -1069,8 +1069,8 @@ Sensitivities
 
                     | Mission/Aircraft/TailBoom
                deta : +0.26                                           normalized segment length
-               mfac : +0.065                                          weight margin factor
                kfac : +0.065                                          (1-k/2)
+               mfac : +0.065                                          weight margin factor
 
                     | Mission/Aircraft/Tank
          Estar_fuel : -0.78                                           fuel specific energy

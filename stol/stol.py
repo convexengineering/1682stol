@@ -77,8 +77,8 @@ class Aircraft(Model):
                        # self.boom["l"] <= Variable("a",20,"ft"),
                        # self.vtail.lv == Variable("lv",180,"in"),
                        # self.htail.lh == Variable("lh",180,"in"),
-                       self.fuselage.m >= 0.4*(sum(c.topvar("m") for c in self.components) + (self.vtail.W + self.htail.W)/g),
-                       self.mass>=sum(c.topvar("m") for c in self.components) + (self.boom.W + self.vtail.W + self.htail.W)/g+ (mpax+mbaggage)*Npax]
+                       self.fuselage.m >= 0.4*(sum(c.topvar("m") for c in self.components) + (self.vtail.W + self.htail.W)/g) + (mpax+mbaggage)*Npax,
+                       self.mass>=sum(c.topvar("m") for c in self.components) + (self.boom.W + self.vtail.W + self.htail.W)/g + (mpax+mbaggage)*Npax]
         for s in self.boom.d:
             constraints+=[s == d]
         with gpkit.SignomialsEnabled():
@@ -109,16 +109,21 @@ class AircraftP(Model):
         self.htail_perf = aircraft.htail.flight_model(aircraft.htail, state)
         self.vtail_perf = aircraft.vtail.flight_model(aircraft.vtail, state)
         self.boom_perf = aircraft.boom.flight_model(aircraft.boom, state)
-        self.fuse_perf = aircraft.fuselage.dynamic(state)
-        self.perf_models = [self.bw_perf,self.batt_perf,self.htail_perf,self.vtail_perf,self.boom_perf,self.fuse_perf]
+        self.perf_models = [self.bw_perf,self.batt_perf,self.htail_perf,self.vtail_perf,self.boom_perf]
         self.fs = state
 
         constraints = [P >= self.bw_perf["P"] + P_avionics,
-                       CD >= self.bw_perf.C_D + (aircraft.fuselage.Swet/aircraft.bw.wing.planform.S)*self.fuse_perf.Cd + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd) + (aircraft.boom.S/aircraft.bw.wing.planform.S)*self.boom_perf.Cf,
+                       CD >= self.bw_perf.C_D + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd) + (aircraft.boom.S/aircraft.bw.wing.planform.S)*self.boom_perf.Cf,
                        self.bw_perf.C_T >= CD
                     ]
+
+        #If we're not in groundroll, apply lift=weight and fuselage drag
         if groundroll == False:
-            constraints += [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*g]
+            self.fuse_perf = aircraft.fuselage.dynamic(state)
+            self.perf_models += [self.fuse_perf]
+            constraints += [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*g,
+                            CD >= self.bw_perf.C_D + (aircraft.fuselage.Swet/aircraft.bw.wing.planform.S)*self.fuse_perf.Cd + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd) + (aircraft.boom.S/aircraft.bw.wing.planform.S)*self.boom_perf.Cf]
+        
         if hybrid:
             self.gen_perf = aircraft.turbogen.dynamic(state)
             if powermode == "batt-chrg":
@@ -296,13 +301,14 @@ class TurboGen(Model):
     m                              [kg]       total mass
     m_ref           1              [kg]       reference mass, for meeting units constraints
     Pstar_ref       1              [W/kg]     reference specific power, for meeting units constraints
-    eta_turb        0.15            [-]         turboshaft efficiency
+    eta_turb        0.15           [-]        turboshaft efficiency
     """
     def setup(self):
         exec parse_variables(TurboGen.__doc__)
         with gpkit.SignomialsEnabled():
             constraints = [P_g_sp_cont <= (Variable("a",46.4,"W/kg**2")*m_g + Variable("b",5032,"W/kg")), #magicALL motor fits
                            P_g_cont    <=   P_g_sp_cont*m_g,
+                           # P_turb_cont <= P_turb_sp_cont*m_turb,
                            m >= m_g + m_turb
             ]
 
@@ -748,6 +754,7 @@ class Landing(Model):
                 perf.bw_perf.C_LC == 2.19,
                 W == aircraft.mass*g,
                 C_T >= CD, #+ (W*sing)/(0.5*rho*S*V**2),
+                fs.V == Vs*mstall,
                 (Vs*mstall)**2  >= (2.*aircraft.mass*g/rho/S/CL),
                 Xgr*(2*g*(mu_b)) >= (mstall*Vs)**2,
                 Xla >= Xgr,
@@ -998,7 +1005,7 @@ def ICVsTurboshaft():
 
 def Runway():
     M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
-    runway_sweep = np.linspace(188,300,10)
+    runway_sweep = np.linspace(300,500,10)
     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
@@ -1008,6 +1015,7 @@ def Runway():
     plt.title("Runway trade")
     plt.xlabel("Runway length [ft]")
     plt.ylabel("Takeoff mass [kg]")
+    plt.ylim(ymin=0)
     plt.grid()
     plt.show()   
 
@@ -1018,7 +1026,7 @@ def RegularSolve():
     # M.debug()
     sol = M.localsolve("mosek")
     # print M.program.gps[-1].result.summary()
-    print sol.table()
+    print sol.summary()
     sd = get_highestsens(M, sol, N=10)
     f, a = plot_chart(sd)
     f.savefig("sensbar.pdf", bbox_inches="tight")
