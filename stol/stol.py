@@ -286,39 +286,24 @@ class GenAndIC(Model):
     """ GenAndIC Model
     Variables
     ---------
-    P_ic_sp_cont    2.8            [kW/kg]    specific cont power of IC (2.8 if turboshaft)
-<<<<<<< 8b5b1da5d58fdf8d56731e943d9d1159b0635c0b
-    eta_IC          0.15           [-]        thermal efficiency of IC (0.15 if turboshaft)
-<<<<<<< 8caeed776237994746bb09a1b38bc61b5bb6deda
-    m_g                            [kg]       genandic mass
-    m_gc                           [kg]       genandic controller mass
-=======
-=======
->>>>>>> Update fuselage dimensions
+    P_turb_sp_cont  2.8            [kW/kg]    specific cont power of IC (2.8 if turboshaft)
     m_g             49.5           [kg]       turbogen mass
     m_gc                           [kg]       turbogen controller mass
->>>>>>> Fix generator efficiency and mass
-    m_ic            61.3           [kg]       piston mass
-<<<<<<< 8b5b1da5d58fdf8d56731e943d9d1159b0635c0b
-    P_g_sp_cont                    [W/kg]     genandic spec power (cont)
-    P_g_cont                       [W]        genandic cont. power
-    P_ic_cont       160            [kW]       piston continous power  
-=======
+    m_turb          61.3           [kg]       piston mass
     P_g_sp_cont                    [W/kg]     turbogen spec power (cont)
     P_g_cont                       [W]        turbogen cont. power
-    P_ic_cont       160            [kW]       turboshaft continous power  
->>>>>>> Update fuselage dimensions
+    P_turb_cont     160            [kW]       turboshaft continous power  
     m                              [kg]       total mass
     m_ref           1              [kg]       reference mass, for meeting units constraints
     Pstar_ref       1              [W/kg]     reference specific power, for meeting units constraints
+    eta_turb        0.15           [-]       turboshaft efficiency
     """
     def setup(self):
         exec parse_variables(GenAndIC.__doc__)
         with gpkit.SignomialsEnabled():
             constraints = [P_g_sp_cont <= (Variable("a",46.4,"W/kg**2")*m_g + Variable("b",5032,"W/kg")), #magicALL motor fits
                            P_g_cont    <=   P_g_sp_cont*m_g,
-                           #P_ic_cont   <=   P_ic_sp_cont*m_ic,
-                           m >= m_g + m_ic
+                           m >= m_g + m_turb
             ]
 
         return constraints
@@ -331,20 +316,19 @@ class genandicP(Model):
     ---------
     P_g                             [kW]        generator power
     P_gc                            [kW]        generator controller power
-    P_ic                            [kW]        turboshaft power
+    P_turb                          [kW]        turboshaft power
     P_fuel                          [kW]        power coming in from fuel flow
     P_out                           [kW]        output from generator controller after efficiency
     eta_wiring      0.98            [-]         efficiency of electrical connections (wiring loss)
     eta_shaft       0.98            [-]         shaft losses (two 99% efficient bearings)
     eta_g           0.953           [-]         generator efficiency
-    eta_ic          0.256           [-]         turboshaft efficiency
     """
     def setup(self,gen,state):
         exec parse_variables(genandicP.__doc__)
         constraints = [P_g <= gen.P_g_cont,
-                       P_ic <= gen.P_ic_cont,
-                       P_fuel*eta_ic == P_ic,
-                       P_ic*eta_shaft == P_g,
+                       P_turb <= gen.P_turb_cont,
+                       P_fuel*gen.eta_turb == P_turb,
+                       P_turb*eta_shaft == P_g,
                        P_g*eta_g == P_out,
                        ]
         return constraints
@@ -1030,7 +1014,7 @@ def RegularSolve():
     # M.debug()
     sol = M.localsolve("mosek")
     # print M.program.gps[-1].result.summary()
-    print sol.summary()
+    print sol.table()
     sd = get_highestsens(M, sol, N=10)
     f, a = plot_chart(sd)
     f.savefig("sensbar.pdf", bbox_inches="tight")
