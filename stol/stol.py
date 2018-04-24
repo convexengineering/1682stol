@@ -170,9 +170,9 @@ class Fuselage(Model):
     Variables
     ---------
     m                   [kg]    mass of fuselage
-    l       140         [in]    fuselage length
-    w       50          [in]    width
-    h       60          [in]    fuselage height
+    l       136.958     [in]    fuselage length
+    w       46.165      [in]    width
+    h       67.722      [in]    fuselage height
     f                   [-]     fineness ratio
     Swet    29833.67    [in^2]  wetted area of fuselage    
     """
@@ -197,7 +197,7 @@ class FuselageP(Model):
         exec parse_variables(FuselageP.__doc__)
         constraints = [FF >= 1 + 60/(fuse.f)**3 + fuse.f/400,
                        C_f**5 == (mfac*0.074)**5 /(Re),
-                       Cd >= C_f*FF,
+                       Cd == C_f*FF,
                        Re == state["V"]*state["rho"]*fuse.l/state["mu"],
                     ]
         return constraints
@@ -216,7 +216,7 @@ class Powertrain(Model):
     r                       [m]             propeller radius
     Pstar_ref     1         [W]             specific motor power reference
     m_ref         1         [kg]            reference motor power
-    eta                     [-]             efficiency
+    eta                     [-]             powertrain efficiency
     a             1         [W/kg]          dummy
     RPM_margin    0.9       [-]             margin for rpm
     tau_margin    0.95      [-]             margin for torque
@@ -287,18 +287,27 @@ class GenAndIC(Model):
     Variables
     ---------
     P_ic_sp_cont    2.8            [kW/kg]    specific cont power of IC (2.8 if turboshaft)
+<<<<<<< 8b5b1da5d58fdf8d56731e943d9d1159b0635c0b
     eta_IC          0.15           [-]        thermal efficiency of IC (0.15 if turboshaft)
 <<<<<<< 8caeed776237994746bb09a1b38bc61b5bb6deda
     m_g                            [kg]       genandic mass
     m_gc                           [kg]       genandic controller mass
 =======
+=======
+>>>>>>> Update fuselage dimensions
     m_g             49.5           [kg]       turbogen mass
     m_gc                           [kg]       turbogen controller mass
 >>>>>>> Fix generator efficiency and mass
     m_ic            61.3           [kg]       piston mass
+<<<<<<< 8b5b1da5d58fdf8d56731e943d9d1159b0635c0b
     P_g_sp_cont                    [W/kg]     genandic spec power (cont)
     P_g_cont                       [W]        genandic cont. power
     P_ic_cont       160            [kW]       piston continous power  
+=======
+    P_g_sp_cont                    [W/kg]     turbogen spec power (cont)
+    P_g_cont                       [W]        turbogen cont. power
+    P_ic_cont       160            [kW]       turboshaft continous power  
+>>>>>>> Update fuselage dimensions
     m                              [kg]       total mass
     m_ref           1              [kg]       reference mass, for meeting units constraints
     Pstar_ref       1              [W/kg]     reference specific power, for meeting units constraints
@@ -322,13 +331,13 @@ class genandicP(Model):
     ---------
     P_g                             [kW]        generator power
     P_gc                            [kW]        generator controller power
-    P_ic                            [kW]        internal combustion power
+    P_ic                            [kW]        turboshaft power
     P_fuel                          [kW]        power coming in from fuel flow
     P_out                           [kW]        output from generator controller after efficiency
     eta_wiring      0.98            [-]         efficiency of electrical connections (wiring loss)
     eta_shaft       0.98            [-]         shaft losses (two 99% efficient bearings)
     eta_g           0.953           [-]         generator efficiency
-    eta_ic          0.256           [-]         internal combustion engine efficiency
+    eta_ic          0.256           [-]         turboshaft efficiency
     """
     def setup(self,gen,state):
         exec parse_variables(genandicP.__doc__)
@@ -1033,24 +1042,6 @@ def RegularSolve():
 # SpeedSweep()
 # ElectricVsHybrid()
 # ICVsTurboshaft()
-<<<<<<< 8caeed776237994746bb09a1b38bc61b5bb6deda
-# Runway()
-
-if __name__ == "__main__":
-    # Runway()
-    poweredwheels = False
-    M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True)
-    M.cost = M.aircraft.mass
-    # M.debug()
-    sol = M.localsolve("mosek")
-    # print M.program.gps[-1].result.summary()
-    print sol.summary()
-    sd = get_highestsens(M, sol, N=10)
-    f, a = plot_chart(sd)
-    f.savefig("sensbar.pdf", bbox_inches="tight")
-    print sol(M.aircraft.mass)
-    writeSol(sol)
-=======
 
 if __name__ == "__main__":
     # Runway()
