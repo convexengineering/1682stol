@@ -100,30 +100,31 @@ class AircraftP(Model):
     CD                  [-]     total CD, referenced to wing area
     P_charge            [kW]    battery charging power
     P_avionics  0.25    [kW]    avionics continuous power draw
-    C_chrg              [1/hr]     battery charge rate
+    C_chrg              [1/hr]  battery charge rate
+    CDfrac              [-]     fuselage drag fraction
     """
     def setup(self,aircraft,state,hybrid=False,powermode="batt-chrg",t_charge=None,groundroll=False):
         exec parse_variables(AircraftP.__doc__)
+        self.fuse_perf = aircraft.fuselage.dynamic(state)
+
         self.bw_perf = aircraft.bw.dynamic(state)
         self.batt_perf = aircraft.battery.dynamic(state)
         self.htail_perf = aircraft.htail.flight_model(aircraft.htail, state)
         self.vtail_perf = aircraft.vtail.flight_model(aircraft.vtail, state)
         self.boom_perf = aircraft.boom.flight_model(aircraft.boom, state)
-        self.perf_models = [self.bw_perf,self.batt_perf,self.htail_perf,self.vtail_perf,self.boom_perf]
+        self.perf_models = [self.fuse_perf,self.bw_perf,self.batt_perf,self.htail_perf,self.vtail_perf,self.boom_perf]
         self.fs = state
 
         constraints = [P >= self.bw_perf["P"] + P_avionics,
-                       CD >= self.bw_perf.C_D + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd) + (aircraft.boom.S/aircraft.bw.wing.planform.S)*self.boom_perf.Cf,
-                       self.bw_perf.C_T >= CD
+                       CD >= self.bw_perf.C_D + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (self.fuse_perf.Cd*aircraft.fuselage.Swet/aircraft.bw.wing.planform.S) + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd) + (aircraft.boom.S/aircraft.bw.wing.planform.S)*self.boom_perf.Cf,
+                       self.bw_perf.C_T >= CD,
+                       CDfrac == (self.fuse_perf.Cd*aircraft.fuselage.Swet/aircraft.bw.wing.planform.S)/CD
                     ]
 
         #If we're not in groundroll, apply lift=weight and fuselage drag
         if groundroll == False:
-            self.fuse_perf = aircraft.fuselage.dynamic(state)
-            self.perf_models += [self.fuse_perf]
-            constraints += [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*g,
-                            CD >= self.bw_perf.C_D + (aircraft.fuselage.Swet/aircraft.bw.wing.planform.S)*self.fuse_perf.Cd + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd) + (aircraft.boom.S/aircraft.bw.wing.planform.S)*self.boom_perf.Cf]
-        
+            constraints += [0.5*self.bw_perf.C_L*state.rho*aircraft.bw.wing["S"]*state.V**2 >= aircraft.mass*g]
+
         if hybrid:
             self.gen_perf = aircraft.genandic.dynamic(state)
             if powermode == "batt-chrg":
@@ -183,8 +184,8 @@ class Fuselage(Model):
     """
     def setup(self):
         exec parse_variables(Fuselage.__doc__)
-        return [f <= l/w,
-                f <= l/h]
+        return [#f <= l/w,
+                f == l/h]
     def dynamic(self,state):
         return FuselageP(self,state)
 
@@ -200,9 +201,10 @@ class FuselageP(Model):
     """
     def setup(self,fuse,state):
         exec parse_variables(FuselageP.__doc__)
-        constraints = [FF >= 1 + 60/(fuse.f)**3 + fuse.f/400,
-                       C_f**5 == (mfac*0.074)**5 /(Re),
-                       Cd == C_f*FF,
+        constraints = [#FF >= 1 + 60.0/(fuse.f)**3 + fuse.f/400.0,
+                       FF >= 1.5,
+                       C_f >= 0.455/Re**0.3,
+                       Cd/mfac == C_f*FF,
                        Re == state["V"]*state["rho"]*fuse.l/state["mu"],
                     ]
         return constraints

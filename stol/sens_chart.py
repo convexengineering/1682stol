@@ -37,8 +37,14 @@ def get_highestsens(model, res, varnames=None, N=10):
             break
         i += 1
         vk = s[0]
-        val = sum(np.hstack([res(vk)]))
-        if "units" in vk.descr:
+	if hasattr(res(vk), "magnitude"):
+	    val = res(vk).magnitude
+	else:
+	    val = res(vk)
+	if len(val.shape) > 0:
+	    val = val[0]
+        
+	if "units" in vk.descr:
             uts = unitstr(vk.descr["units"])
         else:
             uts = ""
