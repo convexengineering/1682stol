@@ -182,7 +182,7 @@ class Fuselage(Model):
     w       6           [ft]    width
     h       6.4         [ft]    fuselage height
     f                   [-]     fineness ratio
-    Swet    29833.67    [in^2]  wetted area of fuselage    
+    Swet    200.55      [ft^2]  wetted area of fuselage    
     """
     def setup(self):
         exec parse_variables(Fuselage.__doc__)
@@ -204,7 +204,7 @@ class FuselageP(Model):
     def setup(self,fuse,state):
         exec parse_variables(FuselageP.__doc__)
         constraints = [#FF >= 1 + 60.0/(fuse.f)**3 + fuse.f/400.0,
-                       FF == 12/6.4,
+                       FF == 12.0/6.4,
                        C_f >= 0.455/Re**0.3,
                        Cd/mfac == C_f*FF,
                        Re == state["V"]*state["rho"]*fuse.l/state["mu"],
@@ -753,7 +753,7 @@ class Landing(Model):
                 perf.bw_perf.C_LC == 2.19,
                 W == aircraft.mass*g,
                 C_T >= CD, #+ (W*sing)/(0.5*rho*S*V**2),
-                # fs.V == Vs*mstall,
+                V == Vs*mstall,
                 (Vs*mstall)**2  >= (2.*aircraft.mass*g/rho/S/CL),
                 Xgr*(2*g*(mu_b)) >= (mstall*Vs)**2,
                 Xla >= Xgr,
@@ -812,7 +812,7 @@ class Mission(Model):
                             Vs <= Vstall,
                             self.takeoff.dV == dV,
                             # self.takeoff.Vf[0] == self.takeoff.dV,
-                            (self.takeoff.fs.V[-1]/self.takeoff.mstall)**2 == (2*self.takeoff.W/self.takeoff.rho/self.takeoff.S/self.takeoff.perf.bw_perf.C_L[-1]),
+                            (self.takeoff.fs.V[-1]/self.takeoff.mstall)**2 >= (2*self.aircraft.m*g/(self.takeoff.rho*self.takeoff.S*self.takeoff.perf.bw_perf.C_L[-1])),
                             0.5*self.takeoff.perf.bw_perf.C_L[-1]*self.takeoff.perf.fs.rho*self.aircraft.bw.wing["S"]*self.takeoff.fs.V[-1]**2 >= self.aircraft.mass*g,
                             self.takeoff.perf.bw_perf.C_L[0:-1] >= Variable("a",1e-4,"-","dum"),
                             Srunway >= mrunway*sum(self.takeoff.Sto),
