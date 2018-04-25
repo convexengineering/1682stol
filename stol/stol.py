@@ -26,9 +26,9 @@ class Aircraft(Model):
     Variables
     ---------
     m                   [kg]    aircraft mass
-    Npax        4       [-]     number of passengers
-    mpax        93      [kg]    mass of a passenger
-    mbaggage    9       [kg]    mass of baggage
+    n_pax        4      [-]     number of passengers
+    mpax        93      [kg]    single passenger mass
+    mbaggage    9       [kg]    single baggage mass
     tangamma    0.5     [-]     tan of the gamma climb angle
     d                   [in]    spar diam
     """
@@ -78,7 +78,7 @@ class Aircraft(Model):
                        # self.vtail.lv == Variable("lv",180,"in"),
                        # self.htail.lh == Variable("lh",180,"in"),
                        self.fuselage.m >= 0.4*(sum(c.topvar("m") for c in self.components) + (self.vtail.W + self.htail.W)/g),
-                       self.mass>=sum(c.topvar("m") for c in self.components) + (self.boom.W + self.vtail.W + self.htail.W)/g+ (mpax+mbaggage)*Npax]
+                       self.mass>=sum(c.topvar("m") for c in self.components) + (self.boom.W + self.vtail.W + self.htail.W)/g+ (mpax+mbaggage)*n_pax]
         for s in self.boom.d:
             constraints+=[s == d]
         with gpkit.SignomialsEnabled():
@@ -147,7 +147,7 @@ class Gear(Model):
     """Gear
     Variables
     ---------
-    m    60.3  [lb]    mass
+    m    60.3  [lb]    total landing gear mass
     l    3     [ft]    landing gear length
     """
     def setup(self):
@@ -159,7 +159,7 @@ class Cabin(Model):
     """Cabin
     Variables
     ---------
-    m        78.43     [kg]       total mass
+    m        78.43     [kg]       total cabin mass
     """
     def setup(self):
         exec parse_variables(Cabin.__doc__)
@@ -169,9 +169,9 @@ class Fuselage(Model):
 
     Variables
     ---------
-    m                   [kg]    mass of fuselage
+    m                   [kg]    fuselage mass
     l       140         [in]    fuselage length
-    w       50          [in]    width
+    w       50          [in]    fuselage width
     h       60          [in]    fuselage height
     f                   [-]     fineness ratio
     Swet    29833.67    [in^2]  wetted area of fuselage    
@@ -207,7 +207,7 @@ class Powertrain(Model):
     """ Powertrain
     Variables
     ---------
-    m                       [kg]            powertrain mass
+    m                       [kg]            single powertrain mass
     Pmax                    [kW]            maximum power
     P_m_sp_cont             [W/kg]          continuous motor specific power
     P_m_sp_max              [W/kg]          maximum motor specific power
@@ -243,7 +243,7 @@ class PoweredWheel(Model):
     gear_ratio              [-]         gear ratio of powered wheel
     gear_ratio_max  20      [-]         max gear ratio of powered wheel
     tau_max                 [N*m]       torque of the
-    m                       [kg]        mass of powered wheel motor
+    m                       [kg]        powered wheel motor mass
     m_ref           1       [kg]        reference mass for equations
     r               0.2     [m]         tire radius
     Pstar           5       [kW/kg]     specific power for powered wheel
@@ -294,7 +294,7 @@ class GenAndIC(Model):
     P_g_sp_cont                    [W/kg]     genandic spec power (cont)
     P_g_cont                       [W]        genandic cont. power
     P_ic_cont       160            [kW]       piston continous power  
-    m                              [kg]       total mass
+    m                              [kg]       total genandic and piston mass
     m_ref           1              [kg]       reference mass, for meeting units constraints
     Pstar_ref       1              [W/kg]     reference specific power, for meeting units constraints
     """
@@ -339,8 +339,8 @@ class Tank(Model):
     """Tank Model
     Variables
     ---------
-    m                          [lb]          total mass
-    m_fuel                     [lb]          mass of fuel
+    m                          [lb]          total tank mass
+    m_fuel                     [lb]          fuel mass
     E                          [Wh]          fuel energy
     Estar_fuel          11.9   [kWh/kg]      fuel specific energy
     V_fuel                     [gal]         fuel volume
@@ -361,7 +361,7 @@ class Battery(Model):
     """ Battery
     Variables
     ---------
-    m                   [kg]            total mass
+    m                   [kg]            total battery mass
     Estar       140     [Wh/kg]         specific energy
     E_capacity          [Wh]            energy capacity
     P_max_cont  4.2e3   [W/kg]          continuous power output
@@ -447,7 +447,7 @@ class BlownWing(Model):
     """
     Variables
     ---------
-    n_prop     10   [-]             number of props
+    n_prop     10   [-]             number of powertrains/propellers
     m               [kg]            mass
     """
 
@@ -851,6 +851,46 @@ def writeSol(sol):
     with open('solve.txt', 'wb') as output:
         output.write(sol.table())
 
+
+def writeAlb(sol,M):
+    with open('albie.txt', 'wb') as output:
+        output.write('Weights Summary\n')
+        # output.write(sol(M.aircraft.mass).split(" ")[0])
+        # output.write(sol.table(["m_Mission/Aircraft/Fuselage",
+                                # "m_Mission/Aircraft/Cabin",
+                                # "W_Mission/Aircraft/HorizontalTail",
+                                # "W_Mission/Aircraft/VerticalTail",
+                                # "W_Mission/Aircraft/TailBoom",
+                                # "W_Mission/Aircraft/BlownWing/Wing",
+                                # "n_prop_Mission/Aircraft/BlownWing",
+                                # "m_Mission/Aircraft/BlownWing/Powertrain",
+                                # "m_Mission/Aircraft/Gear",
+                                # "m_Mission/Aircraft/GenAndIC",
+                                # "m_fuel_Mission/Aircraft/Tank",
+                                # "m_tank_Mission/Aircraft/Tank",
+                                # "n_pax_Mission/Aircraft",
+                                # "mbaggage_Mission/Aircraft",
+                                # "mpax_Mission/Aircraft",
+                                # "m_Mission/Aircraft/Battery"
+                                # ]))
+        output.write('\n\n\nPropulsion Summary')
+
+if __name__ == "__main__":
+    poweredwheels = False
+    M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True)
+    M.cost = M.aircraft.mass
+    # M.debug()
+    sol = M.localsolve("mosek")
+    # print M.program.gps[-1].result.summary()
+    print sol.summary()
+    sd = get_highestsens(M, sol, N=10)
+    f, a = plot_chart(sd)
+    f.savefig("sensbar.pdf", bbox_inches="tight")
+    print sol(M.aircraft.mass)
+    writeSol(sol)
+    writeAlb(sol,M)
+
+>>>>>>> 795e349601f5385153e9442e5726078eac92e2a6
 def CLCurves():
     M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
     range_sweep = np.linspace(115,600,4)
@@ -1020,6 +1060,7 @@ def Runway():
 # ElectricVsHybrid()
 # ICVsTurboshaft()
 # Runway()
+<<<<<<< HEAD
 
 if __name__ == "__main__":
     # Runway()
@@ -1035,3 +1076,5 @@ if __name__ == "__main__":
     f.savefig("sensbar.pdf", bbox_inches="tight")
     print sol(M.aircraft.mass)
     writeSol(sol)
+=======
+>>>>>>> 795e349601f5385153e9442e5726078eac92e2a6
