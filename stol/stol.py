@@ -1041,7 +1041,7 @@ def ICVsTurboshaft():
 
 def Runway():
     M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
-    runway_sweep = np.linspace(300,500,10)
+    runway_sweep = np.linspace(80,300,10)
     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
