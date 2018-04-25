@@ -580,7 +580,7 @@ class TakeOff(Model):
     mu_friction 0.6         [-]         traction limit for powered wheels
     t                       [s]         time of takeoff maneuver
     dV                      [kt]        difference in velocity over run
-    mstall      1.3         [-]         stall margin
+    mstall      1.2         [-]         stall margin on takeoff
     rho                     [kg/m^3]    air density
     S                       [m^2]       wing area
     a                       [kt/s]      acceleration of segment
@@ -731,7 +731,7 @@ class Landing(Model):
     Xla                     [ft]        total landing distance                        
     mu_b         0.6        [-]         braking friction coefficient
     Sgr                     [ft]        landing distance
-    mstall       1.3        [-]         stall
+    mstall       1.2        [-]         stall margin on landing
     t                       [s]         time of landing maneuver
     """
     def setup(self, aircraft,hybrid=False):
