@@ -78,7 +78,7 @@ class Aircraft(Model):
                        # self.vtail.lv == Variable("lv",180,"in"),
                        # self.htail.lh == Variable("lh",180,"in"),
 
-                       self.fuselage.m >= 0.4*(sum(c.topvar("m") for c in self.components) + (self.vtail.W + self.htail.W)/g + (mpax+mbaggage)*n_pax),
+                       self.fuselage.m >= 0.17*(sum(c.topvar("m") for c in self.components) + (self.vtail.W + self.htail.W)/g + (mpax+mbaggage)*n_pax),
                        self.mass>=sum(c.topvar("m") for c in self.components) + (self.boom.W + self.vtail.W + self.htail.W)/g + (mpax+mbaggage)*n_pax]
 
         for s in self.boom.d:
@@ -177,7 +177,7 @@ class Fuselage(Model):
 
     Variables
     ---------
-    m                   [kg]    mass of fuselage
+    m                   [lb]    mass of fuselage
     l       12          [ft]    fuselage length
     w       6           [ft]    width
     h       6.4         [ft]    fuselage height
