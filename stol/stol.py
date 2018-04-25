@@ -204,7 +204,7 @@ class FuselageP(Model):
     def setup(self,fuse,state):
         exec parse_variables(FuselageP.__doc__)
         constraints = [#FF >= 1 + 60.0/(fuse.f)**3 + fuse.f/400.0,
-                       FF >= 1.5,
+                       FF == 12/6.4,
                        C_f >= 0.455/Re**0.3,
                        Cd/mfac == C_f*FF,
                        Re == state["V"]*state["rho"]*fuse.l/state["mu"],
@@ -753,7 +753,7 @@ class Landing(Model):
                 perf.bw_perf.C_LC == 2.19,
                 W == aircraft.mass*g,
                 C_T >= CD, #+ (W*sing)/(0.5*rho*S*V**2),
-                fs.V == Vs*mstall,
+                # fs.V == Vs*mstall,
                 (Vs*mstall)**2  >= (2.*aircraft.mass*g/rho/S/CL),
                 Xgr*(2*g*(mu_b)) >= (mstall*Vs)**2,
                 Xla >= Xgr,
