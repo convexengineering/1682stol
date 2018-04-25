@@ -78,8 +78,8 @@ class Aircraft(Model):
                        # self.vtail.lv == Variable("lv",180,"in"),
                        # self.htail.lh == Variable("lh",180,"in"),
 
-                       self.fuselage.m >= 0.4*(sum(c.topvar("m") for c in self.components) + (self.vtail.W + self.htail.W)/g) + (mpax+mbaggage)*Npax,
-                       self.mass>=sum(c.topvar("m") for c in self.components) + (self.boom.W + self.vtail.W + self.htail.W)/g + (mpax+mbaggage)*Npax]
+                       self.fuselage.m >= 0.4*(sum(c.topvar("m") for c in self.components) + (self.vtail.W + self.htail.W)/g) + (mpax+mbaggage)*n_pax,
+                       self.mass>=sum(c.topvar("m") for c in self.components) + (self.boom.W + self.vtail.W + self.htail.W)/g + (mpax+mbaggage)*n_pax]
 
         for s in self.boom.d:
             constraints+=[s == d]
@@ -295,7 +295,6 @@ class GenAndIC(Model):
     """ GenAndIC Model
     Variables
     ---------
-
     P_turb_sp_cont  2.8            [kW/kg]    specific cont power of IC (2.8 if turboshaft)
     m_g             49.5           [kg]       turbogen mass
     m_gc                           [kg]       turbogen controller mass
@@ -880,22 +879,7 @@ def writeAlb(sol,M):
                                 # ]))
         output.write('\n\n\nPropulsion Summary')
 
-if __name__ == "__main__":
-    poweredwheels = False
-    M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True)
-    M.cost = M.aircraft.mass
-    # M.debug()
-    sol = M.localsolve("mosek")
-    # print M.program.gps[-1].result.summary()
-    print sol.summary()
-    sd = get_highestsens(M, sol, N=10)
-    f, a = plot_chart(sd)
-    f.savefig("sensbar.pdf", bbox_inches="tight")
-    print sol(M.aircraft.mass)
-    writeSol(sol)
-    writeAlb(sol,M)
 
->>>>>>> 795e349601f5385153e9442e5726078eac92e2a6
 def CLCurves():
     M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
     range_sweep = np.linspace(115,600,4)
@@ -1072,6 +1056,7 @@ def RegularSolve():
     f.savefig("sensbar.pdf", bbox_inches="tight")
     print sol(M.aircraft.mass)
     writeSol(sol)
+    writeAlb(sol,M)
 
 # CLCurves()
 # RangeRunway()
