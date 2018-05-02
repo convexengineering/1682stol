@@ -384,8 +384,8 @@ class Battery(Model):
     m                   [kg]            total battery mass
     Estar       140     [Wh/kg]         specific energy
     E_capacity          [Wh]            energy capacity
-    P_max_cont  4.2e3   [W/kg]          continuous power output
-    P_max_burst 5.6e3   [W/kg]          burst power output
+    P_max_cont  3.9e3   [W/kg]          4.2e3, continuous power output
+    P_max_burst 3.9e3   [W/kg]          5.6e3, burst power output
     eta_pack    0.8     [-]             add packing efficiency for battery
     """
 
@@ -513,7 +513,7 @@ class BlownWingP(Model):
     h               [m]             Wake height
     T               [N]             propeller thrust
     P               [kW]            power draw
-    eta_prop  0.87  [-]             prop efficiency loss after blade disk actuator
+    eta_prop        [-]             prop efficiency loss after blade disk actuator
     A_disk          [m**2]          area of prop disk
     Mlim      0.5   [-]             tip limit
     a         343   [m/s]           speed of sound at sea level
@@ -592,7 +592,7 @@ class TakeOff(Model):
     mu_friction 0.6         [-]         traction limit for powered wheels
     t                       [s]         time of takeoff maneuver
     dV                      [kt]        difference in velocity over run
-    mstall      1.2         [-]         stall margin on takeoff
+    mstall      1.1         [-]         stall margin on takeoff
     rho                     [kg/m^3]    air density
     S                       [m^2]       wing area
     a                       [kt/s]      acceleration of segment
@@ -617,7 +617,7 @@ class TakeOff(Model):
                     rho == self.fs.rho,
                     S == aircraft.bw.wing["S"],
                     W == aircraft.mass*g,
-
+                    self.perf.bw_perf.eta_prop == 0.75,
                     # T/W >= A/g + mu,
                     CDg == perf.bw_perf.C_D,
                     (T-0.5*CDg*rho*S*self.fs.V**2)/aircraft.mass >= a,
@@ -675,6 +675,7 @@ class Climb(Model):
 
         constraints = [
             perf.batt_perf.P <= aircraft.battery.m*aircraft.battery.P_max_cont,
+            perf.bw_perf.eta_prop == 0.87,
             W ==  aircraft.mass*g,
             perf.bw_perf.C_T*rho*S*V**2 >= 0.5*CD*rho*S*V**2 + W*h_dot/V,
             h_gain <= h_dot*t,
@@ -698,7 +699,8 @@ class Cruise(Model):
         self.perf = aircraft.dynamic(self.flightstate,hybrid,powermode="batt-chrg",t_charge=t)
         constraints = [R == t*self.flightstate.V,
                        self.flightstate["V"] >= Vmin,
-                       self.perf.bw_perf.C_LC == 0.534]
+                       self.perf.bw_perf.C_LC == 0.534,
+                       self.perf.bw_perf.eta_prop == 0.87]
 
         return constraints, self.flightstate, self.perf
 
@@ -715,7 +717,8 @@ class Reserve(Model):
         exec parse_variables(Reserve.__doc__)
         self.flightstate = FlightState()
         self.perf = aircraft.dynamic(self.flightstate,hybrid,powermode="batt-chrg",t_charge=t)
-        constraints = [self.perf.bw_perf.C_LC == 0.534]
+        constraints = [self.perf.bw_perf.C_LC == 0.534,
+                       self.perf.bw_perf.eta_prop == 0.87]
 
         return constraints, self.perf
      
@@ -770,7 +773,9 @@ class Landing(Model):
                 Xgr*(2*g*(mu_b)) >= (mstall*Vs)**2,
                 Xla >= Xgr,
                 Sgr >= Xla,
-                t >= Sgr/(0.3*V)
+                t >= Sgr/(0.3*V),
+                perf.bw_perf.eta_prop == 0.75,
+
             ]
 
         return constraints, fs,perf      
@@ -919,27 +924,25 @@ def CLCurves():
     plt.show()
 
 def RangeRunway():
-    M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
-    range_sweep = np.linspace(250,350,4)
+    M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
+    range_sweep = np.linspace(100,300,8)
     M.substitutions.update({M.R:('sweep',range_sweep)})
     M.cost = M.aircraft.mass
     # sol = M.localsolve("mosek")
     # print sol.summary()
 
-    runway_set = np.linspace(100,200,5)
-    for s in runway_set:
-        M.substitutions.update({M.Srunway:s})
-        sol = M.localsolve("mosek")
-        plt.plot(sol(M.R),sol(M.aircraft.mass),label=str(s)+ " ft")
+    # M.substitutions.update({M.Srunway:s})
+    sol = M.localsolve("mosek")
+    plt.plot(sol(M.R),sol(M.aircraft.mass))
 
     # plt.plot(sol(M.R),sol(M.aircraft.mass))
     plt.grid()
     # plt.xlim([0,300])
-    # plt.ylim([0,1600])
-    plt.title("Impact of range, runway on takeoff mass")
+    plt.ylim(ymin=0)
+    plt.title("Impact of range on takeoff mass")
     plt.xlabel("Cruise segment range [nmi]")
     plt.ylabel("Takeoff mass [kg]")
-    plt.legend()
+    # plt.legend()
     plt.show()
 
 def RangeSpeed():
@@ -985,28 +988,27 @@ def SpeedSweep():
     plt.show()
 
 def ElectricVsHybrid():
-    M = Mission(poweredwheels=True,n_wheels=3,hybrid=False)
-    M.substitutions.update({M.R:115})
-    runway_sweep = np.linspace(300,1000,8)
+    M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
+    runway_sweep = np.linspace(80,300,10)
     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
-    M.substitutions.update({M.aircraft.bw.n_prop:6})
+    # M.substitutions.update({M.aircraft.bw.n_prop:6})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
     print sol.summary()
     
-    plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label='electric')
+    plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label='mstall = 1.1')
 
-    M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
-    M.substitutions.update({M.R:115})
-    runway_sweep = np.linspace(300,1000,8)
+    M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
+    # M.substitutions.update({M.aircraft.battery.:1.2})
+    # runway_sweep = np.linspace(300,1000,8)
     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
-    M.substitutions.update({M.aircraft.bw.n_prop:6})
+    # M.substitutions.update({M.aircraft.bw.n_prop:6})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
 
-    plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label='hybrid')
+    plt.plot(sol(M.Srunway),sol(M.aircraft.mass),label='mstall = 1.2')
     plt.legend()
-    plt.title("Hybrid vs Electric Tradeoff")
+    plt.title("Stall margin tradeoff")
     plt.xlabel("Runway length [ft]")
     plt.ylabel("Takeoff mass [kg]")
     plt.grid()
@@ -1079,5 +1081,7 @@ def RegularSolve():
 
 if __name__ == "__main__":
     # Runway()
+    # RangeRunway()
     RegularSolve()
+    # ElectricVsHybrid()
 
