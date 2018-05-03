@@ -787,7 +787,7 @@ class Mission(Model):
 
     Variables
     ---------
-    Srunway         150         [ft]        runway length
+    Srunway         300         [ft]        runway length
     Sobstacle                   [ft]        obstacle length
     mrunway         1.4         [-]         runway margin
     mobstacle       1.4         [-]         obstacle margin
@@ -1064,24 +1064,31 @@ def PerfPlot():
     M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True,perf=False)
     M.cost = M.aircraft.mass
     # M.debug()
-    sol = M.localsolve("mosek")
+    sol = M.localsoslve("mosek")
     # print M.program.gps[-1].result.summary()
     print sol.summary()
 
     print "fixed solve"
     M2 = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True,perf=True)
-    # M2.aircraft.bw.wing.planform.substitutions[M2.aircraft.bw.wing.planform.AR] = sol(M.aircraft.bw.wing.planform.AR)
     #Fix airplane design
-    for i in range(4):
-        
     M2.substitutions.update({M2.aircraft.mass:sol(M.aircraft.mass)})
     M2.substitutions.update({M2.aircraft.bw.wing.planform.AR:sol(M.aircraft.bw.wing.planform.AR)})
     M2.substitutions.update({M2.aircraft.bw.powertrain.m:sol(M.aircraft.bw.powertrain.m)})
 
-    M2.substitutions.update({M2.Srunway:200})
-
-    M2.cost = 1/M2.R
-    sol2 = M2.localsolve("mosek")
+    for n_pax in [1,2,3,4]:
+        M2.substitutions.update({M2.Srunway:('sweep',np.linspace(300,500,4))})
+        M2.substitutions.update({M2.aircraft.n_pax:n_pax})
+        M2.cost = 1/M2.R
+        sol2 = M2.localsolve("mosek")
+        plt.plot(sol2(M2.Srunway),sol2(M2.R),label = str(n_pax-1) + " passengers")
+    
+    plt.title("Performance Trade for 300 ft Design")
+    plt.xlabel("Runway length [ft]")
+    plt.ylabel("Range [nmi]")
+    plt.legend()
+    plt.ylim(ymin=0)
+    plt.grid()
+    plt.show()    
     # print sol2.table()
     # sd = get_highestsens(M, sol, N=10)
     # f, a = plot_chart(sd)
@@ -1089,6 +1096,41 @@ def PerfPlot():
     # print sol(M.aircraft.mass)
     # writeSol(sol)
     # writeAlb(sol,M)
+
+def PowerIncrease():
+    poweredwheels = False
+    M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True,perf=False)
+    M.cost = M.aircraft.mass
+    sol = M.localsolve("mosek")
+    print sol.summary()
+
+    print "fixed solve"
+    M2 = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True,perf=False)
+    #Fix airplane design
+    # M2.substitutions.update({M2.aircraft.mass:sol(M.aircraft.mass)})
+    M2.substitutions.update({M2.aircraft.bw.wing.planform.S:sol(M.aircraft.bw.wing.planform.S)})    
+    M2.substitutions.update({M2.aircraft.bw.wing.planform.AR:sol(M.aircraft.bw.wing.planform.AR)})
+    M2.substitutions.update({M2.aircraft.htail.planform.AR:sol(M.aircraft.htail.planform.AR)})
+
+    # M2.substitutions.update({M2.aircraft.bw.powertrain.m:sol(M.aircraft.bw.powertrain.m)})
+    pbs = [180,64,"PBS TS-100DA"]
+    rolls = [313,73, "RR M250-C20B/F/J"]
+    for i,eng in enumerate([pbs,rolls]):
+        M2.substitutions.update({M2.Srunway:('sweep',np.linspace(150,300,4))})
+        M2.substitutions.update({M2.aircraft.genandic.P_turb_sp_cont:eng[0]/eng[1]})
+        M2.substitutions.update({M2.aircraft.genandic.m_turb:eng[1]})
+        M2.cost = 1/M2.aircraft.mass
+        sol2 = M2.localsolve("mosek")
+        plt.plot(sol2(M2.Srunway),sol2(M2.aircraft.mass),label = eng[2])
+    
+    plt.title("Power increase trade")
+    plt.xlabel("Runway length [ft]")
+    plt.ylabel("Mass [kg]")
+    plt.legend()
+    plt.ylim(ymin=0)
+    plt.grid()
+    plt.show() 
+
 
 def RegularSolve():
     poweredwheels = False
@@ -1116,6 +1158,7 @@ if __name__ == "__main__":
     # Runway()
     # RangeRunway()
     # RegularSolve()
-    PerfPlot()
+    # PerfPlot()
+    PowerIncrease()
     # ElectricVsHybrid()
 
