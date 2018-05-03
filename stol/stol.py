@@ -25,7 +25,7 @@ class Aircraft(Model):
 
     Variables
     ---------
-    m                   [kg]    aircraft mass
+    mass                [kg]    aircraft mass
     n_pax       4       [-]     number of passengers
     mpax        93      [kg]    single passenger mass
     mbaggage    9       [kg]    single baggage mass
@@ -62,7 +62,7 @@ class Aircraft(Model):
                 self.pw = PoweredWheel()
                 self.wheels = n_wheels*[self.pw]
                 self.components += self.wheels
-        self.mass = m
+
         constraints = [
 
                        self.htail.Vh == (self.htail["S"]*self.htail.lh/self.bw.wing["S"]**2 *self.bw.wing["b"]),
@@ -787,11 +787,11 @@ class Mission(Model):
 
     Variables
     ---------
-    Srunway         300         [ft]        runway length
+    Srunway         150         [ft]        runway length
     Sobstacle                   [ft]        obstacle length
     mrunway         1.4         [-]         runway margin
     mobstacle       1.4         [-]         obstacle margin
-    R               100         [nmi]       mission range
+    R                           [nmi]       mission range
     Vstall          61          [kts]       power off stall requirement
     Vs                          [kts]       power off stall speed
     CLstall         2.5         [-]         power off stall CL
@@ -799,7 +799,7 @@ class Mission(Model):
     CJmax                       [-]         maximum CJ of mission
     CLmax                       [-]         maximum CL of mission
     """
-    def setup(self,poweredwheels=False,n_wheels=3,hybrid=False):
+    def setup(self,poweredwheels=False,n_wheels=3,hybrid=False,perf=False):
         exec parse_variables(Mission.__doc__)
         self.aircraft = Aircraft(poweredwheels,n_wheels,hybrid)
         with Vectorize(4):
@@ -829,7 +829,7 @@ class Mission(Model):
                             Vs <= Vstall,
                             self.takeoff.dV == dV,
                             # self.takeoff.Vf[0] == self.takeoff.dV,
-                            (self.takeoff.fs.V[-1]/self.takeoff.mstall)**2 >= (2*self.aircraft.m*g/(self.takeoff.rho*self.takeoff.S*self.takeoff.perf.bw_perf.C_L[-1])),
+                            (self.takeoff.fs.V[-1]/self.takeoff.mstall)**2 >= (2*self.aircraft.mass*g/(self.takeoff.rho*self.takeoff.S*self.takeoff.perf.bw_perf.C_L[-1])),
                             0.5*self.takeoff.perf.bw_perf.C_L[-1]*self.takeoff.perf.fs.rho*self.aircraft.bw.wing["S"]*self.takeoff.fs.V[-1]**2 >= self.aircraft.mass*g,
                             self.takeoff.perf.bw_perf.C_L[0:-1] >= Variable("a",1e-4,"-","dum"),
                             Srunway >= mrunway*sum(self.takeoff.Sto),
@@ -854,7 +854,8 @@ class Mission(Model):
                             self.climb.perf.bw_perf.P <=  self.aircraft.bw.n_prop*self.aircraft.bw.powertrain.P_m_sp_cont*self.aircraft.bw.powertrain.m,
                             self.cruise.perf.bw_perf.P <= self.aircraft.bw.n_prop*self.aircraft.bw.powertrain.P_m_sp_cont*self.aircraft.bw.powertrain.m
                         ]
-
+        if not perf:
+            constraints += [self.R == Variable("R_req",100,"nmi","range requirement")]
         if hybrid:
             constraints += [ self.takeoff.perf.gen_perf.P_fuel == self.obstacle_climb.perf.gen_perf.P_fuel,
                             self.obstacle_climb.perf.gen_perf.P_fuel == self.climb.perf.gen_perf.P_fuel,
@@ -1043,7 +1044,7 @@ def ICVsTurboshaft():
 
 def Runway():
     M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
-    runway_sweep = np.linspace(80,300,10)
+    runway_sweep = np.linspace(100,300,10)
     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
@@ -1056,6 +1057,38 @@ def Runway():
     plt.ylim(ymin=0)
     plt.grid()
     plt.show()    
+
+def PerfPlot():
+    poweredwheels = False
+
+    M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True,perf=False)
+    M.cost = M.aircraft.mass
+    # M.debug()
+    sol = M.localsolve("mosek")
+    # print M.program.gps[-1].result.summary()
+    print sol.summary()
+
+    print "fixed solve"
+    M2 = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True,perf=True)
+    # M2.aircraft.bw.wing.planform.substitutions[M2.aircraft.bw.wing.planform.AR] = sol(M.aircraft.bw.wing.planform.AR)
+    #Fix airplane design
+    for i in range(4):
+        
+    M2.substitutions.update({M2.aircraft.mass:sol(M.aircraft.mass)})
+    M2.substitutions.update({M2.aircraft.bw.wing.planform.AR:sol(M.aircraft.bw.wing.planform.AR)})
+    M2.substitutions.update({M2.aircraft.bw.powertrain.m:sol(M.aircraft.bw.powertrain.m)})
+
+    M2.substitutions.update({M2.Srunway:200})
+
+    M2.cost = 1/M2.R
+    sol2 = M2.localsolve("mosek")
+    # print sol2.table()
+    # sd = get_highestsens(M, sol, N=10)
+    # f, a = plot_chart(sd)
+    # f.savefig("sensbar.pdf", bbox_inches="tight")
+    # print sol(M.aircraft.mass)
+    # writeSol(sol)
+    # writeAlb(sol,M)
 
 def RegularSolve():
     poweredwheels = False
@@ -1082,6 +1115,7 @@ def RegularSolve():
 if __name__ == "__main__":
     # Runway()
     # RangeRunway()
-    RegularSolve()
+    # RegularSolve()
+    PerfPlot()
     # ElectricVsHybrid()
 
