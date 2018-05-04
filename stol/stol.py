@@ -178,7 +178,7 @@ class Equipment(Model):
     """Equipment
     Variables
     ---------
-    m        339.75     [lb]       total equipment mass, without battery
+    m        304.25     [lb]       total equipment mass, without battery
     """
     def setup(self):
         exec parse_variables(Equipment.__doc__)
@@ -308,9 +308,9 @@ class GenAndIC(Model):
     Variables
     ---------
     P_turb_sp_cont  160/61.3       [kW/kg]    specific cont power of IC (2.8 if turboshaft)
-    m_g                            [kg]       49.5 turbogen mass
+    m_g             49.5           [kg]       49.5 turbogen mass
     m_gc                           [kg]       turbogen controller mass
-    m_turb                         [kg]       piston mass
+    m_turb          61.3           [kg]       piston mass
     P_g_sp_cont                    [W/kg]     turbogen spec power (cont)
     P_g_cont                       [W]        turbogen cont. power
     P_turb_cont                    [kW]       turboshaft continous power  
@@ -370,7 +370,7 @@ class Tank(Model):
     """
     def setup(self):
         exec parse_variables(Tank.__doc__)
-        constraints = [V_fuel*rho_fuel >= m_fuel,
+        constraints = [V_fuel*rho_fuel == m_fuel,
                        m_tank >= 0.1*m_fuel,
                        m_fuel >= E/Estar_fuel,
                        m >= m_fuel+m_tank]
