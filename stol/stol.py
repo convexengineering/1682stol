@@ -371,7 +371,7 @@ class Tank(Model):
     def setup(self):
         exec parse_variables(Tank.__doc__)
         constraints = [V_fuel*rho_fuel >= m_fuel,
-                       m_tank >= V_fuel*rho_tank,
+                       m_tank >= 0.1*m_fuel,
                        m_fuel >= E/Estar_fuel,
                        m >= m_fuel+m_tank]
         return constraints
