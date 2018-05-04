@@ -178,7 +178,7 @@ class Equipment(Model):
     """Equipment
     Variables
     ---------
-    m        297.29     [lb]       total equipment mass, without battery
+    m        317.29     [lb]       total equipment mass, without battery
     """
     def setup(self):
         exec parse_variables(Equipment.__doc__)
@@ -382,10 +382,10 @@ class Battery(Model):
     Variables
     ---------
     m                   [kg]            total battery mass
-    Estar       140     [Wh/kg]         specific energy
+    Estar       140     [Wh/kg]         140, specific energy
     E_capacity          [Wh]            energy capacity
-    P_max_cont  3.9e3   [W/kg]          4.2e3, continuous power output
-    P_max_burst 3.9e3   [W/kg]          5.6e3, burst power output
+    P_max_cont  3.9e3   [W/kg]          3.9e3, continuous power output
+    P_max_burst 3.9e3   [W/kg]          3.9e3, burst power output
     eta_pack    0.8     [-]             add packing efficiency for battery
     """
 
@@ -788,7 +788,7 @@ class Mission(Model):
 
     Variables
     ---------
-    Srunway         150         [ft]        runway length
+    Srunway                     [ft]        runway length
     Sobstacle                   [ft]        obstacle length
     mrunway         1.4         [-]         runway margin
     mobstacle       1.4         [-]         obstacle margin
@@ -844,7 +844,7 @@ class Mission(Model):
                             self.takeoff.fs.V[1] >= sum(self.takeoff.dV[:2]),
                             self.takeoff.fs.V[2] >= sum(self.takeoff.dV[:3]),
                             self.takeoff.fs.V[-1] <=  sum(self.takeoff.dV),
-                            Srunway >= self.landing.Sgr*mrunway,
+                            Srunway == self.landing.Sgr*mrunway,
                             Sobstacle <= Srunway + Variable("obstacle_dist",100,"ft"),
                             Sobstacle >= mobstacle*(sum(self.takeoff.Sto)+ self.obstacle_climb.Sclimb),
                             loading.wingl["W"] == Wcent,
@@ -1188,9 +1188,81 @@ def ICVsTurboshaft():
     plt.ylim(ymin=0)
     plt.show()
 
+
+def BattCompare():
+    #Lithium
+    M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
+    runway_sweep = np.linspace(50,100,4)
+    M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
+    M.cost = M.aircraft.mass
+    sol = M.localsolve("mosek")
+    print sol.summary()
+    plt.plot(sol(M.Srunway),sol(M.aircraft.bw.wing.planform.b),label="Li-ion")
+
+    #NiMH
+    M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
+    runway_sweep = np.linspace(60,100,4)
+    M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
+    M.substitutions.update({M.aircraft.battery.P_max_burst:834})
+    M.substitutions.update({M.aircraft.battery.P_max_cont:834})
+    M.substitutions.update({M.aircraft.battery.Estar:80})
+    M.cost = M.aircraft.mass
+    sol = M.localsolve("mosek")
+    print sol.summary()
+    plt.plot(sol(M.Srunway),sol(M.aircraft.bw.wing.planform.b),label="Ni-MH")
+
+    # #NiCd
+    # M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
+    # runway_sweep = np.linspace(200,400,10)
+    # M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
+    # M.substitutions.update({M.aircraft.battery.P_max_burst:150})
+    # M.substitutions.update({M.aircraft.battery.P_max_cont:150})
+    # M.substitutions.update({M.aircraft.battery.Estar:40})
+    # M.cost = M.aircraft.mass
+    # sol = M.localsolve("mosek")
+    # print sol.summary()
+    # plt.plot(sol(M.Srunway),sol(M.aircraft.bw.wing.planform.b),label="Ni-Cd")
+
+
+
+    plt.scatter([77.5,73],[1611,1261.2],label="sizing points")
+    plt.title("Batt trade")
+    plt.xlabel("Runway length [ft]")
+    plt.ylabel("Span [ft]")
+    plt.ylim(ymin=0)
+    plt.legend()
+    plt.grid()
+    plt.show()  
+
+def NimhRetro():
+    M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
+    M.substitutions.update({M.Srunway:77.5})
+    M.cost = M.aircraft.mass
+    sol = M.localsolve("mosek")
+    # print sol.summary()
+
+    M2 = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
+    M2.substitutions.update({M2.aircraft.battery.P_max_burst:834})
+    M2.substitutions.update({M2.aircraft.battery.P_max_cont:834})
+    M2.substitutions.update({M2.aircraft.battery.Estar:80})
+    #fix design
+    M2.substitutions.update({M2.aircraft.mass:sol(M.aircraft.mass)})
+    # M2.substitutions.update({M2.aircraft.bw.wing.planform.b:sol(M2.aircraft.bw.wing.planform.b)})
+    M2.substitutions.update({M2.aircraft.htail.planform.b:sol(M.aircraft.htail.planform.b)})
+    M2.substitutions.update({M2.aircraft.htail.lh:sol(M.aircraft.htail.lh)})
+    M2.substitutions.update({M2.aircraft.bw.wing.planform.AR:sol(M.aircraft.bw.wing.planform.AR)})
+    M2.substitutions.update({M2.aircraft.bw.powertrain.m:sol(M.aircraft.bw.powertrain.m)})
+
+    M2.cost = M2.Srunway
+    sol2 = M2.localsolve("mosek")
+    print sol2.summary()
+    print sol2(M2.Srunway)
+    # plt.plot(sol(M.Srunway),sol(M.aircraft.bw.wing.planform.b),label="Li-ion")
+
+
 def Runway():
     M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
-    runway_sweep = np.linspace(100,300,10)
+    runway_sweep = np.linspace(70,150,10)
     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
@@ -1305,7 +1377,9 @@ def RegularSolve():
 if __name__ == "__main__":
     # Runway()
     # RangeRunway()
-    RegularSolve()
+    # RegularSolve()
+    # BattCompare()
+    NimhRetro()
     # PerfPlot()
     # PowerIncrease()
     # ElectricVsHybrid()
