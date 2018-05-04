@@ -39,7 +39,7 @@ class Aircraft(Model):
         self.battery = Battery()
         self.fuselage = Fuselage()
         self.bw = BlownWing()
-        self.cabin = Cabin()
+        # self.cabin = Cabin()
         self.htail = HorizontalTail()
         self.vtail = VerticalTail()
         self.boom =  TailBoom()
@@ -51,7 +51,7 @@ class Aircraft(Model):
         self.htail.substitutions[self.htail.planform.CLmax] = 3
         self.vtail.substitutions[self.vtail.planform.CLmax] = 3
 
-        self.components = [self.cabin,self.bw,self.battery,self.fuselage,self.gear,self.equipment]
+        self.components = [self.bw,self.battery,self.fuselage,self.gear,self.equipment]
     
         if hybrid:
             self.tank = Tank()
@@ -164,21 +164,21 @@ class Gear(Model):
         exec parse_variables(Gear.__doc__)
         return []
 
-class Cabin(Model):
-    """Cabin
-    Variables
-    ---------
-    m        78.43     [kg]       total cabin mass
-    """
-    def setup(self):
-        exec parse_variables(Cabin.__doc__)
-        return []
+# class Cabin(Model):
+#     """Cabin
+#     Variables
+#     ---------
+#     m        78.43     [kg]       total cabin mass
+#     """
+#     def setup(self):
+#         exec parse_variables(Cabin.__doc__)
+#         return []
 
 class Equipment(Model):
     """Equipment
     Variables
     ---------
-    m        304.25     [lb]       total equipment mass, without battery
+    m        297.29     [lb]       total equipment mass, without battery
     """
     def setup(self):
         exec parse_variables(Equipment.__doc__)
@@ -884,7 +884,7 @@ def writeWgt(sol,M):
         m_vtail = sol(M.aircraft.vtail.W/g  ).to("kg")
         m_boom  = sol(M.aircraft.boom.W/g   ).to("kg")
         m_fuse  = sol(M.aircraft.fuselage.m ).to("kg")
-        m_cabin = sol(M.aircraft.cabin.m    )
+        # m_cabin = sol(M.aircraft.cabin.m    )
         m_equip = sol(M.aircraft.equipment.m).to("kg")
         m_gear  = sol(M.aircraft.gear.m     ).to("kg")
         m_batt  = sol(M.aircraft.battery.m  )
@@ -908,7 +908,7 @@ def writeWgt(sol,M):
         output.write(str(m_vtail.magnitude) + '\n')
         output.write(str(m_boom .magnitude) + '\n')
         output.write(str(m_fuse .magnitude) + '\n')
-        output.write(str(m_cabin.magnitude) + '\n')
+        # output.write(str(m_cabin.magnitude) + '\n')
         output.write(str(m_equip.magnitude) + '\n')
         output.write(str(m_gear .magnitude) + '\n')
         output.write(str(m_batt .magnitude) + '\n')
@@ -931,7 +931,7 @@ def writeWgt(sol,M):
         output.write('m_vtail = ' + str(m_vtail) + '\n')
         output.write('m_boom  = ' + str(m_boom ) + '\n')
         output.write('m_fuse  = ' + str(m_fuse ) + '\n')
-        output.write('m_cabin = ' + str(m_cabin) + '\n')
+        # output.write('m_cabin = ' + str(m_cabin) + '\n')
         output.write('m_equip = ' + str(m_equip) + '\n')
         output.write('m_gear  = ' + str(m_gear ) + '\n')
         output.write('m_batt  = ' + str(m_batt ) + '\n')
