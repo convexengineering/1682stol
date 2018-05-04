@@ -241,7 +241,7 @@ class Powertrain(Model):
     a             1         [W/kg]          dummy
     RPM_margin    0.9       [-]             margin for rpm
     tau_margin    0.95      [-]             margin for torque
-    P_margin      0.8       [-]             margin for power (helpful for tail sizing)
+    P_margin      0.4       [-]             margin for power (helpful for tail sizing)
     """
 
     def setup(self):
