@@ -79,7 +79,7 @@ class Aircraft(Model):
                        # self.vtail.lv == Variable("lv",180,"in"),
                        # self.htail.lh == Variable("lh",180,"in"),
 
-                       self.fuselage.m >= 0.17*(sum(c.topvar("m") for c in self.components) + (self.vtail.W + self.htail.W)/g + (mpax+mbaggage)*n_pax),
+                       self.fuselage.m >= 0.17*(sum(c.topvar("m") for c in self.components) + (self.boom.W + self.vtail.W + self.htail.W)/g + (mpax+mbaggage)*n_pax),
                        self.mass>=sum(c.topvar("m") for c in self.components) + (self.boom.W + self.vtail.W + self.htail.W)/g + (mpax+mbaggage)*n_pax]
 
         for s in self.boom.d:
@@ -788,7 +788,7 @@ class Mission(Model):
 
     Variables
     ---------
-    Srunway                     [ft]        runway length
+    Srunway         77          [ft]        runway length
     Sobstacle                   [ft]        obstacle length
     mrunway         1.4         [-]         runway margin
     mobstacle       1.4         [-]         obstacle margin
@@ -1262,7 +1262,7 @@ def NimhRetro():
 
 def Runway():
     M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
-    runway_sweep = np.linspace(70,150,10)
+    runway_sweep = np.linspace(40,150,10)
     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
@@ -1377,9 +1377,9 @@ def RegularSolve():
 if __name__ == "__main__":
     # Runway()
     # RangeRunway()
-    # RegularSolve()
+    RegularSolve()
     # BattCompare()
-    NimhRetro()
+    # NimhRetro()
     # PerfPlot()
     # PowerIncrease()
     # ElectricVsHybrid()
