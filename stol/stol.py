@@ -80,7 +80,9 @@ class Aircraft(Model):
                        # self.htail.lh == Variable("lh",180,"in"),
 
                        self.fuselage.m >= 0.17*(sum(c.topvar("m") for c in self.components) + (self.boom.W + self.vtail.W + self.htail.W)/g + (mpax+mbaggage)*n_pax),
-                       self.mass>=sum(c.topvar("m") for c in self.components) + (self.boom.W + self.vtail.W + self.htail.W)/g + (mpax+mbaggage)*n_pax]
+                       # self.mass*0.50 <= sum(c.topvar("m") for c in self.components) + (self.boom.W + self.vtail.W + self.htail.W)/g, - self.tank.m_fuel - self.genandic.m - self.bw.n_prop*self.bw.powertrain.m,
+                       # self.mass*0.50 >= self.equipment.m + self.battery.m + self.fuselage.m + self.gear.m + self.tank.m_tank + self.wheels.m + (self.boom.W + self.vtail.W + self.htail.W + self.bw.wing.W)/g,
+                       self.mass >= sum(c.topvar("m") for c in self.components) + (self.boom.W + self.vtail.W + self.htail.W)/g + (mpax+mbaggage)*n_pax]
 
         for s in self.boom.d:
             constraints+=[s == d]
@@ -105,6 +107,7 @@ class AircraftP(Model):
     P_avionics  0.25    [kW]    avionics continuous power draw
     C_chrg              [1/hr]  battery charge rate
     CDfrac              [-]     fuselage drag fraction
+    L_D                 [-]     aircraft lift-to-drag ratio
     """
     def setup(self,aircraft,state,hybrid=False,powermode="batt-chrg",t_charge=None,groundroll=False):
         exec parse_variables(AircraftP.__doc__)
@@ -121,7 +124,9 @@ class AircraftP(Model):
         constraints = [P >= self.bw_perf["P"] + P_avionics,
                        CD >= self.bw_perf.C_D + ((aircraft.htail.planform.S/aircraft.bw.wing.planform.S)*self.htail_perf.Cd + (self.fuse_perf.Cd*aircraft.fuselage.Swet/aircraft.bw.wing.planform.S) + (aircraft.vtail.planform.S/aircraft.bw.wing.planform.S)*self.vtail_perf.Cd) + (aircraft.boom.S/aircraft.bw.wing.planform.S)*self.boom_perf.Cf,
                        self.bw_perf.C_T >= CD,
-                       CDfrac == (self.fuse_perf.Cd*aircraft.fuselage.Swet/aircraft.bw.wing.planform.S)/CD
+                       CDfrac == (self.fuse_perf.Cd*aircraft.fuselage.Swet/aircraft.bw.wing.planform.S)/CD,
+                       L_D == self.bw_perf.C_L/CD,
+                       state.V <= state.Vne
                     ]
 
         #If we're not in groundroll, apply lift=weight and fuselage drag
@@ -210,7 +215,7 @@ class FuselageP(Model):
     Cd              [-]     drag coefficient
     FF              [-]     form factor
     C_f             [-]     friction coefficient
-    mfac     1.1    [-]     friction margin
+    mfac     1.2    [-]     friction margin
     Re              [-]     Reynolds number
     """
     def setup(self,fuse,state):
@@ -235,13 +240,11 @@ class Powertrain(Model):
     tau_sp_max              [N*m/kg]        max specific torque
     RPMmax                  [rpm]           max rpm
     r                       [m]             propeller radius
-    Pstar_ref     1         [W]             specific motor power reference
-    m_ref         1         [kg]            reference motor power
     eta                     [-]             powertrain efficiency
-    a             1         [W/kg]          dummy
-    RPM_margin    0.9       [-]             margin for rpm
-    tau_margin    0.95      [-]             margin for torque
-    P_margin      0.4       [-]             margin for power (helpful for tail sizing)
+    a             1         [W/kg]          dum
+    RPM_margin    0.9       [-]             rpm margin
+    tau_margin    0.95      [-]             torque margin
+    P_margin      0.5       [-]             power margin (helpful for tail sizing)
     """
 
     def setup(self):
@@ -265,7 +268,6 @@ class PoweredWheel(Model):
     gear_ratio_max  20      [-]         max gear ratio of powered wheel
     tau_max                 [N*m]       torque of the
     m                       [kg]        powered wheel motor mass
-    m_ref           1       [kg]        reference mass for equations
     r               0.2     [m]         tire radius
     Pstar           5       [kW/kg]     specific power for powered wheel
     """
@@ -307,23 +309,19 @@ class GenAndIC(Model):
     """ GenAndIC Model
     Variables
     ---------
-    P_turb_sp_cont  160/61.3       [kW/kg]    specific cont power of IC (2.8 if turboshaft)
-    m_g             49.5           [kg]       49.5 turbogen mass
-    m_gc                           [kg]       turbogen controller mass
-    m_turb          61.3           [kg]       piston mass
-    P_g_sp_cont                    [W/kg]     turbogen spec power (cont)
-    P_g_cont                       [W]        turbogen cont. power
+    P_turb_sp_cont  160/61.3       [kW/kg]    turboshaft specific continuous power
+    P_g_sp_cont     240/49.5       [kW/kg]    generator specific continuous power
+    m_turb          61.3           [kg]       turboshaft mass
+    m_g             49.5           [kg]       generator mass
     P_turb_cont                    [kW]       turboshaft continous power  
-    m                              [kg]       total mass
-    m_ref           1              [kg]       reference mass, for meeting units constraints
-    Pstar_ref       1              [W/kg]     reference specific power, for meeting units constraints
-    eta_turb        0.15           [-]        turboshaft efficiency
+    P_g_cont                       [kW]       generator continuous power
+    m                              [kg]       turboshaft + generator mass
     """
     def setup(self):
         exec parse_variables(GenAndIC.__doc__)
         with gpkit.SignomialsEnabled():
-            constraints = [P_g_sp_cont <= (Variable("a",46.4,"W/kg**2")*m_g + Variable("b",5032,"W/kg")), #magicALL motor fits
-                           P_g_cont    <=   P_g_sp_cont*m_g,
+            constraints = [# P_g_sp_cont <= (Variable("a",46.4,"W/kg**2")*m_g + Variable("b",5032,"W/kg")), #magicALL motor fits
+                           P_g_cont    <= P_g_sp_cont*m_g,
                            P_turb_cont <= P_turb_sp_cont*m_turb,
                            m >= m_g + m_turb
             ]
@@ -337,19 +335,19 @@ class genandicP(Model):
     Variables
     ---------
     P_g                             [kW]        generator power
-    P_gc                            [kW]        generator controller power
     P_turb                          [kW]        turboshaft power
     P_fuel                          [kW]        power coming in from fuel flow
     P_out                           [kW]        output from generator controller after efficiency
     eta_wiring      0.98            [-]         efficiency of electrical connections (wiring loss)
     eta_shaft       0.98            [-]         shaft losses (two 99% efficient bearings)
     eta_g           0.953           [-]         generator efficiency
+    eta_turb        0.15            [-]         turboshaft efficiency
     """
     def setup(self,gen,state):
         exec parse_variables(genandicP.__doc__)
         constraints = [P_g <= gen.P_g_cont,
                        P_turb <= gen.P_turb_cont,
-                       P_fuel*gen.eta_turb == P_turb,
+                       P_fuel*eta_turb == P_turb,
                        P_turb*eta_shaft == P_g,
                        P_g*eta_g == P_out,
                        ]
@@ -381,12 +379,12 @@ class Battery(Model):
     """ Battery
     Variables
     ---------
-    m                   [kg]            total battery mass
-    Estar       140     [Wh/kg]         140, specific energy
-    E_capacity          [Wh]            energy capacity
-    P_max_cont  3.9e3   [W/kg]          3.9e3, continuous power output
-    P_max_burst 3.9e3   [W/kg]          3.9e3, burst power output
-    eta_pack    0.8     [-]             add packing efficiency for battery
+    m                   [kg]            battery total mass
+    Estar       108     [Wh/kg]         battery cell specific energy
+    E_capacity          [Wh]            battery total energy capacity
+    P_max_cont  2160    [W/kg]          battery cell continuous specific power
+    P_max_burst 5190    [W/kg]          battery cell burst specific power
+    eta_pack    0.8     [-]             battery packing efficiency
     """
 
     def setup(self):
@@ -409,7 +407,7 @@ class BatteryP(Model):
     """
     def setup(self,batt,state):
         exec parse_variables(BatteryP.__doc__)
-        constraints = [P <= batt.m*batt.P_max_burst]
+        constraints = [P <= batt.m*batt.P_max_burst*batt.eta_pack]
         return constraints
 
 class Wing(Model):
@@ -418,7 +416,7 @@ class Wing(Model):
     Variables
     ---------
     W                   [lbf]       wing weight
-    mfac        1.2     [-]         wing weight margin factor
+    mfac        1.2     [-]         wing weight margin
     n_plies     5       [-]         number of plies on skin
     Upper Unbounded
     ---------------
@@ -504,7 +502,7 @@ class BlownWingP(Model):
     C_T             [-]             thrust coefficient
     Re              [-]             Reynolds number
     e       0.8     [-]             span efficiency
-    mfac    1.1     [-]             profile drag margin factor
+    mfac    1.2     [-]             profile drag margin
     m_dotprime      [kg/(m*s)]      jet mass flow per unit span
     J_prime         [kg/(s**2)]     momentum flow per unit span
     E_prime         [J/(m*s)]       energy flow per unit span
@@ -536,6 +534,7 @@ class BlownWingP(Model):
             P <= bw.n_prop*bw.powertrain["Pmax"],
 
             C_L <= C_LC*(1+2*C_J/(pi*bw.wing["AR"]*e)),
+            C_L >= C_LC,
             C_LC <= CLCmax,
             bw.powertrain.RPMmax*bw.powertrain.r <= a*Mlim,
             C_T == T/((0.5*state.rho*bw.wing["S"]*state.V**2)),
@@ -560,11 +559,11 @@ class FlightState(Model):
 
     Variables
     ---------
-    rho         1.225       [kg/m**3]        air density
-    mu          1.789e-5    [N*s/m^2]        air viscosity
-    V                       [knots]         speed
+    rho         1.225       [kg/m**3]       air density
+    mu          1.789e-5    [N*s/m^2]       air viscosity
+    V                       [kts]           speed
     qne                     [kg/s^2/m]      never exceed dynamic pressure
-    Vne         175         [kts]           never exceed speed
+    Vne         160         [kts]           never exceed speed
     """
     def setup(self):
         exec parse_variables(FlightState.__doc__)
@@ -572,7 +571,7 @@ class FlightState(Model):
 
 class TakeOff(Model):
     """
-    take off model
+    takeoff model
     http://www.dept.aoe.vt.edu/~lutze/AOE3104/takeoff&landing.pdf
 
     Variables
@@ -581,22 +580,22 @@ class TakeOff(Model):
     B                       [1/m]       log fit equation helper 2
     g           9.81        [m/s**2]    gravitational constant
     mu          0.025       [-]         coefficient of rolling resistance
-    T                       [N]         take off thrust
+    T                       [N]         takeoff thrust
     cda         0.015       [-]         parasite drag coefficient
     CDg                     [-]         drag ground coefficient
-    CLg         2.5         [-]         lift coefficient during ground run
+    CLg         2.5         [-]         ground run lift coefficient
     cdp         0.025       [-]         profile drag at Vstallx1.2
     Kg          0.04        [-]         ground-effect induced drag parameter
-    zsto                    [-]         take off distance helper variable
-    Sto                     [ft]        take off distance
+    zsto                    [-]         takeoff distance helper variable
+    Sto                     [ft]        takeoff distance
     W                       [N]         aircraft weight
     mu_friction 0.6         [-]         traction limit for powered wheels
-    t                       [s]         time of takeoff maneuver
-    dV                      [kt]        difference in velocity over run
-    mstall      1.1         [-]         stall margin on takeoff
+    t                       [s]         takeoff segment time
+    dV                      [kt]        takeoff segment velocity difference 
+    mstall      1.1         [-]         takeoff stall margin
     rho                     [kg/m^3]    air density
     S                       [m^2]       wing area
-    a                       [m/s/s]      acceleration of segment
+    a                       [m/s/s]     takeoff segment acceleration
     """
     def setup(self, aircraft,poweredwheels,n_wheels,hybrid=False,N=5):
         exec parse_variables(TakeOff.__doc__)
@@ -614,27 +613,27 @@ class TakeOff(Model):
         e = perf.bw_perf.e
         with gpkit.SignomialsEnabled():
             constraints = [
-                    
-                    rho == self.fs.rho,
-                    S == aircraft.bw.wing["S"],
-                    W == aircraft.mass*g,
-                    self.perf.bw_perf.eta_prop == 0.75,
-                    # T/W >= A/g + mu,
-                    CDg == perf.bw_perf.C_D,
-                    (T-0.5*CDg*rho*S*self.fs.V**2)/aircraft.mass >= a,
-                    t*a == dV,
-                    # FitCS(fd, zsto, [A/g, B*dV**2/g]), #fit constraint set, pass in fit data, zsto is the 
-                    # # y variable, then arr of independent (input) vars, watch the units
-                    # Sto >= 1.0/2.0/B*zsto,
-                    ]
+                rho == self.fs.rho,
+                S == aircraft.bw.wing["S"],
+                W == aircraft.mass*g,
+                self.perf.bw_perf.eta_prop == 0.75,
+                # T/W >= A/g + mu,
+                CDg == perf.bw_perf.C_D,
+                (T-0.5*CDg*rho*S*self.fs.V**2)/aircraft.mass >= a,
+                t*a == dV,
+                # FitCS(fd, zsto, [A/g, B*dV**2/g]), #fit constraint set, pass in fit data, zsto is the 
+                # # y variable, then arr of independent (input) vars, watch the units
+                # Sto >= 1.0/2.0/B*zsto,
+            ]
         # with gpkit.SignomialsEnabled():
         #     constraints += [B >= g/W*0.5*rho*S*(CDg)]
         if poweredwheels:
             wheel_models = [wheel.dynamic(fs) for wheel in aircraft.wheels]
             with gpkit.SignomialsEnabled():
-                constraints += [T <= perf.bw_perf.T + sum(model.T for model in wheel_models),
-                                perf.P >= perf.bw_perf.P + sum(model.P for model in wheel_models)
-                            ]
+                constraints += [
+                    T <= perf.bw_perf.T + sum(model.T for model in wheel_models),
+                    perf.P >= perf.bw_perf.P + sum(model.P for model in wheel_models)
+                ]
                 for model in wheel_models:
                     constraints += [model.T <= (aircraft.mass*g*mu_friction)/Variable("a",len(wheel_models),"-")]
                 constraints += wheel_models
@@ -675,7 +674,7 @@ class Climb(Model):
         rho = perf.fs.rho
 
         constraints = [
-            perf.batt_perf.P <= aircraft.battery.m*aircraft.battery.P_max_cont,
+            perf.batt_perf.P <= aircraft.battery.m*aircraft.battery.P_max_cont*aircraft.battery.eta_pack,
             perf.bw_perf.eta_prop == 0.87,
             W ==  aircraft.mass*g,
             perf.bw_perf.C_T*rho*S*V**2 >= 0.5*CD*rho*S*V**2 + W*h_dot/V,
@@ -689,16 +688,16 @@ class Cruise(Model):
 
     Variables
     ---------
-    R           [nmi]       Range flown in flight segment
-    t           [min]       Time to fly flight segment
-    Vmin  120   [kts]       minimum cruise speed
+    R           [nmi]       cruise range
+    t           [min]       cruise time
+    Vmin  120   [kts]       cruise minimum speed
     """
 
     def setup(self,aircraft,hybrid=False):
         exec parse_variables(Cruise.__doc__)
         self.flightstate = FlightState()
         self.perf = aircraft.dynamic(self.flightstate,hybrid,powermode="batt-chrg",t_charge=t)
-        constraints = [R == t*self.flightstate.V,
+        constraints = [R <= t*self.flightstate.V,
                        self.flightstate["V"] >= Vmin,
                        self.perf.bw_perf.C_LC == 0.534,
                        self.perf.bw_perf.eta_prop == 0.87]
@@ -710,15 +709,18 @@ class Reserve(Model):
 
     Variables
     ---------
-    t     30    [min]       Time to fly flight segment
-    Vmin        [kts]       Minimum flight speed
+    R           [nmi]       reserve range
+    t     30    [min]       reserve time
+    Vmin  120   [kts]       reserve minimum speed
     """
 
     def setup(self,aircraft,hybrid=False):
         exec parse_variables(Reserve.__doc__)
         self.flightstate = FlightState()
         self.perf = aircraft.dynamic(self.flightstate,hybrid,powermode="batt-chrg",t_charge=t)
-        constraints = [self.perf.bw_perf.C_LC == 0.534,
+        constraints = [R == t*self.flightstate.V,
+                       self.flightstate["V"] >= Vmin,
+                       self.perf.bw_perf.C_LC == 0.534,
                        self.perf.bw_perf.eta_prop == 0.87]
 
         return constraints, self.perf
@@ -734,7 +736,6 @@ class Landing(Model):
     Xa                      [ft]        approach distance
     Xro                     [ft]        round out distance
     Xdec                    [ft]        deceleration distance
-    msafety     1.4         [-]         landing safety margin
     tang        -0.0524     [-]         tan(gamma)
     cosg        0.9986      [-]         cos(gamma)
     sing        -0.0523     [-]         sin(gamma)
@@ -747,7 +748,7 @@ class Landing(Model):
     Xla                     [ft]        total landing distance                        
     mu_b         0.6        [-]         braking friction coefficient
     Sgr                     [ft]        landing distance
-    mstall       1.2        [-]         stall margin on landing
+    mstall       1.2        [-]         landing stall margin
     t                       [s]         time of landing maneuver
     """
     def setup(self, aircraft,hybrid=False):
@@ -788,7 +789,7 @@ class Mission(Model):
 
     Variables
     ---------
-    Srunway         77          [ft]        runway length
+    Srunway         80          [ft]        runway length
     Sobstacle                   [ft]        obstacle length
     mrunway         1.4         [-]         runway margin
     mobstacle       1.4         [-]         obstacle margin
@@ -805,8 +806,8 @@ class Mission(Model):
         self.aircraft = Aircraft(poweredwheels,n_wheels,hybrid)
         with Vectorize(4):
             self.takeoff = TakeOff(self.aircraft,poweredwheels,n_wheels,hybrid)
-        self.obstacle_climb = Climb(self.aircraft,hybrid)
-        self.climb = Climb(self.aircraft,hybrid,powermode="batt-chrg")
+        self.obstacle_climb = Climb(self.aircraft,hybrid,powermode="batt-dischrg")
+        self.climb = Climb(self.aircraft,hybrid,powermode="batt-dischrg")
         self.cruise = Cruise(self.aircraft,hybrid)
         self.reserve = Reserve(self.aircraft,hybrid)
         self.landing = Landing(self.aircraft,hybrid)
@@ -823,9 +824,11 @@ class Mission(Model):
                             CLmax >= self.landing.perf.bw_perf.C_L,
                             CJmax >= self.takeoff.perf.bw_perf.C_J,
                             CJmax >= self.landing.perf.bw_perf.C_J,
-                            self.obstacle_climb.h_gain == Variable("h_obstacle",50,"ft"),
-                            self.climb.h_gain == Variable("h_cruise",1950,"ft"),
-                            self.climb.Sclimb == Variable("Scruiseclimb",10,"miles"),
+                            self.obstacle_climb.h_gain >= Variable("h_obstacle",50,"ft","obstacle height"),
+                            self.climb.h_gain >= Variable("h_cruise",2000,"ft","cruise altitude") - self.obstacle_climb.h_gain,
+                            self.climb.Sclimb == Variable("S_climb",10,"nmi","climb range specified"),
+                            # self.R >= Variable("R_req",100,"nmi","total range requirement"),
+                            # self.R <= self.climb.Sclimb + self.cruise.R,
                             0.5*state.rho*CLstall*self.aircraft.bw.wing.planform.S*Vs**2 == self.aircraft.mass*g,
                             Vs <= Vstall,
                             self.takeoff.dV == dV,
@@ -844,8 +847,8 @@ class Mission(Model):
                             self.takeoff.fs.V[1] >= sum(self.takeoff.dV[:2]),
                             self.takeoff.fs.V[2] >= sum(self.takeoff.dV[:3]),
                             self.takeoff.fs.V[-1] <=  sum(self.takeoff.dV),
-                            Srunway == self.landing.Sgr*mrunway,
-                            Sobstacle <= Srunway + Variable("obstacle_dist",100,"ft"),
+                            Srunway >= self.landing.Sgr*mrunway,
+                            Sobstacle <= Srunway + Variable("obstacle_dist",100,"ft","obstacle distance"),
                             Sobstacle >= mobstacle*(sum(self.takeoff.Sto)+ self.obstacle_climb.Sclimb),
                             loading.wingl["W"] == Wcent,
                             Wcent >= self.aircraft.mass*g,
@@ -856,18 +859,18 @@ class Mission(Model):
                             self.cruise.perf.bw_perf.P <= self.aircraft.bw.n_prop*self.aircraft.bw.powertrain.P_m_sp_cont*self.aircraft.bw.powertrain.m
                         ]
         if not perf:
-            constraints += [self.R == Variable("R_req",100,"nmi","range requirement")]
+            constraints += [self.R >= Variable("S_cruise",100,"nmi","cruise range minimum")]
         if hybrid:
             constraints += [ self.takeoff.perf.gen_perf.P_fuel == self.obstacle_climb.perf.gen_perf.P_fuel,
                             self.obstacle_climb.perf.gen_perf.P_fuel == self.climb.perf.gen_perf.P_fuel,
                             self.climb.perf.gen_perf.P_fuel == self.cruise.perf.gen_perf.P_fuel,
-                       self.cruise.perf.gen_perf.P_fuel == self.landing.perf.gen_perf.P_fuel,
+                            self.cruise.perf.gen_perf.P_fuel == self.landing.perf.gen_perf.P_fuel,
                             self.aircraft.battery.E_capacity*0.8 >= self.takeoff.perf.bw_perf.P*self.takeoff.t + self.obstacle_climb.perf.bw_perf.P*self.obstacle_climb.t,
                             self.aircraft.tank.E >= sum(s.t*s.perf.gen_perf.P_fuel for s in self.fs)]
         else:
             constraints += [self.aircraft.battery.E_capacity*0.8 >= sum(s.t*s.perf.batt_perf.P for s in self.fs)]
         with gpkit.SignomialsEnabled():
-            constraints += [R <= self.cruise.R]
+            constraints += [self.R <= self.cruise.R]
         return constraints,self.aircraft,self.fs, loading
 
 def writeSol(sol):
@@ -950,9 +953,11 @@ def writeProp(sol,M):
 
         output  = open('prop.txt','wb')
         
-        A_str = '{:7.4f}'
-        T_str = '{:9.2f}'
-        V_str = '{:7.2f}'
+        A_str = '{:5.3f}'
+        T_str = '{:9.0f}'
+        U_str = '{:7.2f}'
+        R_str = '{:7.0f}'
+        t_str = '{:7.2f}'
         
         A_disk = sol(M.cruise.perf.bw_perf.A_disk).magnitude
         
@@ -963,18 +968,18 @@ def writeProp(sol,M):
         T_CL1 = sol(M.obstacle_climb.perf.bw_perf.T).magnitude
         T_CL2 = sol(M.climb.perf.bw_perf.T         ).magnitude
         T_CR  = sol(M.cruise.perf.bw_perf.T        ).magnitude
-        T_R   = sol(M.reserve.perf.bw_perf.T       ).magnitude
         T_L   = sol(M.landing.perf.bw_perf.T       ).magnitude
-        
-        V_TO1 = sol(M.takeoff.perf.fs.V[0]    ).to("m/s").magnitude
-        V_TO2 = sol(M.takeoff.perf.fs.V[1]    ).to("m/s").magnitude
-        V_TO3 = sol(M.takeoff.perf.fs.V[2]    ).to("m/s").magnitude
-        V_TO4 = sol(M.takeoff.perf.fs.V[3]    ).to("m/s").magnitude
-        V_CL1 = sol(M.obstacle_climb.perf.fs.V).to("m/s").magnitude
-        V_CL2 = sol(M.climb.perf.fs.V         ).to("m/s").magnitude
-        V_CR  = sol(M.cruise.perf.fs.V        ).to("m/s").magnitude
-        V_R   = sol(M.reserve.perf.fs.V       ).to("m/s").magnitude
-        V_L   = sol(M.landing.perf.fs.V       ).to("m/s").magnitude
+        T_R   = sol(M.reserve.perf.bw_perf.T       ).magnitude
+
+        U_TO1 = sol(M.takeoff.perf.fs.V[0]    ).to("m/s").magnitude
+        U_TO2 = sol(M.takeoff.perf.fs.V[1]    ).to("m/s").magnitude
+        U_TO3 = sol(M.takeoff.perf.fs.V[2]    ).to("m/s").magnitude
+        U_TO4 = sol(M.takeoff.perf.fs.V[3]    ).to("m/s").magnitude
+        U_CL1 = sol(M.obstacle_climb.perf.fs.V).to("m/s").magnitude
+        U_CL2 = sol(M.climb.perf.fs.V         ).to("m/s").magnitude
+        U_CR  = sol(M.cruise.perf.fs.V        ).to("m/s").magnitude
+        U_L   = sol(M.landing.perf.fs.V       ).to("m/s").magnitude
+        U_R   = sol(M.reserve.perf.fs.V       ).to("m/s").magnitude
         
         u_j_TO1 = sol(M.takeoff.perf.bw_perf.u_j[0]    ).to("m/s").magnitude
         u_j_TO2 = sol(M.takeoff.perf.bw_perf.u_j[1]    ).to("m/s").magnitude
@@ -983,66 +988,137 @@ def writeProp(sol,M):
         u_j_CL1 = sol(M.obstacle_climb.perf.bw_perf.u_j).to("m/s").magnitude
         u_j_CL2 = sol(M.climb.perf.bw_perf.u_j         ).to("m/s").magnitude
         u_j_CR  = sol(M.cruise.perf.bw_perf.u_j        ).to("m/s").magnitude
-        u_j_R   = sol(M.reserve.perf.bw_perf.u_j       ).to("m/s").magnitude
         u_j_L   = sol(M.landing.perf.bw_perf.u_j       ).to("m/s").magnitude
+        u_j_R   = sol(M.reserve.perf.bw_perf.u_j       ).to("m/s").magnitude
+
+        V_TO1 = sol(M.takeoff.perf.fs.V[0]    ).to("kts").magnitude
+        V_TO2 = sol(M.takeoff.perf.fs.V[1]    ).to("kts").magnitude
+        V_TO3 = sol(M.takeoff.perf.fs.V[2]    ).to("kts").magnitude
+        V_TO4 = sol(M.takeoff.perf.fs.V[3]    ).to("kts").magnitude
+        V_CL1 = sol(M.obstacle_climb.perf.fs.V).to("kts").magnitude
+        V_CL2 = sol(M.climb.perf.fs.V         ).to("kts").magnitude
+        V_CR  = sol(M.cruise.perf.fs.V        ).to("kts").magnitude
+        V_L   = sol(M.landing.perf.fs.V       ).to("kts").magnitude
+        V_R   = sol(M.reserve.perf.fs.V       ).to("kts").magnitude
+
+        D_TO1 = sol(M.takeoff.Sto[0]          ).to("ft").magnitude
+        D_TO2 = sol(M.takeoff.Sto[1]          ).to("ft").magnitude
+        D_TO3 = sol(M.takeoff.Sto[2]          ).to("ft").magnitude
+        D_TO4 = sol(M.takeoff.Sto[3]          ).to("ft").magnitude
+        D_CL1 = sol(M.obstacle_climb.Sclimb   ).to("ft").magnitude
+        D_CL2 = sol(M.climb.Sclimb            ).to("ft").magnitude
+        D_CR  = sol(M.cruise.R                ).to("ft").magnitude
+        D_L   = sol(M.landing.Sgr             ).to("ft").magnitude
+        D_R   = sol(M.reserve.R               ).to("ft").magnitude
+
+        s_TO1 = sol(M.takeoff.t[0]            ).to("s").magnitude
+        s_TO2 = sol(M.takeoff.t[1]            ).to("s").magnitude
+        s_TO3 = sol(M.takeoff.t[2]            ).to("s").magnitude
+        s_TO4 = sol(M.takeoff.t[3]            ).to("s").magnitude
+        s_CL1 = sol(M.obstacle_climb.t        ).to("s").magnitude
+        s_CL2 = sol(M.climb.t                 ).to("s").magnitude
+        s_CR  = sol(M.cruise.t                ).to("s").magnitude
+        s_L   = sol(M.landing.t               ).to("s").magnitude
+        s_R   = sol(M.reserve.t               ).to("s").magnitude
+
+        R_TO1 =         D_TO1
+        R_TO2 = R_TO1 + D_TO2
+        R_TO3 = R_TO2 + D_TO3
+        R_TO4 = R_TO3 + D_TO4
+        R_CL1 = R_TO4 + D_CL1
+        R_CL2 = R_CL1 + D_CL2
+        R_CR  = R_CL2 + D_CR
+        R_L   = R_CR  + D_L
+        R_R   =         D_R
+
+        t_TO1 =         s_TO1
+        t_TO2 = t_TO1 + s_TO2
+        t_TO3 = t_TO2 + s_TO3
+        t_TO4 = t_TO3 + s_TO4
+        t_CL1 = t_TO4 + s_CL1
+        t_CL2 = t_CL1 + s_CL2
+        t_CR  = t_CL2 + s_CR
+        t_L   = t_CR  + s_L
+        t_R   =         s_R
         
         output.write('A_disk = ' + str(A_str.format(float(A_disk))) + ' m^2' + '\n\n')
 
-        output.write('       T_tot [N]  V [m/s]  uj [m/s]')
+        output.write('       T_tot [N]  V [m/s]  uj [m/s]  V [kt]   R [ft]   t [s] R_tot [ft] t_tot [s]')
         output.write('\n' + 'TO1 = ' + str(T_str.format(float(T_TO1)))
-                          + '  '     + str(V_str.format(float(V_TO1)))
-                          + '  '     + str(V_str.format(float(u_j_TO1))))
+                          + '  '     + str(U_str.format(float(U_TO1)))
+                          + '  '     + str(U_str.format(float(u_j_TO1)))
+                          + '  '     + str(U_str.format(float(V_TO1)))
+                          + '  '     + str(R_str.format(float(D_TO1)))
+                          + '  '     + str(t_str.format(float(s_TO1)))
+                          + '  '     + str(R_str.format(float(R_TO1)))
+                          + '  '     + str(t_str.format(float(t_TO1))))
         output.write('\n' + 'TO2 = ' + str(T_str.format(float(T_TO2)))
-                          + '  '     + str(V_str.format(float(V_TO2)))
-                          + '  '     + str(V_str.format(float(u_j_TO2))))
+                          + '  '     + str(U_str.format(float(U_TO2)))
+                          + '  '     + str(U_str.format(float(u_j_TO2)))
+                          + '  '     + str(U_str.format(float(V_TO2)))
+                          + '  '     + str(R_str.format(float(D_TO2)))
+                          + '  '     + str(t_str.format(float(s_TO2)))
+                          + '  '     + str(R_str.format(float(R_TO2)))
+                          + '  '     + str(t_str.format(float(t_TO2))))
         output.write('\n' + 'TO3 = ' + str(T_str.format(float(T_TO3)))
-                          + '  '     + str(V_str.format(float(V_TO3)))
-                          + '  '     + str(V_str.format(float(u_j_TO3))))
+                          + '  '     + str(U_str.format(float(U_TO3)))
+                          + '  '     + str(U_str.format(float(u_j_TO3)))
+                          + '  '     + str(U_str.format(float(V_TO3)))
+                          + '  '     + str(R_str.format(float(D_TO3)))
+                          + '  '     + str(t_str.format(float(s_TO3)))
+                          + '  '     + str(R_str.format(float(R_TO3)))
+                          + '  '     + str(t_str.format(float(t_TO3))))
         output.write('\n' + 'TO4 = ' + str(T_str.format(float(T_TO4)))
-                          + '  '     + str(V_str.format(float(V_TO4)))
-                          + '  '     + str(V_str.format(float(u_j_TO4))))
+                          + '  '     + str(U_str.format(float(U_TO4)))
+                          + '  '     + str(U_str.format(float(u_j_TO4)))
+                          + '  '     + str(U_str.format(float(V_TO4)))
+                          + '  '     + str(R_str.format(float(D_TO4)))
+                          + '  '     + str(t_str.format(float(s_TO4)))
+                          + '  '     + str(R_str.format(float(R_TO4)))
+                          + '  '     + str(t_str.format(float(t_TO4))))
         output.write('\n' + 'CL1 = ' + str(T_str.format(float(T_CL1)))
-                          + '  '     + str(V_str.format(float(V_CL1)))
-                          + '  '     + str(V_str.format(float(u_j_CL1))))
+                          + '  '     + str(U_str.format(float(U_CL1)))
+                          + '  '     + str(U_str.format(float(u_j_CL1)))
+                          + '  '     + str(U_str.format(float(V_CL1)))
+                          + '  '     + str(R_str.format(float(D_CL1)))
+                          + '  '     + str(t_str.format(float(s_CL1)))
+                          + '  '     + str(R_str.format(float(R_CL1)))
+                          + '  '     + str(t_str.format(float(t_CL1))))
         output.write('\n' + 'CL2 = ' + str(T_str.format(float(T_CL2)))
-                          + '  '     + str(V_str.format(float(V_CL2)))
-                          + '  '     + str(V_str.format(float(u_j_CL2))))
+                          + '  '     + str(U_str.format(float(U_CL2)))
+                          + '  '     + str(U_str.format(float(u_j_CL2)))
+                          + '  '     + str(U_str.format(float(V_CL2)))
+                          + '  '     + str(R_str.format(float(D_CL2)))
+                          + '  '     + str(t_str.format(float(s_CL2)))
+                          + '  '     + str(R_str.format(float(R_CL2)))
+                          + '  '     + str(t_str.format(float(t_CL2))))
         output.write('\n' + 'CR  = ' + str(T_str.format(float(T_CR )))
-                          + '  '     + str(V_str.format(float(V_CR )))
-                          + '  '     + str(V_str.format(float(u_j_CR ))))
-        output.write('\n' + 'R   = ' + str(T_str.format(float(T_R  )))
-                          + '  '     + str(V_str.format(float(V_R  )))
-                          + '  '     + str(V_str.format(float(u_j_R  ))))
+                          + '  '     + str(U_str.format(float(U_CR )))
+                          + '  '     + str(U_str.format(float(u_j_CR )))
+                          + '  '     + str(U_str.format(float(V_CR )))
+                          + '  '     + str(R_str.format(float(D_CR )))
+                          + '  '     + str(t_str.format(float(s_CR )))
+                          + '  '     + str(R_str.format(float(R_CR )))
+                          + '  '     + str(t_str.format(float(t_CR ))))
         output.write('\n' + 'L   = ' + str(T_str.format(float(T_L  )))
-                          + '  '     + str(V_str.format(float(V_L  )))
-                          + '  '     + str(V_str.format(float(u_j_L  ))))
+                          + '  '     + str(U_str.format(float(U_L  )))
+                          + '  '     + str(U_str.format(float(u_j_L  )))
+                          + '  '     + str(U_str.format(float(V_L  )))
+                          + '  '     + str(R_str.format(float(D_L  )))
+                          + '  '     + str(t_str.format(float(s_L  )))
+                          + '  '     + str(R_str.format(float(R_L  )))
+                          + '  '     + str(t_str.format(float(t_L  ))))
+        output.write('\n')
+        output.write('\n' + 'R   = ' + str(T_str.format(float(T_R  )))
+                          + '  '     + str(U_str.format(float(U_R  )))
+                          + '  '     + str(U_str.format(float(u_j_R  )))
+                          + '  '     + str(U_str.format(float(V_R  )))
+                          + '  '     + str(R_str.format(float(D_R  )))
+                          + '  '     + str(t_str.format(float(s_R  )))
+                          + '  '     + str(R_str.format(float(R_R  )))
+                          + '  '     + str(t_str.format(float(t_R  ))))
 
         output.close
-
-
-def writeAlb(sol,M):
-    with open('albie.txt', 'wb') as output:
-        output.write('Weights Summary\n')
-        # output.write(sol(M.aircraft.mass).split(" ")[0])
-        # output.write(sol.table(["m_Mission/Aircraft/Fuselage",
-                                # "m_Mission/Aircraft/Cabin",
-                                # "W_Mission/Aircraft/HorizontalTail",
-                                # "W_Mission/Aircraft/VerticalTail",
-                                # "W_Mission/Aircraft/TailBoom",
-                                # "W_Mission/Aircraft/BlownWing/Wing",
-                                # "n_prop_Mission/Aircraft/BlownWing",
-                                # "m_Mission/Aircraft/BlownWing/Powertrain",
-                                # "m_Mission/Aircraft/Gear",
-                                # "m_Mission/Aircraft/GenAndIC",
-                                # "m_fuel_Mission/Aircraft/Tank",
-                                # "m_tank_Mission/Aircraft/Tank",
-                                # "n_pax_Mission/Aircraft",
-                                # "mbaggage_Mission/Aircraft",
-                                # "mpax_Mission/Aircraft",
-                                # "m_Mission/Aircraft/Battery"
-                                # ]))
-        output.write('\n\n\nPropulsion Summary')
-
 
 def CLCurves():
     M = Mission(poweredwheels=True,n_wheels=3,hybrid=True)
@@ -1262,7 +1338,7 @@ def NimhRetro():
 
 def Runway():
     M = Mission(poweredwheels=False,n_wheels=3,hybrid=True)
-    runway_sweep = np.linspace(40,150,10)
+    runway_sweep = np.linspace(60,100,9)
     M.substitutions.update({M.Srunway:('sweep',runway_sweep)})
     M.cost = M.aircraft.mass
     sol = M.localsolve("mosek")
@@ -1272,7 +1348,8 @@ def Runway():
     plt.title("Runway trade")
     plt.xlabel("Runway length [ft]")
     plt.ylabel("Takeoff mass [kg]")
-    plt.ylim(ymin=0)
+   #  plt.ylim(ymin=0)
+    plt.ylim([1200,1400])
     plt.grid()
     plt.show()    
 
@@ -1357,14 +1434,13 @@ def RegularSolve():
     # M.debug()
     sol = M.localsolve("mosek")
     # print M.program.gps[-1].result.summary()
-    print sol.summary()
+    # print sol.summary()
     sd = get_highestsens(M, sol, N=10)
     f, a = plot_chart(sd)
     f.savefig("sensbar.pdf", bbox_inches="tight")
     print sol(M.aircraft.mass)
-    print sol["sensitivities"]["constants"]["CLCmax"]
+    # print sol["sensitivities"]["constants"]["CLCmax"]
     writeSol(sol)
-    writeAlb(sol,M)
     writeProp(sol,M)
     writeWgt(sol,M)
 # CLCurves()
