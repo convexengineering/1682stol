@@ -1355,13 +1355,13 @@ def Runway():
 
 def PerfPlot():
     poweredwheels = False
-
     M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True,perf=False)
+    M.substitutions.update({M.aircraft.bw.wing.planform.b:31.09})
     M.cost = M.aircraft.mass
     # M.debug()
-    sol = M.localsoslve("mosek")
+    sol = M.localsolve("mosek")
     # print M.program.gps[-1].result.summary()
-    print sol.summary()
+    # print sol.summary()
 
     print "fixed solve"
     M2 = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True,perf=True)
@@ -1369,28 +1369,40 @@ def PerfPlot():
     M2.substitutions.update({M2.aircraft.mass:sol(M.aircraft.mass)})
     M2.substitutions.update({M2.aircraft.bw.wing.planform.AR:sol(M.aircraft.bw.wing.planform.AR)})
     M2.substitutions.update({M2.aircraft.bw.powertrain.m:sol(M.aircraft.bw.powertrain.m)})
+    # M2.substitutions.update({M2.aircraft.bw.wing.planform.b:sol(M.aircraft.bw.wing.planform.b)})
+
+    # Srunway = 80
+    # M2.substitutions.update({M2.Srunway:Srunway})
 
     for n_pax in [1,2,3,4]:
-        M2.substitutions.update({M2.Srunway:('sweep',np.linspace(300,500,4))})
         M2.substitutions.update({M2.aircraft.n_pax:n_pax})
         M2.cost = 1/M2.R
         sol2 = M2.localsolve("mosek")
-        plt.plot(sol2(M2.Srunway),sol2(M2.R),label = str(n_pax-1) + " passengers")
-    
-    plt.title("Performance Trade for 300 ft Design")
-    plt.xlabel("Runway length [ft]")
-    plt.ylabel("Range [nmi]")
-    plt.legend()
-    plt.ylim(ymin=0)
+        # plt.plot(sol2(M2.R),sol2(M2.aircraft.n_pax))
+        plt.plot(sol2(M2.R),sol2(M2.aircraft.n_pax*(M2.aircraft.mpax+M2.aircraft.mbaggage).to("lb")), marker = "o", color = "k")
+
+    font = {"family" : "normal", "weight" : "normal", "size" : 16}
+    plt.rc("font", **font)
+
+    # plt.title("Payload-range diagram, operating on an 80 ft runway.")
+    plt.xlabel("Range [nmi]" , size = 16) # weight = "medium"
+    plt.ylabel("Payload [lb]", size = 16) # weight = "medium"
+    # plt.legend()
+    # plt.xlim(xmin=0,xmax=800)
+    # plt.ylim(ymin=0,ymax=1000)
+    plt.xticks(np.arange(0,801 ,step=200))
+    plt.yticks(np.arange(0,1001,step=200))
     plt.grid()
-    plt.show()    
+    plt.savefig("payload-range.png", bbox_inches="tight", format='png', dpi=1000)
+    plt.show()
     # print sol2.table()
-    # sd = get_highestsens(M, sol, N=10)
+    # sd = get_highestsens(M2, sol2, N=10)
     # f, a = plot_chart(sd)
     # f.savefig("sensbar.pdf", bbox_inches="tight")
-    # print sol(M.aircraft.mass)
-    # writeSol(sol)
-    # writeAlb(sol,M)
+    # print sol2(M.aircraft.mass)
+    # writeSol(sol2)
+    # writeProp(sol2,M2)
+    # writeWgt(sol2,M2)
 
 def PowerIncrease():
     poweredwheels = False
@@ -1424,12 +1436,12 @@ def PowerIncrease():
     plt.legend()
     plt.ylim(ymin=0)
     plt.grid()
-    plt.show() 
-
+    plt.show()
 
 def RegularSolve():
     poweredwheels = False
     M = Mission(poweredwheels=poweredwheels,n_wheels=3,hybrid=True)
+    M.substitutions.update({M.aircraft.bw.wing.planform.b:31.09})
     M.cost = M.aircraft.mass
     # M.debug()
     sol = M.localsolve("mosek")
@@ -1453,10 +1465,10 @@ def RegularSolve():
 if __name__ == "__main__":
     # Runway()
     # RangeRunway()
-    RegularSolve()
+    # RegularSolve()
     # BattCompare()
     # NimhRetro()
-    # PerfPlot()
+    PerfPlot()
     # PowerIncrease()
     # ElectricVsHybrid()
 
